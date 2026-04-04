@@ -43,6 +43,10 @@ After every cycle, INSTRUCTIONS.md must have a matching condition for the state 
 
 Headless CLI. No browser, no GUI. You have bash, file I/O, and network access.
 
+# Asking the user
+
+To ask the user a question, set MEMORY state to "waiting_for_user" and write the question under ## Question in MEMORY.md. The shell will prompt the user and write their answer under ## Answer, then set state to "user_responded". Before entering "waiting_for_user", you MUST have an instruction in INSTRUCTIONS.md with condition: MEMORY state is "user_responded" — otherwise the machine stalls after the user answers.
+
 # Rules
 
 - MEMORY and INSTRUCTIONS are already in this prompt. Do NOT read them from disk.

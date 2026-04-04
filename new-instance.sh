@@ -2,12 +2,22 @@
 set -euo pipefail
 
 if [ -z "${1:-}" ]; then
-  echo "Usage: ./new-instance.sh <name>"
+  echo "Usage: ./new-instance.sh <name> [interpreter-path]"
+  echo ""
+  echo "  name              Name of the instance"
+  echo "  interpreter-path  Path to an interpreter directory containing INSTRUCTIONS.md"
+  echo "                    (default: built-in generic strategy)"
+  echo ""
+  echo "Examples:"
+  echo "  ./new-instance.sh my-project"
+  echo "  ./new-instance.sh my-game interpreters/game-team"
   exit 1
 fi
 
 NAME="$1"
+INTERPRETER="${2:-}"
 DIR="instances/$NAME"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 if [ -d "$DIR" ]; then
   echo "Error: instance '$NAME' already exists at $DIR"
@@ -16,6 +26,7 @@ fi
 
 mkdir -p "$DIR"
 
+# PROGRAM.md — always a fresh template for the user to fill in
 cat > "$DIR/PROGRAM.md" << 'EOF'
 # Goal
 (describe the goal here)
@@ -27,7 +38,24 @@ cat > "$DIR/PROGRAM.md" << 'EOF'
 (describe what to do)
 EOF
 
-cat > "$DIR/INSTRUCTIONS.md" << 'INSTEOF'
+# INSTRUCTIONS.md — from interpreter or built-in default
+if [ -n "$INTERPRETER" ]; then
+  INTERP_DIR="$SCRIPT_DIR/$INTERPRETER"
+  if [ ! -f "$INTERP_DIR/INSTRUCTIONS.md" ]; then
+    echo "Error: interpreter at '$INTERP_DIR' has no INSTRUCTIONS.md"
+    exit 1
+  fi
+  cp "$INTERP_DIR/INSTRUCTIONS.md" "$DIR/INSTRUCTIONS.md"
+
+  # Copy any supporting files (role descriptions, etc.) into the instance
+  for f in "$INTERP_DIR"/*.md; do
+    base="$(basename "$f")"
+    if [ "$base" != "INSTRUCTIONS.md" ]; then
+      cp "$f" "$DIR/$base"
+    fi
+  done
+else
+  cat > "$DIR/INSTRUCTIONS.md" << 'INSTEOF'
 # Strategy
 
 These strategy instructions must be preserved at the top of INSTRUCTIONS.md every time it is rewritten. They are the interpreter that runs the program in PROGRAM.md.
@@ -54,12 +82,15 @@ If all steps in PROGRAM.md are done, set MEMORY state to "done" instead.
 
 (none yet — the strategy will populate these)
 INSTEOF
+fi
 
+# MEMORY.md — always starts empty
 cat > "$DIR/MEMORY.md" << 'EOF'
 ## State
 empty
 EOF
 
+# run.sh
 cat > "$DIR/run.sh" << 'RUNEOF'
 #!/usr/bin/env bash
 set -euo pipefail
@@ -68,16 +99,22 @@ INSTANCE_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(cd "$INSTANCE_DIR/../.." && pwd)"
 KEY_FILE="$INSTANCE_DIR/.api_key"
 
-if [ -z "${ANTHROPIC_API_KEY:-}" ]; then
-  if [ -f "$KEY_FILE" ]; then
-    ANTHROPIC_API_KEY="$(cat "$KEY_FILE")"
-  else
-    read -rsp "ANTHROPIC_API_KEY: " ANTHROPIC_API_KEY
-    echo
-    echo "$ANTHROPIC_API_KEY" > "$KEY_FILE"
-    chmod 600 "$KEY_FILE"
+# Default to claude-code provider
+export TURING_PROVIDER="${TURING_PROVIDER:-claude-code}"
+
+# API provider needs an API key
+if [ "$TURING_PROVIDER" = "api" ]; then
+  if [ -z "${ANTHROPIC_API_KEY:-}" ]; then
+    if [ -f "$KEY_FILE" ]; then
+      ANTHROPIC_API_KEY="$(cat "$KEY_FILE")"
+    else
+      read -rsp "ANTHROPIC_API_KEY: " ANTHROPIC_API_KEY
+      echo
+      echo "$ANTHROPIC_API_KEY" > "$KEY_FILE"
+      chmod 600 "$KEY_FILE"
+    fi
+    export ANTHROPIC_API_KEY
   fi
-  export ANTHROPIC_API_KEY
 fi
 
 cd "$INSTANCE_DIR"
@@ -87,5 +124,8 @@ RUNEOF
 chmod +x "$DIR/run.sh"
 
 echo "Instance '$NAME' created at $DIR/"
+if [ -n "$INTERPRETER" ]; then
+  echo "  Interpreter: $INTERPRETER"
+fi
 echo "  1. Edit $DIR/PROGRAM.md with your goal and high-level steps"
 echo "  2. Run:  $DIR/run.sh"

@@ -154,15 +154,53 @@ An LLM-powered universal Turing machine.
 ## Usage
 
 ```bash
-# Create a new instance
+# Create a new instance with the default interpreter
 ./new-instance.sh my-project
+
+# Create an instance with a custom interpreter
+./new-instance.sh my-game interpreters/game-team
 
 # Edit the program
 vim instances/my-project/PROGRAM.md
 
-# Run
+# Run (default: claude-code provider)
 instances/my-project/run.sh
+
+# Run with API provider
+TURING_PROVIDER=api instances/my-project/run.sh
 ```
+
+## Interpreters
+
+An interpreter is a reusable strategy that defines how PROGRAM.md gets executed. It lives in `interpreters/<name>/` and contains:
+
+- `INSTRUCTIONS.md` (required) — The strategy instructions, copied into the instance on creation
+- `*.md` (optional) — Supporting files (role descriptions, templates, etc.), also copied into the instance
+
+### Creating a new interpreter
+
+An interpreter's INSTRUCTIONS.md must follow these patterns:
+
+1. **Strategy preservation**: Start with a comment saying these instructions must be preserved on every rewrite.
+
+2. **Initialize → strategy_ready**: An Initialize instruction that reads PROGRAM.md and sets up initial state.
+
+3. **Step loading loop**: A "pick next step" instruction (condition: `strategy_ready`) that reads PROGRAM.md, finds the next incomplete step, and either decomposes it or sets state to `done`.
+
+4. **Decompose → execute → verify**: When a step (or feature) is ready to implement, decompose it into concrete sub-instructions. Each action must be followed by a verification. The pattern:
+   - Action instruction (creates/modifies something)
+   - Verify instruction (checks it actually worked)
+   - ... more action/verify pairs ...
+   - Return instruction (marks step done, sets state back to `strategy_ready`)
+
+5. **Handback**: The last sub-instruction must always return control to the strategy by setting state to `strategy_ready`. Without this, the machine stalls after completing sub-steps.
+
+6. **Finish**: A Finish instruction (condition: `done`) that calls halt.
+
+### Built-in interpreters
+
+- **default** (no argument) — Generic step-by-step executor. Reads PROGRAM.md steps, decomposes each into sub-instructions with verification.
+- **`interpreters/game-team`** — Simulates a game dev team. For each feature: gathers opinions from architect, game designer, developer, 2D artist, and UI/UX expert, then synthesizes into an implementation plan before decomposing into executable sub-steps. Can ask the user for clarification when specs are ambiguous.
 
 ## Instance Structure
 

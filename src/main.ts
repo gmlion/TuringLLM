@@ -1,13 +1,17 @@
 import { resolve } from "path";
-import { mkdirSync, copyFileSync, readdirSync } from "fs";
-import { getSystemPrompt, getUserPrompt } from "./prompt.js";
-import { runCycle } from "./llm.js";
+import { mkdirSync, copyFileSync, readFileSync, writeFileSync, readdirSync } from "fs";
+import { createInterface } from "readline";
+import { runCycle as runCycleClaudeCode } from "./providers/claude-code.js";
+import { runCycle as runCycleApi } from "./providers/api.js";
+import { initLog, log, getLogPath } from "./logger.js";
 
 const BASE_DIR = process.cwd();
 const MEMORY_PATH = resolve(BASE_DIR, "MEMORY.md");
 const INSTRUCTIONS_PATH = resolve(BASE_DIR, "INSTRUCTIONS.md");
 const HISTORY_DIR = resolve(BASE_DIR, "history");
 const MAX_CYCLES = 100;
+
+const PROVIDER = process.env.TURING_PROVIDER || "claude-code";
 
 function getStartCycle(): number {
   try {
@@ -33,38 +37,112 @@ function snapshot(cycle: number) {
   copyFileSync(INSTRUCTIONS_PATH, resolve(dir, "INSTRUCTIONS.md"));
 }
 
+function readFile(path: string): string {
+  try {
+    return readFileSync(path, "utf-8");
+  } catch {
+    return "";
+  }
+}
+
+function getMemoryState(): string {
+  const memory = readFile(MEMORY_PATH);
+  const match = memory.match(/^## State\n(.+)/m);
+  return match ? match[1].trim() : "";
+}
+
+function getMemoryQuestion(): string {
+  const memory = readFile(MEMORY_PATH);
+  const match = memory.match(/^## Question\n([\s\S]*?)(?=\n## |\s*$)/m);
+  return match ? match[1].trim() : "";
+}
+
+async function askUser(question: string): Promise<string> {
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  return new Promise((resolve) => {
+    log("");
+    rl.question(`  [user input needed] ${question}\n  > `, (answer) => {
+      rl.close();
+      resolve(answer);
+    });
+  });
+}
+
+async function handleUserInteraction(): Promise<void> {
+  const question = getMemoryQuestion();
+  const answer = await askUser(question || "(the machine is asking for input but provided no question)");
+  log(`  [user answered] ${answer}`);
+
+  const memory = readFile(MEMORY_PATH);
+  const updated = memory
+    .replace(/^(## State\n).+/m, "$1user_responded")
+    .replace(/^## Answer\n[\s\S]*?(?=\n## |\s*$)/m, "")
+    + `\n## Answer\n${answer}\n`;
+  writeFileSync(MEMORY_PATH, updated, "utf-8");
+}
+
+async function runCycle(instructionsPath: string, memoryPath: string) {
+  switch (PROVIDER) {
+    case "claude-code":
+      return runCycleClaudeCode(instructionsPath, memoryPath);
+    case "api":
+      return runCycleApi(instructionsPath, memoryPath);
+    default:
+      throw new Error(`Unknown provider: ${PROVIDER}. Use "claude-code" or "api".`);
+  }
+}
+
 async function main() {
-  console.log("Turing machine starting");
-  console.log(`  MEMORY:       ${MEMORY_PATH}`);
-  console.log(`  INSTRUCTIONS: ${INSTRUCTIONS_PATH}`);
+  initLog(BASE_DIR);
+
+  log("Turing machine starting");
+  log(`  Provider:     ${PROVIDER}`);
+  log(`  MEMORY:       ${MEMORY_PATH}`);
+  log(`  INSTRUCTIONS: ${INSTRUCTIONS_PATH}`);
+  log(`  Log:          ${getLogPath()}`);
 
   mkdirSync(HISTORY_DIR, { recursive: true });
 
   const startCycle = getStartCycle();
-  console.log(`  Resuming from cycle ${startCycle}`);
-  console.log();
-
-  const systemPrompt = getSystemPrompt();
+  log(`  Resuming from cycle ${startCycle}`);
+  log("");
 
   for (let cycle = startCycle; cycle < startCycle + MAX_CYCLES; cycle++) {
-    snapshot(cycle);
-    console.log(`--- Cycle ${cycle} ---`);
+    if (getMemoryState() === "waiting_for_user") {
+      log(`--- Cycle ${cycle} (user interaction) ---`);
+      snapshot(cycle);
+      await handleUserInteraction();
+      log("");
+      continue;
+    }
 
-    const userPrompt = getUserPrompt(MEMORY_PATH, INSTRUCTIONS_PATH);
-    const result = await runCycle(systemPrompt, userPrompt, INSTRUCTIONS_PATH, MEMORY_PATH);
+    snapshot(cycle);
+    log(`--- Cycle ${cycle} ---`);
+
+    const result = await runCycle(INSTRUCTIONS_PATH, MEMORY_PATH);
 
     if (result.halt) {
       snapshot(cycle + 1);
-      console.log(`\nMachine halted: ${result.haltMessage}`);
+      log(`\nMachine halted: ${result.haltMessage}`);
       return;
     }
-    console.log();
+
+    if (getMemoryState() === "waiting_for_user") {
+      await handleUserInteraction();
+    }
+
+    log("");
   }
 
-  console.log(`\nMax cycles (${MAX_CYCLES}) reached — halting.`);
+  log(`\nMax cycles (${MAX_CYCLES}) reached — halting.`);
 }
 
 main().catch((err) => {
+  if (err?.name === "QuotaExceededError") {
+    log(`\nQuota exceeded — pausing. Resume anytime by running this instance again.`);
+    log(`  ${err.message}`);
+    process.exit(0);
+  }
   console.error("Fatal error:", err);
   process.exit(1);
 });
