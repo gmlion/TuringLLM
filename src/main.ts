@@ -1,11 +1,7 @@
 import { resolve } from "path";
 import { mkdirSync, copyFileSync, readdirSync } from "fs";
-import {
-  getPlanSystemPrompt,
-  getExecuteSystemPrompt,
-  getUserPrompt,
-} from "./prompt.js";
-import { runPlanPhase, runExecutePhase } from "./llm.js";
+import { getSystemPrompt, getUserPrompt } from "./prompt.js";
+import { runCycle } from "./llm.js";
 
 const BASE_DIR = process.cwd();
 const MEMORY_PATH = resolve(BASE_DIR, "MEMORY.md");
@@ -18,7 +14,7 @@ function getStartCycle(): number {
     const entries = readdirSync(HISTORY_DIR);
     let max = 0;
     for (const entry of entries) {
-      const match = entry.match(/^(\d+)-/);
+      const match = entry.match(/^(\d+)/);
       if (match) {
         const num = parseInt(match[1], 10);
         if (num > max) max = num;
@@ -30,8 +26,8 @@ function getStartCycle(): number {
   }
 }
 
-function snapshotCycle(cycle: number, phase: string) {
-  const dir = resolve(HISTORY_DIR, `${String(cycle).padStart(4, "0")}-${phase}`);
+function snapshot(cycle: number) {
+  const dir = resolve(HISTORY_DIR, String(cycle).padStart(4, "0"));
   mkdirSync(dir, { recursive: true });
   copyFileSync(MEMORY_PATH, resolve(dir, "MEMORY.md"));
   copyFileSync(INSTRUCTIONS_PATH, resolve(dir, "INSTRUCTIONS.md"));
@@ -41,7 +37,6 @@ async function main() {
   console.log("Turing machine starting");
   console.log(`  MEMORY:       ${MEMORY_PATH}`);
   console.log(`  INSTRUCTIONS: ${INSTRUCTIONS_PATH}`);
-  console.log();
 
   mkdirSync(HISTORY_DIR, { recursive: true });
 
@@ -49,28 +44,17 @@ async function main() {
   console.log(`  Resuming from cycle ${startCycle}`);
   console.log();
 
+  const systemPrompt = getSystemPrompt();
+
   for (let cycle = startCycle; cycle < startCycle + MAX_CYCLES; cycle++) {
+    snapshot(cycle);
     console.log(`--- Cycle ${cycle} ---`);
 
-    // PLAN phase
-    snapshotCycle(cycle, "pre-plan");
-    const planPrompt = getUserPrompt(MEMORY_PATH, INSTRUCTIONS_PATH);
-    console.log("  [PLAN]");
-    await runPlanPhase(getPlanSystemPrompt(), planPrompt, INSTRUCTIONS_PATH);
-
-    // EXECUTE phase
-    snapshotCycle(cycle, "pre-exec");
-    const execPrompt = getUserPrompt(MEMORY_PATH, INSTRUCTIONS_PATH);
-    console.log("  [EXECUTE]");
-    const result = await runExecutePhase(
-      getExecuteSystemPrompt(),
-      execPrompt,
-      INSTRUCTIONS_PATH,
-      MEMORY_PATH
-    );
+    const userPrompt = getUserPrompt(MEMORY_PATH, INSTRUCTIONS_PATH);
+    const result = await runCycle(systemPrompt, userPrompt, INSTRUCTIONS_PATH, MEMORY_PATH);
 
     if (result.halt) {
-      snapshotCycle(cycle, "final");
+      snapshot(cycle + 1);
       console.log(`\nMachine halted: ${result.haltMessage}`);
       return;
     }

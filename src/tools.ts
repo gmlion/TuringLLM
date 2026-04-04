@@ -9,32 +9,12 @@ export type ToolResult = {
   error: boolean;
 };
 
-// Plan phase: can only rewrite INSTRUCTIONS.md
-export function getPlanTools(instructionsPath: string): Anthropic.Tool[] {
-  return [
-    {
-      name: "update_instructions",
-      description: `Rewrite INSTRUCTIONS.md with the new plan. You must call this every cycle.`,
-      input_schema: {
-        type: "object" as const,
-        properties: {
-          content: {
-            type: "string",
-            description: "The complete new contents of INSTRUCTIONS.md",
-          },
-        },
-        required: ["content"],
-      },
-    },
-  ];
-}
-
-// Execute phase: can run bash, write files, update instructions, or halt
-export function getExecuteTools(): Anthropic.Tool[] {
+export function getTools(): Anthropic.Tool[] {
   return [
     {
       name: "bash",
-      description: "Run a shell command. Returns stdout and stderr. Do NOT use heredocs to create files — use the write_file tool instead.",
+      description:
+        "Run a shell command. Returns stdout and stderr. Do NOT use heredocs to create files — use write_file instead.",
       input_schema: {
         type: "object" as const,
         properties: {
@@ -48,7 +28,8 @@ export function getExecuteTools(): Anthropic.Tool[] {
     },
     {
       name: "write_file",
-      description: "Write content to a file. Creates parent directories if needed. Use this instead of bash heredocs for creating files.",
+      description:
+        "Write content to a file. Creates parent directories if needed. Use this for authoring files (HTML, CSS, scripts). Do not use bash heredocs.",
       input_schema: {
         type: "object" as const,
         properties: {
@@ -67,7 +48,7 @@ export function getExecuteTools(): Anthropic.Tool[] {
     {
       name: "update_instructions",
       description:
-        "Rewrite INSTRUCTIONS.md. Use this to decompose an abstract instruction into finer-grained sub-instructions, or to add verification and next-step instructions after executing.",
+        "Rewrite INSTRUCTIONS.md with the complete new contents.",
       input_schema: {
         type: "object" as const,
         properties: {
@@ -82,7 +63,7 @@ export function getExecuteTools(): Anthropic.Tool[] {
     {
       name: "halt",
       description:
-        "Stop the machine. Call this when the program has reached its goal or cannot make further progress.",
+        "Stop the machine. Call when the program has reached its goal or cannot make further progress.",
       input_schema: {
         type: "object" as const,
         properties: {
@@ -97,52 +78,17 @@ export function getExecuteTools(): Anthropic.Tool[] {
   ];
 }
 
-export function executePlanTool(
-  name: string,
-  input: Record<string, unknown>,
-  instructionsPath: string
-): ToolResult {
-  if (name === "update_instructions") {
-    writeFileSync(instructionsPath, String(input.content ?? ""), "utf-8");
-    console.log(`  [update_instructions]`);
-    return { output: "OK", halt: false, error: false };
-  }
-  return { output: `Unknown tool: ${name}`, halt: false, error: true };
-}
-
-export function executeExecTool(
+export function executeTool(
   name: string,
   input: Record<string, unknown>,
   instructionsPath: string
 ): ToolResult {
   switch (name) {
-    case "update_instructions": {
-      writeFileSync(instructionsPath, String(input.content ?? ""), "utf-8");
-      console.log(`  [update_instructions] (decompose)`);
-      return { output: "OK", halt: false, error: false };
-    }
-    case "write_file": {
-      const path = String(input.path ?? "");
-      const content = String(input.content ?? "");
-      if (!path) {
-        return { output: "Error: no path provided", halt: false, error: true };
-      }
-      try {
-        mkdirSync(dirname(path), { recursive: true });
-        writeFileSync(path, content, "utf-8");
-        console.log(`  [write_file] ${path}`);
-        return { output: "OK", halt: false, error: false };
-      } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : String(err);
-        console.log(`  [write_file] ${path} (failed)`);
-        return { output: `Error writing file: ${msg}`, halt: false, error: true };
-      }
-    }
     case "bash": {
       const command = typeof input.command === "string" ? input.command : String(input.command ?? "");
       if (!command) {
         console.log(`  [bash] ERROR: empty command. Input keys: ${Object.keys(input).join(", ")}`);
-        return { output: "Error: no command provided. The bash tool requires a 'command' string parameter.", halt: false, error: true };
+        return { output: "Error: no command provided.", halt: false, error: true };
       }
       const preview = command.length > 120 ? command.slice(0, 120) + "..." : command;
       try {
@@ -158,11 +104,31 @@ export function executeExecTool(
         const stderr = e.stderr ?? "";
         const output = `exit code ${e.status ?? 1}\nstdout: ${e.stdout ?? ""}\nstderr: ${stderr}`;
         console.log(`  [bash] ${preview} (failed)`);
-        // Only retry on shell syntax errors (malformed heredocs, bad substitutions, etc.)
-        // Normal command failures (exit code != 0) are valid results, not retryable errors
         const isSyntaxError = /syntax error|unexpected EOF|here-document|bad substitution/i.test(stderr);
         return { output, halt: false, error: isSyntaxError };
       }
+    }
+    case "write_file": {
+      const path = String(input.path ?? "");
+      const content = String(input.content ?? "");
+      if (!path) {
+        return { output: "Error: no path provided", halt: false, error: true };
+      }
+      try {
+        mkdirSync(dirname(path), { recursive: true });
+        writeFileSync(path, content, "utf-8");
+        console.log(`  [write_file] ${path}`);
+        return { output: "OK", halt: false, error: false };
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.log(`  [write_file] ${path} (failed)`);
+        return { output: `Error: ${msg}`, halt: false, error: true };
+      }
+    }
+    case "update_instructions": {
+      writeFileSync(instructionsPath, String(input.content ?? ""), "utf-8");
+      console.log(`  [update_instructions]`);
+      return { output: "OK", halt: false, error: false };
     }
     case "halt": {
       const message = String(input.message ?? "halted");

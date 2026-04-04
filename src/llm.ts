@@ -1,12 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { readFileSync } from "fs";
-import {
-  getPlanTools,
-  getExecuteTools,
-  executePlanTool,
-  executeExecTool,
-} from "./tools.js";
-import type { ToolResult } from "./tools.js";
+import { getTools, executeTool } from "./tools.js";
 
 const client = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -27,20 +21,21 @@ function readFile(path: string): string {
   }
 }
 
-async function invoke(
+export async function runCycle(
   systemPrompt: string,
   userPrompt: string,
-  tools: Anthropic.Tool[],
-  handleToolUse: (name: string, input: Record<string, unknown>) => ToolResult,
-  watchFiles?: string[]
+  instructionsPath: string,
+  memoryPath: string
 ): Promise<CycleResult> {
+  const tools = getTools();
+  const watchFiles = [memoryPath, instructionsPath];
+  const filesBefore = watchFiles.map((f) => readFile(f));
+
   const messages: Anthropic.MessageParam[] = [
     { role: "user", content: userPrompt },
   ];
 
-  const filesBefore = watchFiles?.map((f) => readFile(f));
-
-  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+  for (let attempt = 0; ; attempt++) {
     const response = await client.messages.create({
       model: "claude-haiku-4-5-20251001",
       max_tokens: 16384,
@@ -63,16 +58,16 @@ async function invoke(
       return { halt: false };
     }
 
-    // Execute all tool calls
     const toolResults: Anthropic.ToolResultBlockParam[] = [];
     let hasError = false;
     let halted = false;
     let haltMessage = "";
 
     for (const toolUse of toolUses) {
-      const result = handleToolUse(
+      const result = executeTool(
         toolUse.name,
-        toolUse.input as Record<string, unknown>
+        toolUse.input as Record<string, unknown>,
+        instructionsPath
       );
       toolResults.push({
         type: "tool_result",
@@ -93,73 +88,54 @@ async function invoke(
       return { halt: true, haltMessage };
     }
 
-    // Check if any tool errored — retry with error feedback
+    // Retry on tool errors (syntax errors, empty commands)
     if (hasError) {
-      if (attempt < MAX_RETRIES) {
-        console.log(`  [retry ${attempt + 1}/${MAX_RETRIES}] tool call error, feeding back`);
-        messages.push({ role: "assistant", content: response.content });
-        messages.push({ role: "user", content: toolResults });
-        continue;
-      }
-      console.log(`  [error] tool calls failed after ${MAX_RETRIES} retries`);
-      return { halt: false };
+      console.log(`  [retry ${attempt + 1}] tool error, feeding back`);
+      messages.push({ role: "assistant", content: response.content });
+      messages.push({ role: "user", content: toolResults });
+      continue;
     }
 
-    // Check if watched files changed — if not, the cycle is incomplete
-    if (watchFiles && filesBefore) {
-      const filesAfter = watchFiles.map((f) => readFile(f));
-      const anyChanged = filesBefore.some((before, i) => before !== filesAfter[i]);
+    // Check cycle completeness
+    const memoryAfter = readFile(memoryPath);
+    const instructionsAfter = readFile(instructionsPath);
+    const memoryChanged = memoryAfter !== filesBefore[0];
+    const instructionsChanged = instructionsAfter !== filesBefore[1];
 
-      if (!anyChanged) {
-        if (attempt < MAX_RETRIES) {
-          console.log(`  [retry ${attempt + 1}/${MAX_RETRIES}] no state change, feeding results back`);
-          messages.push({ role: "assistant", content: response.content });
-          messages.push({
-            role: "user",
-            content: [
-              ...toolResults,
-              {
-                type: "text" as const,
-                text: "Your tool calls executed successfully (results above), but you did not update MEMORY.md or INSTRUCTIONS.md. The cycle is incomplete — the machine will stall if you don't advance the state. Please call bash to write MEMORY.md with the new state and results, and call update_instructions with verification and next steps.",
-              },
-            ],
-          });
-          continue;
-        }
-        console.log(`  [warn] executor made no state change after ${MAX_RETRIES} retries`);
-      }
+    // Extract the new state from MEMORY
+    const stateMatch = memoryAfter.match(/^## State\n(.+)/m);
+    const newState = stateMatch ? stateMatch[1].trim() : "";
+
+    // Check if INSTRUCTIONS has a condition matching the new state
+    const hasMatchingInstruction = newState === "done" ||
+      instructionsAfter.includes(`state is "${newState}"`) ||
+      instructionsAfter.includes(`state is "${newState}"`);
+
+    let problem = "";
+    if (!memoryChanged && !instructionsChanged) {
+      problem = "You did not update MEMORY.md or INSTRUCTIONS.md. The cycle is incomplete.";
+    } else if (memoryChanged && !hasMatchingInstruction) {
+      problem = `You updated MEMORY state to "${newState}" but INSTRUCTIONS.md has no instruction with a matching condition. The machine will stall. You must call update_instructions to add instructions that match the new state.`;
+    }
+
+    if (problem) {
+      console.log(`  [retry ${attempt + 1}] ${memoryChanged ? "orphan state" : "no state change"}`);
+      messages.push({ role: "assistant", content: response.content });
+      messages.push({
+        role: "user",
+        content: [
+          ...toolResults,
+          {
+            type: "text" as const,
+            text: `Tool calls executed (results above), but: ${problem} You MUST update both MEMORY.md (via bash) and INSTRUCTIONS.md (via update_instructions).`,
+          },
+        ],
+      });
+      continue;
     }
 
     return { halt: false };
   }
 
   return { halt: false };
-}
-
-export async function runPlanPhase(
-  systemPrompt: string,
-  userPrompt: string,
-  instructionsPath: string
-): Promise<void> {
-  await invoke(
-    systemPrompt,
-    userPrompt + "\n\nPLAN PHASE: Rewrite INSTRUCTIONS.md with your updated plan.",
-    getPlanTools(instructionsPath),
-    (name, input) => executePlanTool(name, input, instructionsPath)
-  );
-}
-
-export async function runExecutePhase(
-  systemPrompt: string,
-  userPrompt: string,
-  instructionsPath: string,
-  memoryPath: string
-): Promise<CycleResult> {
-  return invoke(
-    systemPrompt,
-    userPrompt + "\n\nEXECUTE PHASE: Find the first matching instruction and handle it.",
-    getExecuteTools(),
-    (name, input) => executeExecTool(name, input, instructionsPath),
-    [memoryPath, instructionsPath]
-  );
 }

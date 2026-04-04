@@ -16,18 +16,44 @@ fi
 
 mkdir -p "$DIR"
 
-cat > "$DIR/INSTRUCTIONS.md" << 'EOF'
+cat > "$DIR/PROGRAM.md" << 'EOF'
 # Goal
 (describe the goal here)
 
+## Step 1: (first high-level step)
+(describe what to do)
+
+## Step 2: (second high-level step)
+(describe what to do)
+EOF
+
+cat > "$DIR/INSTRUCTIONS.md" << 'INSTEOF'
+# Strategy
+
+These strategy instructions must be preserved at the top of INSTRUCTIONS.md every time it is rewritten. They are the interpreter that runs the program in PROGRAM.md.
+
 ## Instruction: Initialize
 **Condition:** MEMORY state is "empty"
-**Action:** Set MEMORY state to "started". Plan the first concrete step and add it as a new instruction.
+**Action:** Read PROGRAM.md to understand the goal. Set MEMORY state to "strategy_ready" with a note about the overall plan.
+
+## Instruction: Load next program step
+**Condition:** MEMORY state is "strategy_ready"
+**Action:** Read PROGRAM.md. Find the first step not marked done in MEMORY. Decompose it into 2-4 concrete sub-instructions. Write them below the strategy section in INSTRUCTIONS.md (keeping all strategy instructions above). Each action sub-instruction must be followed by a verification sub-instruction. The LAST sub-instruction must be:
+
+  ## Instruction: Return to strategy
+  **Condition:** MEMORY state is "<final_sub_state>"
+  **Action:** Mark the current program step as done in MEMORY. Set MEMORY state to "strategy_ready".
+
+If all steps in PROGRAM.md are done, set MEMORY state to "done" instead.
 
 ## Instruction: Finish
 **Condition:** MEMORY state is "done"
 **Action:** Call halt with a summary of what was accomplished.
-EOF
+
+# Program sub-instructions
+
+(none yet — the strategy will populate these)
+INSTEOF
 
 cat > "$DIR/MEMORY.md" << 'EOF'
 ## State
@@ -61,5 +87,5 @@ RUNEOF
 chmod +x "$DIR/run.sh"
 
 echo "Instance '$NAME' created at $DIR/"
-echo "  1. Edit $DIR/INSTRUCTIONS.md with your program"
+echo "  1. Edit $DIR/PROGRAM.md with your goal and high-level steps"
 echo "  2. Run:  $DIR/run.sh"
