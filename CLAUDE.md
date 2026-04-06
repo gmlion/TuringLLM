@@ -10,37 +10,48 @@ An LLM-powered universal Turing machine. A cycle loop invokes an LLM once per cy
 
 ```bash
 npm run build          # tsc → dist/
-./new-instance.sh foo  # creates instances/foo/ with PROGRAM.md, INSTRUCTIONS.md, MEMORY.md, run.sh
+./new-instance.sh foo                          # default interpreter
+./new-instance.sh foo interpreters/game-team   # custom interpreter
 # edit instances/foo/PROGRAM.md
-instances/foo/run.sh   # runs the machine (default: claude-code provider)
-TURING_PROVIDER=api instances/foo/run.sh  # use Anthropic SDK instead (needs ANTHROPIC_API_KEY)
+instances/foo/run.sh                           # run (default: claude-code provider)
+TURING_PROVIDER=api instances/foo/run.sh       # use Anthropic SDK instead
+./visualize.sh foo                             # launch web visualizer for an instance
 ```
 
 No test suite or linter configured. After TypeScript changes, always `npm run build` before running instances.
 
 ## Architecture — Three Layers
 
-**Shell** (`src/main.ts`) — Universal executor. Single cycle loop. Reads MEMORY state after each cycle to detect halt (`done`), user interaction (`waiting_for_user`), and cycle completeness. Snapshots MEMORY+INSTRUCTIONS to `history/` each cycle. Resumes from last cycle number on restart.
+**Shell** (`src/main.ts`) — Universal executor. Single cycle loop, no hardcoded phases. After each cycle: auto-commits via git, snapshots to history/, checks for halt/user-interaction/completeness. Retries if the LLM didn't advance state. Resumes from last cycle number on restart. Exits cleanly on quota exceeded.
 
-**Strategy** (default INSTRUCTIONS.md template in `new-instance.sh`) — Meta-program that interprets PROGRAM.md. Decomposes high-level steps into sub-instructions, ensures handback to strategy via a "Return to strategy" instruction after sub-steps complete. Strategy instructions live at the top of INSTRUCTIONS.md and must survive rewrites.
+**Strategy/Interpreter** (INSTRUCTIONS.md) — Meta-program that interprets PROGRAM.md. Different interpreters encode different execution strategies. Lives in `interpreters/<name>/` and is copied into instances on creation. The strategy section of INSTRUCTIONS.md must survive rewrites — only the `# Sub-instructions` section below it changes.
 
-**Program** (PROGRAM.md) — User-authored high-level goals and steps. Never modified by the machine.
+**Program** (PROGRAM.md) — User-authored goals. Never modified by the machine.
 
 ## Source Files
 
-- `src/main.ts` — Cycle loop, history snapshots, user interaction handling, provider dispatch
-- `src/prompt.ts` — System prompt (universal machine description) and user prompt construction (inlines MEMORY + INSTRUCTIONS)
-- `src/tools.ts` — Tool definitions (bash, write_file, update_instructions, halt) and execution for the API provider
-- `src/providers/api.ts` — Anthropic SDK provider. Manages tool call loop with retries: syntax errors feed back to LLM, orphan states (MEMORY changed but no matching instruction) trigger retry with feedback message
-- `src/providers/claude-code.ts` — Claude Code CLI provider. Invokes `claude --bare -p` per cycle. Retries externally by checking file changes after each invocation
+- `src/main.ts` — Cycle loop, git commits, history snapshots, user interaction handling, provider dispatch
+- `src/prompt.ts` — System prompt and user prompt construction (inlines MEMORY + INSTRUCTIONS)
+- `src/tools.ts` — Tool definitions (bash, write_file, git, update_instructions, halt) and execution for the API provider
+- `src/providers/api.ts` — Anthropic SDK provider. Manages tool call loop with unbounded retries on errors and incomplete cycles. Uses claude-haiku-4-5-20251001
+- `src/providers/claude-code.ts` — Claude Code CLI provider. Invokes `claude -p --model haiku --dangerously-skip-permissions` per cycle. Retries externally by checking file changes
 - `src/logger.ts` — Dual output: console gets summaries, `logs/run-<timestamp>.log` gets full untruncated output
-- `src/errors.ts` — `QuotaExceededError` for graceful exit on rate limits (process exits 0, resumable)
+- `src/errors.ts` — QuotaExceededError for graceful pause on rate limits (exit 0, resumable)
+- `src/git.ts` — Two git repos per instance: machine git (instance root, auto-commits per cycle) and project git (workspace/, LLM-controlled)
+- `src/server.ts` — Static file server for the visualizer
+
+## Two Git Repos Per Instance
+
+- **Machine git** (instance root) — Hardwired. Auto-commits all files after each cycle. Commit message: `cycle N: <state>`. History dirs include the short hash: `history/0042-a3f1b2c/`. Tracks MEMORY, INSTRUCTIONS, and workspace changes.
+- **Project git** (`workspace/`) — LLM-controlled via the `git` tool. The LLM can branch, commit, diff, checkout freely. Used by interpreters like karpathy-loop for exploring alternative approaches.
+
+The machine git ignores `workspace/.git/` so nested repos don't conflict.
 
 ## Provider Differences
 
-**API provider** (`TURING_PROVIDER=api`): Custom tools (bash, write_file, update_instructions, halt). The shell manages the tool call loop, feeds errors back, detects orphan states. Uses `claude-haiku-4-5-20251001`.
+**API provider** (`TURING_PROVIDER=api`): Custom tools (bash, write_file, git, update_instructions, halt). The shell manages the tool call loop. Retries are unbounded for both tool errors and incomplete cycles (no state change, orphan state).
 
-**Claude Code provider** (`TURING_PROVIDER=claude-code`, default): Invokes `claude --bare -p --dangerously-skip-permissions` as a subprocess. Uses Claude Code's built-in tools (Bash, Write, Edit, Read). The shell only checks file changes after each invocation — it cannot intercept mid-execution.
+**Claude Code provider** (`TURING_PROVIDER=claude-code`, default): Invokes `claude -p --model haiku --dangerously-skip-permissions` as a subprocess with `--output-format json`. Uses built-in tools (Bash, Write, Edit, Read). The shell checks file changes after each invocation and retries if no progress.
 
 ## Well-Known States
 
@@ -48,12 +59,33 @@ The shell intercepts these MEMORY states:
 - `done` — halts the machine
 - `waiting_for_user` — prompts user via stdin, writes answer to `## Answer` in MEMORY, sets state to `user_responded`
 
-## Retry Mechanisms (API provider)
+## Interpreters
 
-Retries within a cycle are unbounded. Two types:
-1. **Tool errors** (bash syntax errors, empty commands): error fed back as `is_error: true` tool result
-2. **Orphan state**: MEMORY state changed but INSTRUCTIONS has no matching condition — feedback message tells LLM to call `update_instructions`
-3. **No state change**: neither MEMORY nor INSTRUCTIONS modified — feedback message tells LLM the cycle is incomplete
+Interpreters live in `interpreters/<name>/`. Each has an `INSTRUCTIONS.md` and optional supporting `*.md` files (role descriptions, etc.).
+
+### Existing interpreters
+
+- **default** (no argument to new-instance.sh) — Step-by-step executor. Reads PROGRAM.md steps, decomposes each into sub-instructions with verification.
+- **`interpreters/game-team`** — Game dev team simulation. Six roles (team lead, architect, game designer, developer, 2D artist, UI/UX). Gathers opinions per feature, synthesizes, decomposes into sub-steps. Interactive — asks user when specs are unclear. Has a feature planning loop that reassesses the backlog after each feature.
+- **`interpreters/karpathy-loop`** — Tight code→test→fix→evaluate loop. No upfront planning. Supports breadth-first branching: when multiple approaches are viable, creates git branches and explores them round-robin before comparing and picking a winner.
+
+### Creating a new interpreter
+
+An interpreter's INSTRUCTIONS.md must:
+
+1. **Preserve the strategy section**: Start with `IMPORTANT: Everything between "# Strategy" and "# Sub-instructions" must be copied VERBATIM into every update_instructions call.`
+
+2. **Have a clear boundary**: `# Strategy` at the top, `# Sub-instructions` at the bottom. Only the sub-instructions section changes during execution.
+
+3. **Initialize**: An instruction (condition: state is "empty") that reads PROGRAM.md and bootstraps state.
+
+4. **State machine with handback**: Instructions form a state machine. Every path through the machine must eventually return to a "pick next" or "evaluate" state that reads PROGRAM.md for the next step. Without handback, the machine stalls after completing work.
+
+5. **Decompose → execute → verify**: When work needs to happen, decompose into sub-instructions. Each action must be followed by verification. The last sub-instruction returns to the strategy.
+
+6. **Finish**: An instruction (condition: state is "done") that calls halt.
+
+Supporting `.md` files (role descriptions, templates) are copied into the instance alongside INSTRUCTIONS.md. Reference them by filename in your instructions.
 
 ## Instance Layout
 
@@ -62,8 +94,10 @@ instances/foo/
 ├── PROGRAM.md         # User's program (read-only to machine)
 ├── INSTRUCTIONS.md    # Strategy + generated sub-instructions
 ├── MEMORY.md          # Current state
+├── workspace/         # Project artifacts (has its own git repo)
 ├── run.sh             # Launch script
 ├── .api_key           # Cached API key (gitignored)
-├── history/0001/      # Snapshot per cycle
-└── logs/              # Full run logs
+├── .gitignore         # Ignores .api_key, logs/, history/, workspace/.git/
+├── history/           # Snapshot per cycle (0001-a3f1b2c/)
+└── logs/              # Full run logs (run-<timestamp>.log)
 ```

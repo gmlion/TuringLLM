@@ -11,51 +11,32 @@ An LLM-powered universal Turing machine.
 │  PROGRAM.md          INSTRUCTIONS.md         MEMORY.md      │
 │  ┌─────────────┐    ┌──────────────────┐    ┌───────────┐  │
 │  │ # Goal      │    │ # Strategy       │    │ ## State   │  │
-│  │             │    │                  │    │ current    │  │
-│  │ ## Step 1   │◄───│ Initialize       │    │            │  │
-│  │ ## Step 2   │    │ Load next step   │───►│ ## History │  │
-│  │ ## Step 3   │    │ Finish           │    │ ...        │  │
-│  │ ...         │    │                  │    └───────────┘  │
-│  └─────────────┘    │ # Sub-instructions│         ▲        │
-│   (user-authored)   │ (generated)       │         │        │
-│                     └──────────────────┘         │        │
-│                              ▲                    │        │
-│                              │                    │        │
-│                              └────────┬───────────┘        │
-│                                       │                    │
-└───────────────────────────────────────┼────────────────────┘
-                                        │
-                    ┌───────────────────────────────────────┐
-                    │              SHELL (main.ts)          │
-                    │                                       │
-                    │  for each cycle:                      │
-                    │    snapshot history                    │
-                    │    read MEMORY + INSTRUCTIONS          │
-                    │    invoke LLM ◄──────────────────┐    │
-                    │    execute tool calls             │    │
-                    │    check completeness ────────────┘    │
-                    │      retry if:                    │    │
-                    │        - tool syntax error        │    │
-                    │        - no state change          │    │
-                    │        - orphan state             │    │
-                    │    if halt → stop                      │
-                    │                                       │
-                    └───────────────────────────────────────┘
-                                        │
-                    ┌───────────────────────────────────────┐
-                    │              LLM (one invocation)     │
-                    │                                       │
-                    │  Tools:                               │
-                    │    bash         — run commands         │
-                    │    write_file   — author files         │
-                    │    update_instructions — rewrite plan  │
-                    │    halt         — stop machine         │
-                    │                                       │
-                    │  Reads:  MEMORY state                 │
-                    │  Matches: first instruction by state  │
-                    │  Decides: execute or decompose        │
-                    │                                       │
-                    └───────────────────────────────────────┘
+│  │             │    │ (interpreter)    │    │ current    │  │
+│  │ (user-      │◄───│                  │    │            │  │
+│  │  authored)  │    │ # Sub-instruct.  │───►│ ## Result  │  │
+│  │             │    │ (generated)      │    │ ...        │  │
+│  └─────────────┘    └──────────────────┘    └───────────┘  │
+│                                                             │
+│  workspace/          history/                logs/           │
+│  ┌─────────────┐    ┌──────────────────┐    ┌───────────┐  │
+│  │ (project    │    │ 0001-a3f1b2c/    │    │ run-*.log │  │
+│  │  artifacts, │    │ 0002-b4e2c3d/    │    │ (full     │  │
+│  │  own git    │    │ ...              │    │  output)  │  │
+│  │  repo)      │    │                  │    │           │  │
+│  └─────────────┘    └──────────────────┘    └───────────┘  │
+└─────────────────────────────────────────────────────────────┘
+                              │
+              ┌───────────────┼───────────────┐
+              │               │               │
+              ▼               ▼               ▼
+        ┌──────────┐   ┌──────────┐   ┌──────────────┐
+        │ Machine  │   │  Shell   │   │   Provider   │
+        │ Git      │   │ main.ts  │   │ claude-code  │
+        │ (auto-   │   │ (cycle   │   │ or api       │
+        │  commit  │   │  loop,   │   │ (LLM invoc.) │
+        │  per     │   │  retry,  │   │              │
+        │  cycle)  │   │  halt)   │   │              │
+        └──────────┘   └──────────┘   └──────────────┘
 ```
 
 ## Three-Layer Design
@@ -64,44 +45,37 @@ An LLM-powered universal Turing machine.
 ┌──────────────────────────────────────────────────┐
 │  PROGRAM.md (user layer)                         │
 │                                                  │
-│  High-level goals and steps.                     │
-│  Written by the user. Never modified by the      │
-│  machine. Read by the strategy to determine      │
-│  what to do next.                                │
+│  High-level goals. Written by user.              │
+│  Never modified by the machine.                  │
 ├──────────────────────────────────────────────────┤
-│  INSTRUCTIONS.md (strategy + working layer)      │
+│  INSTRUCTIONS.md (interpreter layer)             │
 │                                                  │
-│  Strategy: meta-instructions that interpret       │
-│  PROGRAM.md. They read the next program step,    │
-│  decompose it into sub-instructions, and         │
-│  ensure a handback when sub-steps complete.      │
+│  # Strategy section: immutable meta-program      │
+│  that interprets PROGRAM.md. Survives rewrites.  │
 │                                                  │
-│  Sub-instructions: concrete steps generated      │
-│  by the strategy. Execute → verify → next.       │
-│  The last sub-instruction always returns          │
-│  control to the strategy.                        │
+│  # Sub-instructions section: mutable working     │
+│  area. Generated and consumed each cycle.        │
 ├──────────────────────────────────────────────────┤
 │  Shell (universal executor)                      │
 │                                                  │
-│  Single cycle loop. Model-agnostic.              │
-│  Reads state, invokes LLM, retries on            │
-│  incomplete cycles. No hardcoded phases.         │
+│  Single cycle loop. Invokes LLM, retries on      │
+│  incomplete cycles, auto-commits, snapshots.     │
+│  No hardcoded phases — the interpreter decides.  │
 └──────────────────────────────────────────────────┘
 ```
 
-## Cycle Flow
+## Cycle Flow (default interpreter)
 
 ```
     ┌──────────┐
     │  empty   │
     └────┬─────┘
-         │ Initialize: read PROGRAM.md
+         │ Initialize
          ▼
     ┌──────────────┐
     │strategy_ready│◄─────────────────────────────┐
     └────┬─────────┘                               │
-         │ Load next step: read PROGRAM.md,        │
-         │ decompose into sub-instructions         │
+         │ Load next step from PROGRAM.md          │
          ▼                                         │
     ┌──────────┐                                   │
     │ sub-step │                                   │
@@ -109,22 +83,10 @@ An LLM-powered universal Turing machine.
     └────┬─────┘                                   │
          │ verify                                  │
          ▼                                         │
-    ┌──────────┐                                   │
-    │ sub-step │                                   │
-    │ verified │                                   │
-    └────┬─────┘                                   │
-         │ ... more sub-steps ...                  │
-         ▼                                         │
     ┌───────────────────┐                          │
     │ Return to strategy│──────────────────────────┘
-    │ mark step done    │
     └───────────────────┘
-         │ (when all program steps done)
-         ▼
-    ┌──────────┐
-    │   done   │
-    └────┬─────┘
-         │ Finish: halt
+         │ (all steps done)
          ▼
     ┌──────────┐
     │  HALTED  │
@@ -137,86 +99,133 @@ An LLM-powered universal Turing machine.
     LLM emits tool calls
          │
          ▼
-    Execute all tools
+    Execute tools
          │
-         ├─── tool syntax error? ──► feed error back, retry
+         ├─── tool error? ──► feed error back, retry (unbounded)
          │
-         ├─── no state change? ──► feed results + nudge, retry
+         ├─── no state change? ──► feed results + nudge, retry (unbounded)
          │
-         ├─── orphan state? ──► feed "no matching instruction"
-         │    (MEMORY changed but         message, retry
-         │     INSTRUCTIONS has no
-         │     matching condition)
+         ├─── orphan state? ──► "no matching instruction", retry (unbounded)
          │
-         └─── all good ──► cycle complete
+         └─── all good ──► git commit ──► snapshot ──► next cycle
 ```
 
 ## Usage
 
 ```bash
-# Create a new instance with the default interpreter
-./new-instance.sh my-project
+# Build
+npm run build
 
-# Create an instance with a custom interpreter
-./new-instance.sh my-game interpreters/game-team
+# Create instances
+./new-instance.sh my-project                          # default interpreter
+./new-instance.sh my-game interpreters/game-team      # game dev team
+./new-instance.sh my-proto interpreters/karpathy-loop # tight code-test-fix loop
 
 # Edit the program
 vim instances/my-project/PROGRAM.md
 
-# Run (default: claude-code provider)
+# Run (default: claude-code provider with Haiku)
 instances/my-project/run.sh
 
-# Run with API provider
+# Run with Anthropic SDK provider
 TURING_PROVIDER=api instances/my-project/run.sh
+
+# Visualize a running or completed instance
+./visualize.sh my-project
 ```
+
+Instances are resumable. Stop anytime (Ctrl+C or quota exceeded) and restart with `run.sh` — the cycle counter picks up where it left off.
 
 ## Interpreters
 
-An interpreter is a reusable strategy that defines how PROGRAM.md gets executed. It lives in `interpreters/<name>/` and contains:
-
-- `INSTRUCTIONS.md` (required) — The strategy instructions, copied into the instance on creation
-- `*.md` (optional) — Supporting files (role descriptions, templates, etc.), also copied into the instance
-
-### Creating a new interpreter
-
-An interpreter's INSTRUCTIONS.md must follow these patterns:
-
-1. **Strategy preservation**: Start with a comment saying these instructions must be preserved on every rewrite.
-
-2. **Initialize → strategy_ready**: An Initialize instruction that reads PROGRAM.md and sets up initial state.
-
-3. **Step loading loop**: A "pick next step" instruction (condition: `strategy_ready`) that reads PROGRAM.md, finds the next incomplete step, and either decomposes it or sets state to `done`.
-
-4. **Decompose → execute → verify**: When a step (or feature) is ready to implement, decompose it into concrete sub-instructions. Each action must be followed by a verification. The pattern:
-   - Action instruction (creates/modifies something)
-   - Verify instruction (checks it actually worked)
-   - ... more action/verify pairs ...
-   - Return instruction (marks step done, sets state back to `strategy_ready`)
-
-5. **Handback**: The last sub-instruction must always return control to the strategy by setting state to `strategy_ready`. Without this, the machine stalls after completing sub-steps.
-
-6. **Finish**: A Finish instruction (condition: `done`) that calls halt.
+An interpreter defines how PROGRAM.md gets executed. It's a reusable strategy that lives in `interpreters/<name>/`.
 
 ### Built-in interpreters
 
-- **default** (no argument) — Generic step-by-step executor. Reads PROGRAM.md steps, decomposes each into sub-instructions with verification.
-- **`interpreters/game-team`** — Simulates a game dev team. For each feature: gathers opinions from architect, game designer, developer, 2D artist, and UI/UX expert, then synthesizes into an implementation plan before decomposing into executable sub-steps. Can ask the user for clarification when specs are ambiguous.
-- **`interpreters/karpathy-loop`** — Tight code-test-fix loop. No upfront planning. Writes the smallest possible change, runs it immediately, looks at actual output, fixes errors, evaluates progress, repeats. Ideal for exploratory coding and prototyping.
+**default** (no argument) — Step-by-step executor. Reads steps from PROGRAM.md, decomposes each into sub-instructions with verification, hands back to strategy after each step.
+
+**`interpreters/game-team`** — Game development team simulation. Six roles with separate role description files:
+- Team lead (coordinates, asks user when unclear)
+- Architect (technical structure)
+- Game designer (gameplay, balance)
+- Developer (implementation)
+- 2D artist (visual assets, programmatic art)
+- UI/UX expert (interface, interaction)
+
+For each feature: plans features → gathers opinions from all roles → synthesizes → decomposes → executes → verifies → loops back to plan next feature. Asks the user interactively when specs are ambiguous.
+
+**`interpreters/karpathy-loop`** — Tight feedback loop. No upfront planning. Code the smallest thing → run it → look at actual output → fix errors → evaluate → repeat. Supports breadth-first branching via git: when multiple approaches are viable, creates branches and explores them round-robin before comparing and picking a winner.
+
+### Creating a new interpreter
+
+Create a directory `interpreters/<name>/` with at least `INSTRUCTIONS.md`. Add optional `*.md` files for role descriptions, templates, etc. — they're copied into instances.
+
+**INSTRUCTIONS.md structure:**
+
+```markdown
+# Strategy: <Name>
+
+IMPORTANT: Everything between "# Strategy" and "# Sub-instructions" is the strategy.
+It must be copied VERBATIM into every update_instructions call. Never modify, summarize,
+or omit any strategy instruction. Only the "# Sub-instructions" section below changes.
+
+<description of what this interpreter does>
+
+## Instruction: Initialize
+**Condition:** MEMORY state is "empty"
+**Action:** Read PROGRAM.md. Bootstrap state. Set state to "<first_state>".
+
+## Instruction: <your state machine instructions here>
+**Condition:** MEMORY state is "<state>"
+**Action:** <what to do>
+
+...more instructions forming a complete state machine...
+
+## Instruction: Finish
+**Condition:** MEMORY state is "done"
+**Action:** Call halt with a summary.
+
+# Sub-instructions
+
+(none yet — the strategy will populate these)
+```
+
+**Key patterns:**
+
+1. **Strategy preservation**: The `IMPORTANT` block at the top tells the LLM to copy the strategy section verbatim on every rewrite.
+
+2. **State machine**: Instructions match on MEMORY state strings. Every state must have a matching instruction, and every instruction must set a new state. Dead-end states stall the machine.
+
+3. **Handback**: After completing a unit of work, the state must loop back to a "pick next" instruction that reads PROGRAM.md. Without this, the machine completes one thing and stalls.
+
+4. **Decompose → execute → verify**: When work needs to happen, write sub-instructions in the `# Sub-instructions` section. Each action followed by verification. The last sub-instruction returns to the strategy.
+
+5. **User interaction**: Set state to `waiting_for_user` with `## Question` in MEMORY. The shell prompts the user and sets state to `user_responded` with `## Answer`. You must have an instruction matching `user_responded`.
+
+6. **Project artifacts**: Code and files go in `workspace/`. The `git` tool operates there. MEMORY.md and INSTRUCTIONS.md stay in the instance root.
+
+## Two Git Repos
+
+- **Machine git** (instance root) — Auto-commits per cycle. Tracks everything. History dirs: `history/0042-a3f1b2c/`.
+- **Project git** (`workspace/`) — LLM-controlled. Interpreters can branch, commit, diff, explore alternatives.
 
 ## Instance Structure
 
 ```
-instances/my-project/
-├── PROGRAM.md        # Your high-level program (goals + steps)
-├── INSTRUCTIONS.md   # Strategy + generated sub-instructions
-├── MEMORY.md         # Machine state
-├── run.sh            # Launch script (prompts for API key on first run)
-├── .api_key          # Cached API key (gitignored)
-└── history/          # Snapshot per cycle
-    ├── 0001/
-    │   ├── MEMORY.md
-    │   └── INSTRUCTIONS.md
-    ├── 0002/
-    │   └── ...
-    └── ...
+instances/foo/
+├── PROGRAM.md         # User's program (read-only to machine)
+├── INSTRUCTIONS.md    # Strategy + generated sub-instructions
+├── MEMORY.md          # Current state
+├── workspace/         # Project artifacts (own git repo)
+├── run.sh             # Launch script
+├── *.md               # Interpreter support files (role descriptions, etc.)
+├── .api_key           # Cached API key (gitignored)
+├── .gitignore
+├── history/           # Snapshots per cycle
+│   ├── 0001-a3f1b2c/
+│   │   ├── MEMORY.md
+│   │   └── INSTRUCTIONS.md
+│   └── ...
+└── logs/              # Full run logs
+    └── run-2026-04-06T*.log
 ```

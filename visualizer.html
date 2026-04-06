@@ -250,21 +250,21 @@
 
       cycles = [];
 
-      // List history directory to discover cycle folders (format: 0001-abcdef or 0001)
+      // List history directory to discover cycle folders
       const histResp = await fetch(`${instanceDir}/history/`);
       if (histResp.ok) {
         const html = await histResp.text();
-        // Parse directory listing links — match folder names like 0001-abcdef/ or 0001/
-        const dirMatches = html.match(/(\d{4}(?:-[a-f0-9]+)?)\//g);
+        // Match any directory starting with 4 digits: 0001/, 0001-abc123/, 0001-pre-plan/
+        const dirMatches = html.match(/(\d{4}[^"<\/]*)\//g);
         if (dirMatches) {
           const dirs = [...new Set(dirMatches)].map(d => d.replace(/\/$/, '')).sort();
           for (const dir of dirs) {
             const num = parseInt(dir.slice(0, 4), 10);
-            const hash = dir.includes('-') ? dir.slice(5) : '';
+            const suffix = dir.length > 4 ? dir.slice(5) : '';
             const mem = await readFile(`${instanceDir}/history/${dir}/MEMORY.md`);
             if (mem === null) continue;
             const inst = await readFile(`${instanceDir}/history/${dir}/INSTRUCTIONS.md`);
-            cycles.push({ num, hash, dir, memory: mem, instructions: inst, state: getState(mem) });
+            cycles.push({ num, hash: suffix, dir, memory: mem, instructions: inst, state: getState(mem) });
           }
         }
       }
