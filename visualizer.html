@@ -249,14 +249,24 @@
       if (!instanceDir) return;
 
       cycles = [];
-      let i = 1;
-      while (true) {
-        const num = String(i).padStart(4, '0');
-        const mem = await readFile(`${instanceDir}/history/${num}/MEMORY.md`);
-        if (mem === null) break;
-        const inst = await readFile(`${instanceDir}/history/${num}/INSTRUCTIONS.md`);
-        cycles.push({ num: i, memory: mem, instructions: inst, state: getState(mem) });
-        i++;
+
+      // List history directory to discover cycle folders (format: 0001-abcdef or 0001)
+      const histResp = await fetch(`${instanceDir}/history/`);
+      if (histResp.ok) {
+        const html = await histResp.text();
+        // Parse directory listing links — match folder names like 0001-abcdef/ or 0001/
+        const dirMatches = html.match(/(\d{4}(?:-[a-f0-9]+)?)\//g);
+        if (dirMatches) {
+          const dirs = [...new Set(dirMatches)].map(d => d.replace(/\/$/, '')).sort();
+          for (const dir of dirs) {
+            const num = parseInt(dir.slice(0, 4), 10);
+            const hash = dir.includes('-') ? dir.slice(5) : '';
+            const mem = await readFile(`${instanceDir}/history/${dir}/MEMORY.md`);
+            if (mem === null) continue;
+            const inst = await readFile(`${instanceDir}/history/${dir}/INSTRUCTIONS.md`);
+            cycles.push({ num, hash, dir, memory: mem, instructions: inst, state: getState(mem) });
+          }
+        }
       }
 
       // Also load current state
@@ -278,7 +288,7 @@
 
       // Select last cycle
       if (cycles.length > 0) {
-        selectCycle(cycles.length);
+        selectCycle(cycles[cycles.length - 1].num);
       }
     }
 
@@ -319,13 +329,15 @@
       container.innerHTML = '';
 
       let prevState = '';
-      for (const cycle of cycles) {
+      for (let idx = 0; idx < cycles.length; idx++) {
+        const cycle = cycles[idx];
+        const isLast = idx === cycles.length - 1;
         const dot = document.createElement('div');
         dot.className = 'cycle-dot';
         dot.textContent = cycle.num;
         dot.onclick = () => selectCycle(cycle.num);
 
-        if (cycle.num === cycles.length) {
+        if (isLast) {
           dot.classList.add('current');
         } else if (cycle.state !== prevState) {
           dot.classList.add('state-changed');
@@ -337,7 +349,8 @@
           dot.classList.add('selected');
         }
 
-        dot.title = `Cycle ${cycle.num}: ${cycle.state}`;
+        const hashLabel = cycle.hash ? ` (${cycle.hash})` : '';
+        dot.title = `Cycle ${cycle.num}${hashLabel}: ${cycle.state}`;
         container.appendChild(dot);
         prevState = cycle.state;
       }
@@ -353,6 +366,7 @@
 
       document.getElementById('memoryPanel').innerHTML = renderMarkdown(cycle.memory);
       document.getElementById('instructionsPanel').innerHTML = renderMarkdown(cycle.instructions);
+      document.getElementById('currentState').textContent = cycle.state + (cycle.hash ? ` (${cycle.hash})` : '');
 
       renderTimeline();
     }
