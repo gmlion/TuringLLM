@@ -66,7 +66,7 @@ Interpreters live in `interpreters/<name>/`. Each has an `INSTRUCTIONS.md` and o
 ### Existing interpreters
 
 - **default** (no argument to new-instance.sh) — Step-by-step executor. Reads PROGRAM.md steps, decomposes each into sub-instructions with verification.
-- **`interpreters/game-team`** — Game dev team simulation. Six roles (team lead, architect, game designer, developer, 2D artist, UI/UX). Gathers opinions per feature, synthesizes, decomposes into sub-steps. Interactive — asks user when specs are unclear. Has a feature planning loop that reassesses the backlog after each feature.
+- **`interpreters/game-team`** — Game dev team simulation. Six roles (team lead, architect, game designer, developer, 2D artist, UI/UX). Gathers opinions per feature, synthesizes, decomposes into sub-steps. Interactive — asks user when specs are unclear. Has a feature planning loop that reassesses the backlog after each feature. Supports parallel exploration: when team members propose fundamentally different approaches, creates git branches for each, implements them round-robin, compares results, and picks the winner.
 - **`interpreters/karpathy-loop`** — Tight code→test→fix→evaluate loop. No upfront planning. Supports breadth-first branching: when multiple approaches are viable, creates git branches and explores them round-robin before comparing and picking a winner.
 
 ### Creating a new interpreter
