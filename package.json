@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "build": "tsc",
-    "start": "node dist/main.js"
+    "start": "node dist/main.js",
+    "visualize": "node dist/server.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0"

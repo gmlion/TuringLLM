@@ -53,15 +53,24 @@ function getMemoryState(): string {
 
 function getMemoryQuestion(): string {
   const memory = readFile(MEMORY_PATH);
-  const match = memory.match(/^## Question\n([\s\S]*?)(?=\n## |\s*$)/m);
-  return match ? match[1].trim() : "";
+  const match = memory.match(/^## Question\n([\s\S]*?)(?=\n## [A-Z])/m);
+  if (match) return match[1].trim();
+  // Fallback: Question is the last section — grab everything after it
+  const fallback = memory.match(/^## Question\n([\s\S]*)$/m);
+  return fallback ? fallback[1].trim() : "";
 }
 
 async function askUser(question: string): Promise<string> {
   const rl = createInterface({ input: process.stdin, output: process.stdout });
   return new Promise((resolve) => {
     log("");
-    rl.question(`  [user input needed] ${question}\n  > `, (answer) => {
+    log("┌─ USER INPUT NEEDED ─────────────────────────────────");
+    for (const line of question.split("\n")) {
+      log(`│ ${line}`);
+    }
+    log("└────────────────────────────────────────────────────");
+    process.stdout.write("  > ");
+    rl.question("", (answer) => {
       rl.close();
       resolve(answer);
     });

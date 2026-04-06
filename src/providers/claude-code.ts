@@ -45,46 +45,70 @@ export async function runCycle(
 
   const maxRetries = 20;
   for (let attempt = 0; ; attempt++) {
+    let stdout = "";
+    let stderr = "";
+    let exitCode = 0;
+
     try {
       const args = [
         "-p", userPrompt,
         "--system-prompt", systemPrompt,
         "--model", "haiku",
-        "--output-format", "text",
+        "--output-format", "json",
         "--allowedTools", "Bash(*)", "Write(*)", "Edit(*)", "Read(*)",
         "--dangerously-skip-permissions",
       ];
 
-      const result = execFileSync("claude", args, {
+      stdout = execFileSync("claude", args, {
         encoding: "utf-8",
         timeout: 180_000,
         maxBuffer: 10 * 1024 * 1024,
         cwd,
         env: { ...process.env },
       });
-
-      logRaw(`  [claude-code full output]\n${result}`);
-      const preview = result.trim().slice(0, 300);
-      if (preview) log(`  [claude-code] ${preview}${result.trim().length > 300 ? "..." : ""}`);
-
-      if (isQuotaError(result)) {
-        throw new QuotaExceededError(`Quota exceeded: ${result.trim().slice(0, 200)}`);
-      }
     } catch (err: unknown) {
       if (err instanceof QuotaExceededError) throw err;
-
       const e = err as { stdout?: string; stderr?: string; status?: number };
-      const stdout = (e.stdout || "").trim();
-      const stderr = (e.stderr || "").trim();
-      logRaw(`  [claude-code stdout]\n${stdout}`);
-      logRaw(`  [claude-code stderr]\n${stderr}`);
+      stdout = (e.stdout || "").trim();
+      stderr = (e.stderr || "").trim();
+      exitCode = e.status ?? 1;
+    }
 
-      if (isQuotaError(stdout) || isQuotaError(stderr)) {
-        throw new QuotaExceededError(`Quota exceeded: ${(stderr || stdout).slice(0, 200)}`);
+    // Log everything
+    logRaw(`  [claude-code exit=${exitCode}]`);
+    logRaw(`  [claude-code stdout]\n${stdout}`);
+    if (stderr) logRaw(`  [claude-code stderr]\n${stderr}`);
+
+    // Check quota
+    if (isQuotaError(stdout) || isQuotaError(stderr)) {
+      throw new QuotaExceededError(`Quota exceeded: ${(stderr || stdout).slice(0, 200)}`);
+    }
+
+    // Parse JSON output for logging
+    let resultText = "";
+    try {
+      const parsed = JSON.parse(stdout);
+      resultText = parsed.result || "";
+
+      // Log cost info if available
+      if (parsed.cost_usd) {
+        log(`  [cost] $${parsed.cost_usd.toFixed(4)}`);
       }
+      if (parsed.duration_ms) {
+        log(`  [duration] ${(parsed.duration_ms / 1000).toFixed(1)}s`);
+      }
+    } catch {
+      resultText = stdout;
+    }
 
-      if (stdout) log(`  [claude-code] ${stdout.slice(0, 200)}${stdout.length > 200 ? "..." : ""}`);
-      if (stderr) log(`  [claude-code error] ${stderr.slice(0, 200)}${stderr.length > 200 ? "..." : ""}`);
+    // Console summary
+    if (resultText) {
+      const preview = resultText.trim().slice(0, 300);
+      log(`  [claude-code] ${preview}${resultText.trim().length > 300 ? "..." : ""}`);
+    } else if (exitCode !== 0) {
+      log(`  [claude-code] exited with code ${exitCode}${stderr ? ": " + stderr.slice(0, 150) : ""}`);
+    } else {
+      log(`  [claude-code] (no text output)`);
     }
 
     // Check if halted

@@ -1,6 +1,6 @@
 # Strategy: Game Development Team
 
-These strategy instructions must be preserved at the top of INSTRUCTIONS.md every time it is rewritten. They simulate a game development team that collaborates on each feature before implementing it.
+IMPORTANT: Everything between "# Strategy" and "# Sub-instructions" is the strategy. It must be copied VERBATIM into every update_instructions call. Never modify, summarize, or omit any strategy instruction. Only the "# Sub-instructions" section below changes.
 
 ## Team members
 
@@ -14,11 +14,11 @@ Role descriptions are in the instance directory. Read these files to understand 
 
 ## Instruction: Initialize
 **Condition:** MEMORY state is "empty"
-**Action:** Read PROGRAM.md to understand the game being built. Read all team member description files. As the team lead, write an overview of the project into MEMORY and identify the first feature to work on. Set MEMORY state to "strategy_ready".
+**Action:** Read PROGRAM.md to understand the game being built. Read all team member description files. As the team lead, write an overview of the project into MEMORY. If PROGRAM.md lists specific features/steps, note them in MEMORY. If it only has a goal, decide what features the game needs and write a feature list in MEMORY under ## Feature Backlog. Set MEMORY state to "strategy_ready".
 
 ## Instruction: Pick next feature
 **Condition:** MEMORY state is "strategy_ready"
-**Action:** As the team lead, read PROGRAM.md. Find the first feature or step not marked done in MEMORY. If all features are done, set state to "done". Otherwise, write the feature description into MEMORY under ## Current Feature and set state to "gathering_opinions".
+**Action:** As the team lead, find the next feature to work on. Check PROGRAM.md for listed features/steps, or check ## Feature Backlog in MEMORY. Find the first one not marked done in ## Completed Features. If all features are done, set state to "done". Otherwise, write the feature description into MEMORY under ## Current Feature and set state to "gathering_opinions".
 
 ## Instruction: Consult architect
 **Condition:** MEMORY state is "gathering_opinions" and MEMORY does not contain "## Architect Opinion"
@@ -50,18 +50,18 @@ Role descriptions are in the instance directory. Read these files to understand 
 
 ## Instruction: Decompose implementation
 **Condition:** MEMORY state is "plan_ready"
-**Action:** As the team lead, read the ## Implementation Plan. Decompose it into 2-4 concrete sub-instructions and write them below the strategy section in INSTRUCTIONS.md (keeping all strategy instructions above). Each action sub-instruction must be followed by a verification sub-instruction. The LAST sub-instruction must be:
+**Action:** As the team lead, read ## Implementation Plan from MEMORY. Decompose it into 2-4 concrete sub-instructions for the CURRENT feature only (do not plan future features). Write them in the "# Sub-instructions" section below. Each action sub-instruction must be followed by a verification sub-instruction. The LAST sub-instruction must always be:
 
   ## Instruction: Feature complete
-  **Condition:** MEMORY state is "<final_sub_state>"
-  **Action:** Mark the current feature as done in MEMORY under ## Completed Features. Clear the opinion sections, current feature, and implementation plan from MEMORY. Set state to "strategy_ready".
+  **Condition:** MEMORY state is "<final_verified_state>"
+  **Action:** Mark the current feature as done in MEMORY under ## Completed Features. Clear opinion sections, current feature, and implementation plan from MEMORY. Set state to "strategy_ready".
 
-Set MEMORY state to the first sub-instruction's expected state.
+Set MEMORY state to the first sub-instruction's expected state. Remember: copy the ENTIRE strategy section above verbatim when calling update_instructions.
 
 ## Instruction: Finish
 **Condition:** MEMORY state is "done"
 **Action:** Call halt with a summary of all features implemented.
 
-# Current sub-instructions
+# Sub-instructions
 
-(none yet — the strategy will populate these during implementation)
+(none yet — the "Decompose implementation" instruction will populate these for the current feature)
