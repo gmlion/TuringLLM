@@ -14,11 +14,15 @@ Role descriptions are in the instance directory. Read these files to understand 
 
 ## Instruction: Initialize
 **Condition:** MEMORY state is "empty"
-**Action:** Read PROGRAM.md to understand the game being built. Read all team member description files. As the team lead, write an overview of the project into MEMORY. If PROGRAM.md lists specific features/steps, note them in MEMORY. If it only has a goal, decide what features the game needs and write a feature list in MEMORY under ## Feature Backlog. Set MEMORY state to "strategy_ready".
+**Action:** Read PROGRAM.md to understand the game being built. Read all team member description files. As the team lead, write an overview of the project into MEMORY. Set MEMORY state to "planning_features".
+
+## Instruction: Plan features
+**Condition:** MEMORY state is "planning_features"
+**Action:** As the team lead, review PROGRAM.md and the current ## Feature Backlog in MEMORY (if any). Decide what features the game needs to be a complete, playable product. Consider what has already been completed (## Completed Features). Write or update ## Feature Backlog in MEMORY with a prioritized list of features still to build. If you're unsure about scope or priorities, ask the user (set state to "waiting_for_user"). Otherwise, set state to "strategy_ready". This instruction fires after every feature is completed, so you can add, reprioritize, or cut features based on what you've learned.
 
 ## Instruction: Pick next feature
 **Condition:** MEMORY state is "strategy_ready"
-**Action:** As the team lead, find the next feature to work on. Check PROGRAM.md for listed features/steps, or check ## Feature Backlog in MEMORY. Find the first one not marked done in ## Completed Features. If all features are done, set state to "done". Otherwise, write the feature description into MEMORY under ## Current Feature and set state to "gathering_opinions".
+**Action:** As the team lead, read ## Feature Backlog in MEMORY. Pick the first feature not marked done. If the backlog is empty or all features are done, set state to "planning_features" to reassess (or set state to "done" if the game is truly complete). Write the feature description into MEMORY under ## Current Feature and set state to "gathering_opinions".
 
 ## Instruction: Consult architect
 **Condition:** MEMORY state is "gathering_opinions" and MEMORY does not contain "## Architect Opinion"
@@ -54,7 +58,7 @@ Role descriptions are in the instance directory. Read these files to understand 
 
   ## Instruction: Feature complete
   **Condition:** MEMORY state is "<final_verified_state>"
-  **Action:** Mark the current feature as done in MEMORY under ## Completed Features. Clear opinion sections, current feature, and implementation plan from MEMORY. Set state to "strategy_ready".
+  **Action:** Mark the current feature as done in MEMORY under ## Completed Features. Clear opinion sections, current feature, and implementation plan from MEMORY. Set state to "planning_features".
 
 Set MEMORY state to the first sub-instruction's expected state. Remember: copy the ENTIRE strategy section above verbatim when calling update_instructions.
 

@@ -4,6 +4,7 @@ import { createInterface } from "readline";
 import { runCycle as runCycleClaudeCode } from "./providers/claude-code.js";
 import { runCycle as runCycleApi } from "./providers/api.js";
 import { initLog, log, getLogPath } from "./logger.js";
+import { ensureRepo, commitCycle } from "./git.js";
 
 const BASE_DIR = process.cwd();
 const MEMORY_PATH = resolve(BASE_DIR, "MEMORY.md");
@@ -30,8 +31,8 @@ function getStartCycle(): number {
   }
 }
 
-function snapshot(cycle: number) {
-  const dir = resolve(HISTORY_DIR, String(cycle).padStart(4, "0"));
+function snapshot(cycle: number, hash: string) {
+  const dir = resolve(HISTORY_DIR, `${String(cycle).padStart(4, "0")}-${hash}`);
   mkdirSync(dir, { recursive: true });
   copyFileSync(MEMORY_PATH, resolve(dir, "MEMORY.md"));
   copyFileSync(INSTRUCTIONS_PATH, resolve(dir, "INSTRUCTIONS.md"));
@@ -55,7 +56,6 @@ function getMemoryQuestion(): string {
   const memory = readFile(MEMORY_PATH);
   const match = memory.match(/^## Question\n([\s\S]*?)(?=\n## [A-Z])/m);
   if (match) return match[1].trim();
-  // Fallback: Question is the last section — grab everything after it
   const fallback = memory.match(/^## Question\n([\s\S]*)$/m);
   return fallback ? fallback[1].trim() : "";
 }
@@ -111,6 +111,7 @@ async function main() {
   log(`  Log:          ${getLogPath()}`);
 
   mkdirSync(HISTORY_DIR, { recursive: true });
+  ensureRepo(BASE_DIR);
 
   const startCycle = getStartCycle();
   log(`  Resuming from cycle ${startCycle}`);
@@ -119,24 +120,27 @@ async function main() {
   for (let cycle = startCycle; cycle < startCycle + MAX_CYCLES; cycle++) {
     if (getMemoryState() === "waiting_for_user") {
       log(`--- Cycle ${cycle} (user interaction) ---`);
-      snapshot(cycle);
+      const hash = commitCycle(BASE_DIR, cycle, "waiting_for_user");
+      snapshot(cycle, hash);
       await handleUserInteraction();
       log("");
       continue;
     }
 
-    snapshot(cycle);
     log(`--- Cycle ${cycle} ---`);
 
     const result = await runCycle(INSTRUCTIONS_PATH, MEMORY_PATH);
 
+    const state = getMemoryState();
+    const hash = commitCycle(BASE_DIR, cycle, state);
+    snapshot(cycle, hash);
+
     if (result.halt) {
-      snapshot(cycle + 1);
       log(`\nMachine halted: ${result.haltMessage}`);
       return;
     }
 
-    if (getMemoryState() === "waiting_for_user") {
+    if (state === "waiting_for_user") {
       await handleUserInteraction();
     }
 

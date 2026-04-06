@@ -90,6 +90,13 @@ cat > "$DIR/MEMORY.md" << 'EOF'
 empty
 EOF
 
+# .gitignore for instance
+cat > "$DIR/.gitignore" << 'EOF'
+.api_key
+logs/
+history/
+EOF
+
 # run.sh
 cat > "$DIR/run.sh" << 'RUNEOF'
 #!/usr/bin/env bash
