@@ -61,6 +61,21 @@ export function getTools(): Anthropic.Tool[] {
       },
     },
     {
+      name: "git",
+      description:
+        "Run a git command. Use for branching, diffing, checking out previous states, or inspecting history. Do NOT use for committing — commits are handled automatically by the machine after each cycle.",
+      input_schema: {
+        type: "object" as const,
+        properties: {
+          args: {
+            type: "string",
+            description: "Arguments to pass to git (e.g., 'branch feature-x', 'diff HEAD~2', 'log --oneline -5', 'checkout -b experiment')",
+          },
+        },
+        required: ["args"],
+      },
+    },
+    {
       name: "halt",
       description:
         "Stop the machine. Call when the program has reached its goal or cannot make further progress.",
@@ -81,7 +96,8 @@ export function getTools(): Anthropic.Tool[] {
 export function executeTool(
   name: string,
   input: Record<string, unknown>,
-  instructionsPath: string
+  instructionsPath: string,
+  workspacePath?: string
 ): ToolResult {
   switch (name) {
     case "bash": {
@@ -117,6 +133,32 @@ export function executeTool(
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
         return { output: `Error: ${msg}`, halt: false, error: true };
+      }
+    }
+    case "git": {
+      const args = typeof input.args === "string" ? input.args : String(input.args ?? "");
+      if (!args) {
+        return { output: "Error: no git args provided.", halt: false, error: true };
+      }
+      if (!workspacePath) {
+        return { output: "Error: workspace path not configured.", halt: false, error: true };
+      }
+      // Block destructive operations
+      if (/^\s*(push|rebase|reset\s+--hard|clean\s+-f)/i.test(args)) {
+        return { output: "Error: git push/rebase/reset --hard/clean are not allowed. Use git for branching, committing, diffing, log, checkout, and inspection.", halt: false, error: true };
+      }
+      try {
+        const stdout = execSync(`git ${args}`, {
+          encoding: "utf-8",
+          timeout: 15_000,
+          maxBuffer: 1024 * 1024,
+          cwd: workspacePath,
+        });
+        return { output: stdout || "(no output)", halt: false, error: false };
+      } catch (err: unknown) {
+        const e = err as { stdout?: string; stderr?: string; status?: number };
+        const output = `exit code ${e.status ?? 1}\nstdout: ${e.stdout ?? ""}\nstderr: ${e.stderr ?? ""}`;
+        return { output, halt: false, error: false };
       }
     }
     case "update_instructions": {

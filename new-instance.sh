@@ -95,6 +95,7 @@ cat > "$DIR/.gitignore" << 'EOF'
 .api_key
 logs/
 history/
+workspace/.git/
 EOF
 
 # run.sh

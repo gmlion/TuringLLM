@@ -1,4 +1,6 @@
 import { execSync } from "child_process";
+import { existsSync } from "fs";
+import { resolve } from "path";
 import { log } from "./logger.js";
 
 function run(cmd: string, cwd: string): string {
@@ -9,29 +11,46 @@ function run(cmd: string, cwd: string): string {
   }
 }
 
-export function ensureRepo(cwd: string): void {
-  const isRepo = run("git rev-parse --is-inside-work-tree", cwd);
+// Machine git — tracks cycle-by-cycle evolution of the instance
+export function ensureMachineRepo(instanceDir: string): void {
+  const isRepo = run("git rev-parse --is-inside-work-tree", instanceDir);
   if (isRepo !== "true") {
-    run("git init", cwd);
-    run("git add -A", cwd);
-    run('git commit -m "cycle 0: initial state" --allow-empty', cwd);
-    log("  [git] initialized repository");
+    run("git init", instanceDir);
+    run("git add -A", instanceDir);
+    run('git commit -m "cycle 0: initial state" --allow-empty', instanceDir);
+    log("  [machine-git] initialized repository");
   }
 }
 
-export function commitCycle(cwd: string, cycle: number, state: string): string {
-  run("git add -A", cwd);
+export function commitCycle(instanceDir: string, cycle: number, state: string): string {
+  run("git add -A", instanceDir);
 
-  // Check if there's anything to commit
-  const status = run("git status --porcelain", cwd);
+  const status = run("git status --porcelain", instanceDir);
   if (!status) {
-    // Nothing changed, return current HEAD hash
-    return run("git rev-parse --short HEAD", cwd) || "0000000";
+    return run("git rev-parse --short HEAD", instanceDir) || "0000000";
   }
 
   const message = `cycle ${cycle}: ${state}`;
-  run(`git commit -m "${message}"`, cwd);
-  const hash = run("git rev-parse --short HEAD", cwd) || "0000000";
-  log(`  [git] ${hash} — ${message}`);
+  run(`git commit -m "${message}"`, instanceDir);
+  const hash = run("git rev-parse --short HEAD", instanceDir) || "0000000";
+  log(`  [machine-git] ${hash} — ${message}`);
   return hash;
+}
+
+// Project git — the LLM's repo for artifacts, inside workspace/
+export function ensureProjectRepo(instanceDir: string): void {
+  const workspaceDir = resolve(instanceDir, "workspace");
+  if (!existsSync(workspaceDir)) {
+    execSync(`mkdir -p "${workspaceDir}"`, { encoding: "utf-8" });
+  }
+  const isRepo = run("git rev-parse --is-inside-work-tree", workspaceDir);
+  if (isRepo !== "true") {
+    run("git init", workspaceDir);
+    run('git commit --allow-empty -m "initial"', workspaceDir);
+    log("  [project-git] initialized workspace repository");
+  }
+}
+
+export function getWorkspacePath(instanceDir: string): string {
+  return resolve(instanceDir, "workspace");
 }

@@ -201,6 +201,7 @@ An interpreter's INSTRUCTIONS.md must follow these patterns:
 
 - **default** (no argument) — Generic step-by-step executor. Reads PROGRAM.md steps, decomposes each into sub-instructions with verification.
 - **`interpreters/game-team`** — Simulates a game dev team. For each feature: gathers opinions from architect, game designer, developer, 2D artist, and UI/UX expert, then synthesizes into an implementation plan before decomposing into executable sub-steps. Can ask the user for clarification when specs are ambiguous.
+- **`interpreters/karpathy-loop`** — Tight code-test-fix loop. No upfront planning. Writes the smallest possible change, runs it immediately, looks at actual output, fixes errors, evaluates progress, repeats. Ideal for exploratory coding and prototyping.
 
 ## Instance Structure
 

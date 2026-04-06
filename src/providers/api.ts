@@ -1,9 +1,11 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { readFileSync } from "fs";
+import { resolve } from "path";
 import { getTools, executeTool } from "../tools.js";
 import { getSystemPrompt, getUserPrompt } from "../prompt.js";
 import { log, logRaw } from "../logger.js";
 import { QuotaExceededError } from "../errors.js";
+import { getWorkspacePath } from "../git.js";
 
 const client = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -81,7 +83,8 @@ export async function runCycle(
       logRaw(`  [tool_call] ${toolUse.name}`);
       logRaw(`  [tool_input] ${JSON.stringify(input)}`);
 
-      const result = executeTool(toolUse.name, input, instructionsPath);
+      const instanceDir = resolve(memoryPath, "..");
+      const result = executeTool(toolUse.name, input, instructionsPath, getWorkspacePath(instanceDir));
 
       // Log full result to file
       logRaw(`  [tool_result] ${result.output}`);
@@ -94,6 +97,8 @@ export async function runCycle(
         log(`  [bash] ${preview}${result.error ? " (error)" : ""}`);
       } else if (toolUse.name === "write_file") {
         log(`  [write_file] ${input.path}${result.error ? " (error)" : ""}`);
+      } else if (toolUse.name === "git") {
+        log(`  [git] ${input.args}${result.error ? " (error)" : ""}`);
       } else if (toolUse.name === "update_instructions") {
         log(`  [update_instructions]`);
       } else if (toolUse.name === "halt") {

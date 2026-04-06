@@ -4,7 +4,7 @@ import { createInterface } from "readline";
 import { runCycle as runCycleClaudeCode } from "./providers/claude-code.js";
 import { runCycle as runCycleApi } from "./providers/api.js";
 import { initLog, log, getLogPath } from "./logger.js";
-import { ensureRepo, commitCycle } from "./git.js";
+import { ensureMachineRepo, ensureProjectRepo, commitCycle } from "./git.js";
 
 const BASE_DIR = process.cwd();
 const MEMORY_PATH = resolve(BASE_DIR, "MEMORY.md");
@@ -111,7 +111,8 @@ async function main() {
   log(`  Log:          ${getLogPath()}`);
 
   mkdirSync(HISTORY_DIR, { recursive: true });
-  ensureRepo(BASE_DIR);
+  ensureMachineRepo(BASE_DIR);
+  ensureProjectRepo(BASE_DIR);
 
   const startCycle = getStartCycle();
   log(`  Resuming from cycle ${startCycle}`);
