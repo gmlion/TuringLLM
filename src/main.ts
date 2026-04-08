@@ -1,18 +1,30 @@
-import { resolve } from "path";
-import { mkdirSync, copyFileSync, readFileSync, writeFileSync, readdirSync } from "fs";
+import { config } from "dotenv";
+import { resolve, dirname } from "path";
+import { mkdirSync, copyFileSync, readFileSync, writeFileSync, readdirSync, existsSync } from "fs";
+import { execSync } from "child_process";
 import { createInterface } from "readline";
-import { runCycle as runCycleClaudeCode } from "./providers/claude-code.js";
-import { runCycle as runCycleApi } from "./providers/api.js";
 import { initLog, log, getLogPath } from "./logger.js";
 import { ensureMachineRepo, ensureProjectRepo, commitCycle } from "./git.js";
+import { getWorkspacePath } from "./git.js";
 
 const BASE_DIR = process.cwd();
+
+// Load .env: instance-level overrides project-level
+const projectRoot = resolve(BASE_DIR, "../..");
+const projectEnv = resolve(projectRoot, ".env");
+const instanceEnv = resolve(BASE_DIR, ".env");
+if (existsSync(projectEnv)) config({ path: projectEnv });
+if (existsSync(instanceEnv)) config({ path: instanceEnv, override: true });
 const MEMORY_PATH = resolve(BASE_DIR, "MEMORY.md");
 const INSTRUCTIONS_PATH = resolve(BASE_DIR, "INSTRUCTIONS.md");
 const HISTORY_DIR = resolve(BASE_DIR, "history");
 const MAX_CYCLES = 100;
 
 const PROVIDER = process.env.TURING_PROVIDER || "claude-code";
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 function getStartCycle(): number {
   try {
@@ -77,6 +89,76 @@ async function askUser(question: string): Promise<string> {
   });
 }
 
+const STATEFUL = process.env.TURING_STATEFUL === "1";
+const SYSCALLS_PATH = resolve(BASE_DIR, "SYSCALLS.md");
+
+function executeSyscalls(): { halted: boolean; haltMessage: string } {
+  const content = readFile(SYSCALLS_PATH);
+  if (!content.trim()) return { halted: false, haltMessage: "" };
+
+  const blocks = content.split(/^---$/m).map(b => b.trim()).filter(Boolean);
+  const results: string[] = [];
+  let halted = false;
+  let haltMessage = "";
+
+  for (let i = 0; i < blocks.length; i++) {
+    const block = blocks[i];
+    const firstLine = block.split("\n")[0];
+    const rest = block.slice(firstLine.length).trim();
+
+    if (firstLine.startsWith("bash:")) {
+      const command = firstLine.slice(5).trim() || rest;
+      log(`  [bash] ${command}`);
+      try {
+        const output = execSync(command, { encoding: "utf-8", maxBuffer: 1024 * 1024, cwd: BASE_DIR });
+        results.push(`## Result ${i + 1}: bash\n${output || "(no output)"}`);
+      } catch (err: unknown) {
+        const e = err as { stdout?: string; stderr?: string; status?: number };
+        results.push(`## Result ${i + 1}: bash\nexit code ${e.status ?? 1}\nstdout: ${e.stdout ?? ""}\nstderr: ${e.stderr ?? ""}`);
+      }
+    } else if (firstLine.startsWith("write_file:")) {
+      const filePath = firstLine.slice(11).trim();
+      log(`  [write_file] ${filePath}`);
+      try {
+        mkdirSync(dirname(filePath), { recursive: true });
+        writeFileSync(filePath, rest, "utf-8");
+        results.push(`## Result ${i + 1}: write_file\nOK`);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        results.push(`## Result ${i + 1}: write_file\nError: ${msg}`);
+      }
+    } else if (firstLine.startsWith("update_instructions:")) {
+      log(`  [update_instructions]`);
+      writeFileSync(INSTRUCTIONS_PATH, rest, "utf-8");
+      results.push(`## Result ${i + 1}: update_instructions\nOK`);
+    } else if (firstLine.startsWith("git:")) {
+      const args = firstLine.slice(4).trim() || rest;
+      const workspacePath = getWorkspacePath(BASE_DIR);
+      if (/^\s*(push|rebase|reset\s+--hard|clean\s+-f)/i.test(args)) {
+        results.push(`## Result ${i + 1}: git\nError: destructive git operations not allowed`);
+      } else {
+        log(`  [git] ${args}`);
+        try {
+          const output = execSync(`git ${args}`, { encoding: "utf-8", maxBuffer: 1024 * 1024, cwd: workspacePath });
+          results.push(`## Result ${i + 1}: git\n${output || "(no output)"}`);
+        } catch (err: unknown) {
+          const e = err as { stdout?: string; stderr?: string; status?: number };
+          results.push(`## Result ${i + 1}: git\nexit code ${e.status ?? 1}\nstdout: ${e.stdout ?? ""}\nstderr: ${e.stderr ?? ""}`);
+        }
+      }
+    } else if (firstLine.startsWith("halt:")) {
+      haltMessage = firstLine.slice(5).trim() || rest;
+      log(`  [halt] ${haltMessage}`);
+      halted = true;
+    } else {
+      results.push(`## Result ${i + 1}: unknown\nError: unknown action: ${firstLine}`);
+    }
+  }
+
+  writeFileSync(SYSCALLS_PATH, results.join("\n\n") + "\n", "utf-8");
+  return { halted, haltMessage };
+}
+
 async function handleUserInteraction(): Promise<void> {
   const question = getMemoryQuestion();
   const answer = await askUser(question || "(the machine is asking for input but provided no question)");
@@ -92,12 +174,28 @@ async function handleUserInteraction(): Promise<void> {
 
 async function runCycle(instructionsPath: string, memoryPath: string) {
   switch (PROVIDER) {
-    case "claude-code":
-      return runCycleClaudeCode(instructionsPath, memoryPath);
-    case "api":
-      return runCycleApi(instructionsPath, memoryPath);
+    case "claude-code": {
+      const { runCycle: fn } = await import("./providers/claude-code.js");
+      return fn(instructionsPath, memoryPath);
+    }
+    case "api": {
+      const { runCycle: fn } = await import("./providers/api.js");
+      return fn(instructionsPath, memoryPath);
+    }
+    case "openai": {
+      const { runCycle: fn } = await import("./providers/openai.js");
+      return fn(instructionsPath, memoryPath);
+    }
+    case "ollama": {
+      const { runCycle: fn } = await import("./providers/ollama.js");
+      return fn(instructionsPath, memoryPath);
+    }
+    case "local": {
+      const { runCycle: fn } = await import("./providers/local.js");
+      return fn(instructionsPath, memoryPath);
+    }
     default:
-      throw new Error(`Unknown provider: ${PROVIDER}. Use "claude-code" or "api".`);
+      throw new Error(`Unknown provider: ${PROVIDER}. Use "claude-code", "api", "openai", "ollama", or "local".`);
   }
 }
 
@@ -119,7 +217,9 @@ async function main() {
   log("");
 
   for (let cycle = startCycle; cycle < startCycle + MAX_CYCLES; cycle++) {
-    if (getMemoryState() === "waiting_for_user") {
+    const currentState = getMemoryState();
+
+    if (currentState === "waiting_for_user") {
       log(`--- Cycle ${cycle} (user interaction) ---`);
       const hash = commitCycle(BASE_DIR, cycle, "waiting_for_user");
       snapshot(cycle, hash);
@@ -130,14 +230,52 @@ async function main() {
 
     log(`--- Cycle ${cycle} ---`);
 
-    const result = await runCycle(INSTRUCTIONS_PATH, MEMORY_PATH);
+    let result;
+    let backoff = 60;
+    for (;;) {
+      try {
+        result = await runCycle(INSTRUCTIONS_PATH, MEMORY_PATH);
+        break;
+      } catch (err: unknown) {
+        if ((err as { name?: string })?.name === "QuotaExceededError") {
+          const qErr = err as { retryAfterSeconds?: number | null; message: string };
+          const waitSec = qErr.retryAfterSeconds ?? backoff;
+          log(`  [quota] ${qErr.message}`);
+          log(`  [quota] retrying in ${waitSec}s...`);
+          await sleep(waitSec * 1000);
+          backoff = Math.min(backoff * 2, 600);
+          continue;
+        }
+        throw err;
+      }
+    }
+
+    // Stateful mode: execute syscalls after LLM writes them
+    if (STATEFUL) {
+      const syscallResult = executeSyscalls();
+      const state = getMemoryState();
+      const hash = commitCycle(BASE_DIR, cycle, state);
+      snapshot(cycle, hash);
+
+      if (syscallResult.halted || state === "done") {
+        log(`\nMachine halted: ${syscallResult.haltMessage || "done"}`);
+        return;
+      }
+
+      if (state === "waiting_for_user") {
+        await handleUserInteraction();
+      }
+
+      log("");
+      continue;
+    }
 
     const state = getMemoryState();
     const hash = commitCycle(BASE_DIR, cycle, state);
     snapshot(cycle, hash);
 
-    if (result.halt) {
-      log(`\nMachine halted: ${result.haltMessage}`);
+    if (result.halt || state === "done") {
+      log(`\nMachine halted: ${result.haltMessage || "done"}`);
       return;
     }
 
@@ -152,11 +290,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  if (err?.name === "QuotaExceededError") {
-    log(`\nQuota exceeded — pausing. Resume anytime by running this instance again.`);
-    log(`  ${err.message}`);
-    process.exit(0);
-  }
   console.error("Fatal error:", err);
   process.exit(1);
 });
