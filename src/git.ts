@@ -12,9 +12,10 @@ function run(cmd: string, cwd: string): string {
 }
 
 // Machine git — tracks cycle-by-cycle evolution of the instance
+// Must be its OWN repo, not inherited from a parent project repo.
 export function ensureMachineRepo(instanceDir: string): void {
-  const isRepo = run("git rev-parse --is-inside-work-tree", instanceDir);
-  if (isRepo !== "true") {
+  const ownGitDir = resolve(instanceDir, ".git");
+  if (!existsSync(ownGitDir)) {
     run("git init", instanceDir);
     run("git add -A", instanceDir);
     run('git commit -m "cycle 0: initial state" --allow-empty', instanceDir);
