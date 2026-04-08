@@ -90,9 +90,13 @@ cat > "$DIR/MEMORY.md" << 'EOF'
 empty
 EOF
 
+# SYSCALLS.md — empty, used by stateful mode
+touch "$DIR/SYSCALLS.md"
+
 # .gitignore for instance
 cat > "$DIR/.gitignore" << 'EOF'
 .api_key
+.env
 logs/
 history/
 workspace/.git/
