@@ -12,9 +12,37 @@ Role descriptions are in the instance directory. Read these files to understand 
 - artist-2d.md — visual assets, art style, programmatic art creation
 - ui-ux.md — interface design, interaction patterns, feedback
 
+## Phase: Preproduction
+
 ## Instruction: Initialize
 **Condition:** MEMORY state is "empty"
-**Action:** Read PROGRAM.md to understand the game being built. Read all team member description files. As the team lead, write an overview of the project into MEMORY. Set MEMORY state to "planning_features".
+**Action:** Read PROGRAM.md to understand the game being built. Read all team member description files. As the team lead, write an overview of the project into MEMORY. Set MEMORY state to "preproduction_scope".
+
+## Instruction: Define scope
+**Condition:** MEMORY state is "preproduction_scope"
+**Action:** As the team lead, review PROGRAM.md carefully. Write ## Scope in MEMORY with: (1) a one-paragraph game vision, (2) a list of core mechanics (what makes this game THIS game — the non-negotiable features), (3) a list of nice-to-have features that can be cut, (4) explicit out-of-scope items. If the scope is ambiguous, ask the user (set state to "waiting_for_user"). Otherwise, set state to "preproduction_tech".
+
+## Instruction: Architect proposes tech stack
+**Condition:** MEMORY state is "preproduction_tech"
+**Action:** As the architect (read architect.md), review ## Scope in MEMORY. Propose a tech stack under ## Tech Proposal in MEMORY. Cover: language (TypeScript recommended for type safety), rendering approach (canvas 2D, WebGL, etc.), project structure (module system, bundler or script tags), build tooling (if any), and key libraries (if any). Justify each choice. Set state to "preproduction_tech_review".
+
+## Instruction: Developer reviews tech stack
+**Condition:** MEMORY state is "preproduction_tech_review"
+**Action:** As the developer (read developer.md), review ## Tech Proposal. Write ## Developer Tech Review in MEMORY: flag any concerns about complexity, build tooling overhead, or feasibility in a headless environment. Suggest alternatives if you disagree. Set state to "preproduction_tech_decide".
+
+## Instruction: Finalize tech stack
+**Condition:** MEMORY state is "preproduction_tech_decide"
+**Action:** As the team lead, review ## Tech Proposal and ## Developer Tech Review. If the team agrees, write the final decisions into ## Tech Stack in MEMORY (language, rendering, project structure, build steps). If there's a fundamental disagreement that needs user input, ask the user (set state to "waiting_for_user"). Otherwise, set state to "preproduction_bootstrap".
+
+## Instruction: Bootstrap project
+**Condition:** MEMORY state is "preproduction_bootstrap"
+**Action:** As the developer, set up the project skeleton in workspace/ according to ## Tech Stack. This means: create the directory structure, config files (tsconfig.json, package.json if needed), the entry point HTML file, and a minimal "hello world" that proves the toolchain works. Run the build (if any) and verify it succeeds. Write the result into MEMORY. Set state to "preproduction_verify".
+
+## Instruction: Verify bootstrap
+**Condition:** MEMORY state is "preproduction_verify"
+**Action:** As the developer, verify the bootstrapped project actually works: run any build step, check that the entry HTML file loads without errors (use a syntax/lint check or node-based validation if possible). List all created files and their purpose in MEMORY under ## Project Structure. If everything works, set state to "planning_features". If the build fails, debug and retry.
+
+## Phase: Production
 
 ## Instruction: Plan features
 **Condition:** MEMORY state is "planning_features"
@@ -81,7 +109,11 @@ Assess quality, correctness, and player experience for each. Set state to "picki
 
 ## Instruction: Decompose implementation
 **Condition:** MEMORY state is "plan_ready"
-**Action:** As the team lead, read ## Implementation Plan from MEMORY. Decompose it into 2-4 concrete sub-instructions for the CURRENT feature only (do not plan future features). Write them in the "# Sub-instructions" section below. Each action sub-instruction must be followed by a verification sub-instruction. The LAST sub-instruction must always be:
+**Action:** As the team lead, read ## Implementation Plan from MEMORY. Decompose it into 2-4 concrete sub-instructions for the CURRENT feature only (do not plan future features). Write them in the "# Sub-instructions" section below. Each action sub-instruction must be followed by a verification sub-instruction.
+
+Verification rules: you are in a headless environment with no browser or display. Verification must use tools you actually have — run builds, execute scripts, check syntax, validate file structure, run node to test logic. If something can ONLY be verified visually (rendering, layout, animation), you MUST ask the user to verify it (set state to "waiting_for_user" with a description of what to check). Never claim visual output is correct without either automated testing or user confirmation.
+
+The LAST sub-instruction must always be:
 
 If MEMORY contains "## Active Branch" (we're exploring on a branch):
 
