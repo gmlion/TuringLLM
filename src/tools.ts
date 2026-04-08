@@ -1,5 +1,6 @@
 import { execSync } from "child_process";
 import { mkdirSync, writeFileSync } from "fs";
+import { createInterface } from "readline";
 import { dirname } from "path";
 import type Anthropic from "@anthropic-ai/sdk";
 
@@ -76,6 +77,21 @@ export function getTools(): Anthropic.Tool[] {
       },
     },
     {
+      name: "ask_user",
+      description:
+        "Ask the user a question and wait for their answer. Use when you need clarification about the spec, when you cannot verify something (e.g., visual output in a headless environment), or when the user's input is required to proceed.",
+      input_schema: {
+        type: "object" as const,
+        properties: {
+          question: {
+            type: "string",
+            description: "The question to ask the user",
+          },
+        },
+        required: ["question"],
+      },
+    },
+    {
       name: "halt",
       description:
         "Stop the machine. Call when the program has reached its goal or cannot make further progress.",
@@ -93,12 +109,29 @@ export function getTools(): Anthropic.Tool[] {
   ];
 }
 
-export function executeTool(
+async function askUserQuestion(question: string): Promise<string> {
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  return new Promise((resolve) => {
+    console.log("");
+    console.log("┌─ USER INPUT NEEDED ─────────────────────────────────");
+    for (const line of question.split("\n")) {
+      console.log(`│ ${line}`);
+    }
+    console.log("└────────────────────────────────────────────────────");
+    process.stdout.write("  > ");
+    rl.question("", (answer) => {
+      rl.close();
+      resolve(answer);
+    });
+  });
+}
+
+export async function executeTool(
   name: string,
   input: Record<string, unknown>,
   instructionsPath: string,
   workspacePath?: string
-): ToolResult {
+): Promise<ToolResult> {
   switch (name) {
     case "bash": {
       const command = typeof input.command === "string" ? input.command : String(input.command ?? "");
@@ -108,7 +141,7 @@ export function executeTool(
       try {
         const stdout = execSync(command, {
           encoding: "utf-8",
-          timeout: 30_000,
+          timeout: 0,
           maxBuffer: 1024 * 1024,
         });
         return { output: stdout || "(no output)", halt: false, error: false };
@@ -150,7 +183,7 @@ export function executeTool(
       try {
         const stdout = execSync(`git ${args}`, {
           encoding: "utf-8",
-          timeout: 15_000,
+          timeout: 0,
           maxBuffer: 1024 * 1024,
           cwd: workspacePath,
         });
@@ -164,6 +197,14 @@ export function executeTool(
     case "update_instructions": {
       writeFileSync(instructionsPath, String(input.content ?? ""), "utf-8");
       return { output: "OK", halt: false, error: false };
+    }
+    case "ask_user": {
+      const question = String(input.question ?? "");
+      if (!question) {
+        return { output: "Error: no question provided", halt: false, error: true };
+      }
+      const answer = await askUserQuestion(question);
+      return { output: answer, halt: false, error: false };
     }
     case "halt": {
       const message = String(input.message ?? "halted");

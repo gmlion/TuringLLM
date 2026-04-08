@@ -28,8 +28,8 @@ export async function runCycle(
   instructionsPath: string,
   memoryPath: string
 ): Promise<CycleResult> {
-  const systemPrompt = getSystemPrompt();
-  const userPrompt = getUserPrompt(memoryPath, instructionsPath) + "\n\nExecute the next cycle.";
+  const systemPrompt = getSystemPrompt("api");
+  const userPrompt = getUserPrompt(memoryPath, instructionsPath);
   const tools = getTools();
 
   const filesBefore = [readFile(memoryPath), readFile(instructionsPath)];
@@ -51,7 +51,12 @@ export async function runCycle(
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       if (/rate.?limit|429|overloaded|529|quota|resource.?exhausted/i.test(msg)) {
-        throw new QuotaExceededError(msg);
+        let retryAfter: number | null = null;
+        const apiErr = err as { headers?: Record<string, string> };
+        if (apiErr.headers?.["retry-after"]) {
+          retryAfter = parseInt(apiErr.headers["retry-after"], 10) || null;
+        }
+        throw new QuotaExceededError(msg, retryAfter);
       }
       throw err;
     }
@@ -84,7 +89,7 @@ export async function runCycle(
       logRaw(`  [tool_input] ${JSON.stringify(input)}`);
 
       const instanceDir = resolve(memoryPath, "..");
-      const result = executeTool(toolUse.name, input, instructionsPath, getWorkspacePath(instanceDir));
+      const result = await executeTool(toolUse.name, input, instructionsPath, getWorkspacePath(instanceDir));
 
       // Log full result to file
       logRaw(`  [tool_result] ${result.output}`);
@@ -93,8 +98,7 @@ export async function runCycle(
       // Console gets a summary
       if (toolUse.name === "bash") {
         const cmd = typeof input.command === "string" ? input.command : "";
-        const preview = cmd.length > 120 ? cmd.slice(0, 120) + "..." : cmd;
-        log(`  [bash] ${preview}${result.error ? " (error)" : ""}`);
+        log(`  [bash] ${cmd}${result.error ? " (error)" : ""}`);
       } else if (toolUse.name === "write_file") {
         log(`  [write_file] ${input.path}${result.error ? " (error)" : ""}`);
       } else if (toolUse.name === "git") {
