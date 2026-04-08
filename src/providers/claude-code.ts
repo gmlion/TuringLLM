@@ -36,8 +36,8 @@ export async function runCycle(
   instructionsPath: string,
   memoryPath: string
 ): Promise<CycleResult> {
-  const systemPrompt = getSystemPrompt();
-  const userPrompt = getUserPrompt(memoryPath, instructionsPath) + "\n\nExecute the next cycle.";
+  const systemPrompt = getSystemPrompt("claude-code");
+  const userPrompt = getUserPrompt(memoryPath, instructionsPath);
   const cwd = resolve(memoryPath, "..");
 
   const memBefore = readFile(memoryPath);
@@ -53,15 +53,15 @@ export async function runCycle(
       const args = [
         "-p", userPrompt,
         "--system-prompt", systemPrompt,
-        "--model", "haiku",
+        "--model", process.env.CC_MODEL || "haiku",
         "--output-format", "json",
-        "--allowedTools", "Bash(*)", "Write(*)", "Edit(*)", "Read(*)",
+        "--allowedTools", "Bash(*)", "Write(*)", "Edit(*)",
         "--dangerously-skip-permissions",
       ];
 
       stdout = execFileSync("claude", args, {
         encoding: "utf-8",
-        timeout: 180_000,
+        timeout: 0,
         maxBuffer: 10 * 1024 * 1024,
         cwd,
         env: { ...process.env },
@@ -103,10 +103,9 @@ export async function runCycle(
 
     // Console summary
     if (resultText) {
-      const preview = resultText.trim().slice(0, 300);
-      log(`  [claude-code] ${preview}${resultText.trim().length > 300 ? "..." : ""}`);
+      log(`  [claude-code] ${resultText.trim()}`);
     } else if (exitCode !== 0) {
-      log(`  [claude-code] exited with code ${exitCode}${stderr ? ": " + stderr.slice(0, 150) : ""}`);
+      log(`  [claude-code] exited with code ${exitCode}${stderr ? ": " + stderr : ""}`);
     } else {
       log(`  [claude-code] (no text output)`);
     }
