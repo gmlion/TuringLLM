@@ -4,6 +4,12 @@ import type { ToolResult } from "../tools.js";
 
 export const MAX_RETRIES = 20;
 
+export type CycleResult = {
+  halt: boolean;
+  haltMessage?: string;
+  noMatch?: boolean;
+};
+
 export function readFile(path: string): string {
   try {
     return readFileSync(path, "utf-8");
@@ -34,6 +40,8 @@ export type CompletenessResult = {
   problem: string;
   halt: boolean;
   haltMessage: string;
+  noMatch: boolean;
+  state: string;
 };
 
 export function checkCycleCompleteness(
@@ -57,20 +65,34 @@ export function checkCycleCompleteness(
       problem: "",
       halt: true,
       haltMessage: lastAction ? lastAction[1].trim() : "Program complete",
+      noMatch: false,
+      state: newState,
     };
   }
 
   if (newState === "waiting_for_user") {
-    return { complete: true, problem: "", halt: false, haltMessage: "" };
+    return { complete: true, problem: "", halt: false, haltMessage: "", noMatch: false, state: newState };
   }
 
-  const hasMatchingInstruction = instructionsAfter.includes(`state is "${newState}"`);
+  // Check if the LLM declared no matching instruction
+  const matchedMatch = memoryAfter.match(/^## Matched Instruction\n(.+)/m);
+  const matchedValue = matchedMatch ? matchedMatch[1].trim().toLowerCase() : "";
+  const noMatch = matchedValue === "none";
+
+  if (noMatch) {
+    return {
+      complete: true,
+      problem: "",
+      halt: false,
+      haltMessage: "",
+      noMatch: true,
+      state: newState,
+    };
+  }
 
   let problem = "";
   if (!memoryChanged && !instructionsChanged) {
     problem = "You did not update MEMORY.md or INSTRUCTIONS.md. The cycle is incomplete.";
-  } else if (memoryChanged && !hasMatchingInstruction) {
-    problem = `You updated MEMORY state to "${newState}" but INSTRUCTIONS.md has no instruction with a matching condition. The machine will stall.`;
   }
 
   return {
@@ -78,5 +100,7 @@ export function checkCycleCompleteness(
     problem,
     halt: false,
     haltMessage: "",
+    noMatch: false,
+    state: newState,
   };
 }

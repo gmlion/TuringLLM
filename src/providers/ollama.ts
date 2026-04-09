@@ -4,17 +4,12 @@ import { getTools, executeTool } from "../tools.js";
 import { getSystemPrompt, getUserPrompt } from "../prompt.js";
 import { log, logRaw } from "../logger.js";
 import { getWorkspacePath } from "../git.js";
-import { readFile, logToolCall, checkCycleCompleteness, MAX_RETRIES } from "./shared.js";
+import { readFile, logToolCall, checkCycleCompleteness, MAX_RETRIES, type CycleResult } from "./shared.js";
 import type Anthropic from "@anthropic-ai/sdk";
 
 const BASE_URL = process.env.OLLAMA_BASE_URL || "http://localhost:11434";
 const MODEL = process.env.OLLAMA_MODEL || "qwen3:14b";
 const NUM_CTX = process.env.OLLAMA_NUM_CTX ? parseInt(process.env.OLLAMA_NUM_CTX, 10) : 16384;
-
-export type CycleResult = {
-  halt: boolean;
-  haltMessage?: string;
-};
 
 interface OllamaToolCall {
   function: {
@@ -278,6 +273,10 @@ export async function runCycle(
 
     if (completeness.halt) {
       return { halt: true, haltMessage: completeness.haltMessage };
+    }
+
+    if (completeness.noMatch) {
+      return { halt: false, noMatch: true };
     }
 
     if (completeness.complete) {

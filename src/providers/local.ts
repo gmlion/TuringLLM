@@ -3,7 +3,7 @@ import { getTools, executeTool } from "../tools.js";
 import { getSystemPrompt, getUserPrompt } from "../prompt.js";
 import { log, logRaw } from "../logger.js";
 import { getWorkspacePath } from "../git.js";
-import { readFile, logToolCall, checkCycleCompleteness, MAX_RETRIES } from "./shared.js";
+import { readFile, logToolCall, checkCycleCompleteness, MAX_RETRIES, type CycleResult } from "./shared.js";
 import {
   getLlama,
   LlamaChatSession,
@@ -19,10 +19,7 @@ const MODEL_URI = process.env.LOCAL_MODEL_URI || "";
 const GPU_LAYERS = process.env.LOCAL_GPU_LAYERS ? parseInt(process.env.LOCAL_GPU_LAYERS, 10) : undefined;
 const CONTEXT_SIZE = process.env.LOCAL_CONTEXT_SIZE ? parseInt(process.env.LOCAL_CONTEXT_SIZE, 10) : 16384;
 
-export type CycleResult = {
-  halt: boolean;
-  haltMessage?: string;
-};
+export type { CycleResult };
 
 // Singleton model — loaded once, reused across cycles
 let llamaInstance: Llama | null = null;
@@ -167,6 +164,10 @@ export async function runCycle(
 
     if (completeness.halt) {
       return { halt: true, haltMessage: completeness.haltMessage };
+    }
+
+    if (completeness.noMatch) {
+      return { halt: false, noMatch: true };
     }
 
     if (completeness.complete) {

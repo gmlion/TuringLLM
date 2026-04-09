@@ -38,6 +38,7 @@ No test suite or linter configured. After TypeScript changes, always `npm run bu
 - `src/providers/openai.ts` — OpenAI-compatible API provider
 - `src/providers/ollama.ts` — Ollama native API provider with streaming
 - `src/providers/local.ts` — In-process GGUF provider via node-llama-cpp (no server needed)
+- `src/providers/shared.ts` — Shared helpers: readFile, logToolCall, checkCycleCompleteness, CycleResult, MAX_RETRIES
 - `src/logger.ts` — Dual output: console gets summaries, `logs/run-<timestamp>.log` gets full untruncated output
 - `src/errors.ts` — QuotaExceededError for graceful pause on rate limits (exit 0, resumable)
 - `src/git.ts` — Two git repos per instance: machine git (instance root, auto-commits per cycle) and project git (workspace/, LLM-controlled)
@@ -80,6 +81,12 @@ All providers except Claude Code use the same custom tools (bash, write_file, gi
 ## Shared Configuration
 
 - `BASH_TIMEOUT` — timeout in seconds for bash tool commands (default: 300 / 5 minutes). Set to 0 to disable.
+
+## Condition Matching
+
+Instruction conditions in INSTRUCTIONS.md are natural language — the LLM interprets them using judgment, not exact string matching. The LLM writes `## Matched Instruction` in MEMORY.md each cycle, declaring which instruction it matched (or `none` if nothing matched).
+
+When the LLM writes `## Matched Instruction: none`, the shell automatically enters `waiting_for_user` and asks the user what to do next. This means conditions can be fuzzy (e.g., "state suggests tests are failing" rather than `state is "tests_failing"`), and the machine gracefully pauses when it reaches an unhandled state instead of retrying forever.
 
 ## Well-Known States
 

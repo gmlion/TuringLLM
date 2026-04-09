@@ -5,18 +5,13 @@ import { getSystemPrompt, getUserPrompt } from "../prompt.js";
 import { log, logRaw } from "../logger.js";
 import { QuotaExceededError } from "../errors.js";
 import { getWorkspacePath } from "../git.js";
-import { readFile, logToolCall, checkCycleCompleteness, MAX_RETRIES } from "./shared.js";
+import { readFile, logToolCall, checkCycleCompleteness, MAX_RETRIES, type CycleResult } from "./shared.js";
 
 const client = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
 const MODEL = process.env.ANTHROPIC_MODEL || "claude-haiku-4-5-20251001";
-
-export type CycleResult = {
-  halt: boolean;
-  haltMessage?: string;
-};
 
 export async function runCycle(
   instructionsPath: string,
@@ -124,6 +119,10 @@ export async function runCycle(
 
     if (completeness.halt) {
       return { halt: true, haltMessage: completeness.haltMessage };
+    }
+
+    if (completeness.noMatch) {
+      return { halt: false, noMatch: true };
     }
 
     if (completeness.complete) {

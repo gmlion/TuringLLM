@@ -254,6 +254,28 @@ async function main() {
 
     // Stateful mode: execute syscalls after LLM writes them
     if (STATEFUL) {
+      // Check for no-match before executing syscalls
+      const memoryContent = readFile(MEMORY_PATH);
+      const matchedMatch = memoryContent.match(/^## Matched Instruction\n(.+)/m);
+      const matchedValue = matchedMatch ? matchedMatch[1].trim().toLowerCase() : "";
+
+      if (matchedValue === "none") {
+        const state = getMemoryState();
+        log(`  [no-match] No instruction matched state "${state}" — asking user`);
+        const updated = memoryContent
+          .replace(/^(## State\n).+/m, "$1waiting_for_user")
+          .replace(/^## Question\n[\s\S]*?(?=\n## [A-Z]|\s*$)/m, "");
+        writeFileSync(MEMORY_PATH,
+          updated + `\n## Question\nNo instruction in INSTRUCTIONS.md matched state "${state}". What should the machine do next?\n`,
+          "utf-8"
+        );
+        const hash = commitCycle(BASE_DIR, cycle, "waiting_for_user");
+        snapshot(cycle, hash);
+        await handleUserInteraction();
+        log("");
+        continue;
+      }
+
       const syscallResult = executeSyscalls();
       const state = getMemoryState();
       const hash = commitCycle(BASE_DIR, cycle, state);
@@ -273,15 +295,30 @@ async function main() {
     }
 
     const state = getMemoryState();
-    const hash = commitCycle(BASE_DIR, cycle, state);
+
+    // If the LLM couldn't match any instruction, ask the user
+    if (result.noMatch) {
+      log(`  [no-match] No instruction matched state "${state}" — asking user`);
+      const memory = readFile(MEMORY_PATH);
+      const updated = memory
+        .replace(/^(## State\n).+/m, "$1waiting_for_user")
+        .replace(/^## Question\n[\s\S]*?(?=\n## [A-Z]|\s*$)/m, "");
+      writeFileSync(MEMORY_PATH,
+        updated + `\n## Question\nNo instruction in INSTRUCTIONS.md matched state "${state}". What should the machine do next?\n`,
+        "utf-8"
+      );
+    }
+
+    const finalState = result.noMatch ? "waiting_for_user" : state;
+    const hash = commitCycle(BASE_DIR, cycle, finalState);
     snapshot(cycle, hash);
 
-    if (result.halt || state === "done") {
+    if (result.halt || finalState === "done") {
       log(`\nMachine halted: ${result.haltMessage || "done"}`);
       return;
     }
 
-    if (state === "waiting_for_user") {
+    if (finalState === "waiting_for_user") {
       await handleUserInteraction();
     }
 

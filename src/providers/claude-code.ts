@@ -3,12 +3,7 @@ import { resolve } from "path";
 import { getSystemPrompt, getUserPrompt } from "../prompt.js";
 import { log, logRaw } from "../logger.js";
 import { QuotaExceededError } from "../errors.js";
-import { readFile, checkCycleCompleteness, MAX_RETRIES } from "./shared.js";
-
-export type CycleResult = {
-  halt: boolean;
-  haltMessage?: string;
-};
+import { readFile, checkCycleCompleteness, MAX_RETRIES, type CycleResult } from "./shared.js";
 
 const QUOTA_PATTERNS = [
   /quota/i,
@@ -104,6 +99,10 @@ export async function runCycle(
 
     if (completeness.halt) {
       return { halt: true, haltMessage: completeness.haltMessage };
+    }
+
+    if (completeness.noMatch) {
+      return { halt: false, noMatch: true };
     }
 
     if (completeness.complete) {

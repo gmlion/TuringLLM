@@ -5,7 +5,7 @@ import { getSystemPrompt, getUserPrompt } from "../prompt.js";
 import { log, logRaw } from "../logger.js";
 import { QuotaExceededError } from "../errors.js";
 import { getWorkspacePath } from "../git.js";
-import { readFile, logToolCall, checkCycleCompleteness, MAX_RETRIES } from "./shared.js";
+import { readFile, logToolCall, checkCycleCompleteness, MAX_RETRIES, type CycleResult } from "./shared.js";
 import type Anthropic from "@anthropic-ai/sdk";
 
 const client = new OpenAI({
@@ -14,11 +14,6 @@ const client = new OpenAI({
 });
 
 const MODEL = process.env.OPENAI_MODEL || "gpt-4o";
-
-export type CycleResult = {
-  halt: boolean;
-  haltMessage?: string;
-};
 
 // Convert our Anthropic-shaped tool defs to OpenAI function calling format
 function convertTools(anthropicTools: Anthropic.Tool[]): OpenAI.ChatCompletionTool[] {
@@ -174,6 +169,10 @@ export async function runCycle(
 
     if (completeness.halt) {
       return { halt: true, haltMessage: completeness.haltMessage };
+    }
+
+    if (completeness.noMatch) {
+      return { halt: false, noMatch: true };
     }
 
     if (completeness.complete) {
