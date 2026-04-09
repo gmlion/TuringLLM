@@ -1,9 +1,9 @@
-import { readFileSync } from "fs";
 import { resolve } from "path";
 import { getTools, executeTool } from "../tools.js";
 import { getSystemPrompt, getUserPrompt } from "../prompt.js";
 import { log, logRaw } from "../logger.js";
 import { getWorkspacePath } from "../git.js";
+import { readFile, logToolCall, checkCycleCompleteness, MAX_RETRIES } from "./shared.js";
 import {
   getLlama,
   LlamaChatSession,
@@ -23,14 +23,6 @@ export type CycleResult = {
   halt: boolean;
   haltMessage?: string;
 };
-
-function readFile(path: string): string {
-  try {
-    return readFileSync(path, "utf-8");
-  } catch {
-    return "";
-  }
-}
 
 // Singleton model — loaded once, reused across cycles
 let llamaInstance: Llama | null = null;
@@ -93,18 +85,7 @@ function buildFunctions(
         logRaw(`  [tool_result] ${result.output}`);
         logRaw(`  [tool_error] ${result.error}`);
 
-        if (toolName === "bash") {
-          const cmd = typeof params.command === "string" ? params.command : "";
-          log(`  [bash] ${cmd}${result.error ? " (error)" : ""}`);
-        } else if (toolName === "write_file") {
-          log(`  [write_file] ${params.path}${result.error ? " (error)" : ""}`);
-        } else if (toolName === "git") {
-          log(`  [git] ${params.args}${result.error ? " (error)" : ""}`);
-        } else if (toolName === "update_instructions") {
-          log(`  [update_instructions]`);
-        } else if (toolName === "halt") {
-          log(`  [halt] ${params.message}`);
-        }
+        logToolCall(toolName, params, result);
 
         results.push({
           name: toolName,
@@ -129,7 +110,7 @@ export async function runCycle(
   const userPrompt = getUserPrompt(memoryPath, instructionsPath, "ollama");
   const tools = getTools();
 
-  const filesBefore = [readFile(memoryPath), readFile(instructionsPath)];
+  const filesBefore: [string, string] = [readFile(memoryPath), readFile(instructionsPath)];
 
   const model = await getModel();
   const instanceDir = resolve(memoryPath, "..");
@@ -137,8 +118,7 @@ export async function runCycle(
 
   const { functions, results } = buildFunctions(tools, instructionsPath, workspacePath);
 
-  const maxRetries = 20;
-  for (let attempt = 0; ; attempt++) {
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     results.length = 0;
 
     // Fresh context and session per attempt — avoids corrupted KV cache on errors
@@ -161,11 +141,8 @@ export async function runCycle(
       const msg = err instanceof Error ? err.message : String(err);
       log(`  [local-error] ${msg}`);
       await context.dispose();
-      if (attempt < maxRetries) {
-        log(`  [retry ${attempt + 1}] inference error`);
-        continue;
-      }
-      throw err;
+      log(`  [retry ${attempt + 1}] inference error`);
+      continue;
     }
 
     await context.dispose();
@@ -176,11 +153,8 @@ export async function runCycle(
 
     if (results.length === 0) {
       logRaw("  (no tool calls)");
-      if (attempt < maxRetries) {
-        log(`  [retry ${attempt + 1}] no tool calls`);
-        continue;
-      }
-      return { halt: false };
+      log(`  [retry ${attempt + 1}] no tool calls`);
+      continue;
     }
 
     const haltResult = results.find((r) => r.halt);
@@ -189,36 +163,19 @@ export async function runCycle(
     }
 
     // Check cycle completeness
-    const memoryAfter = readFile(memoryPath);
-    const instructionsAfter = readFile(instructionsPath);
-    const memoryChanged = memoryAfter !== filesBefore[0];
-    const instructionsChanged = instructionsAfter !== filesBefore[1];
+    const completeness = checkCycleCompleteness(memoryPath, instructionsPath, filesBefore);
 
-    const stateMatch = memoryAfter.match(/^## State\n(.+)/m);
-    const newState = stateMatch ? stateMatch[1].trim() : "";
-
-    if (newState === "done") {
-      const lastAction = memoryAfter.match(/^## Last Action\n([\s\S]*?)(?=\n## |\n*$)/m);
-      return { halt: true, haltMessage: lastAction ? lastAction[1].trim() : "Program complete" };
+    if (completeness.halt) {
+      return { halt: true, haltMessage: completeness.haltMessage };
     }
 
-    if (newState === "waiting_for_user") {
+    if (completeness.complete) {
       return { halt: false };
     }
 
-    const hasMatchingInstruction = instructionsAfter.includes(`state is "${newState}"`);
-
-    if (memoryChanged || instructionsChanged) {
-      if (hasMatchingInstruction) {
-        return { halt: false };
-      }
-    }
-
-    if (attempt >= maxRetries) {
-      log(`  [warn] cycle incomplete after ${maxRetries} retries`);
-      return { halt: false };
-    }
-
-    log(`  [retry ${attempt + 1}] ${memoryChanged ? "orphan state" : "no state change"}`);
+    log(`  [retry ${attempt + 1}] ${completeness.problem.includes("did not update") ? "no state change" : "orphan state"}`);
   }
+
+  log(`  [warn] cycle incomplete after ${MAX_RETRIES} retries`);
+  return { halt: false };
 }

@@ -6,6 +6,7 @@ import { createInterface } from "readline";
 import { initLog, log, getLogPath } from "./logger.js";
 import { ensureMachineRepo, ensureProjectRepo, commitCycle } from "./git.js";
 import { getWorkspacePath } from "./git.js";
+import { ALLOWED_GIT_COMMANDS } from "./tools.js";
 
 const BASE_DIR = process.cwd();
 
@@ -134,8 +135,9 @@ function executeSyscalls(): { halted: boolean; haltMessage: string } {
     } else if (firstLine.startsWith("git:")) {
       const args = firstLine.slice(4).trim() || rest;
       const workspacePath = getWorkspacePath(BASE_DIR);
-      if (/^\s*(push|rebase|reset\s+--hard|clean\s+-f)/i.test(args)) {
-        results.push(`## Result ${i + 1}: git\nError: destructive git operations not allowed`);
+      const subcommand = args.trim().split(/\s+/)[0].toLowerCase();
+      if (!ALLOWED_GIT_COMMANDS.has(subcommand)) {
+        results.push(`## Result ${i + 1}: git\nError: "git ${subcommand}" is not allowed. Allowed: ${[...ALLOWED_GIT_COMMANDS].join(", ")}.`);
       } else {
         log(`  [git] ${args}`);
         try {

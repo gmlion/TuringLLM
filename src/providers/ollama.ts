@@ -1,9 +1,10 @@
-import { readFileSync } from "fs";
+import { writeFileSync } from "fs";
 import { resolve } from "path";
 import { getTools, executeTool } from "../tools.js";
 import { getSystemPrompt, getUserPrompt } from "../prompt.js";
 import { log, logRaw } from "../logger.js";
 import { getWorkspacePath } from "../git.js";
+import { readFile, logToolCall, checkCycleCompleteness, MAX_RETRIES } from "./shared.js";
 import type Anthropic from "@anthropic-ai/sdk";
 
 const BASE_URL = process.env.OLLAMA_BASE_URL || "http://localhost:11434";
@@ -14,14 +15,6 @@ export type CycleResult = {
   halt: boolean;
   haltMessage?: string;
 };
-
-function readFile(path: string): string {
-  try {
-    return readFileSync(path, "utf-8");
-  } catch {
-    return "";
-  }
-}
 
 interface OllamaToolCall {
   function: {
@@ -179,9 +172,6 @@ export async function runCycle(
     const memoryContent = (parts[0] || "").trim();
     const syscallsContent = (parts[1] || "").trim();
 
-    const { writeFileSync } = await import("fs");
-    const { resolve } = await import("path");
-
     if (memoryContent) {
       logRaw(`  [memory-write] ${memoryContent}`);
       writeFileSync(memoryPath, memoryContent + "\n", "utf-8");
@@ -196,19 +186,22 @@ export async function runCycle(
 
   const tools = convertTools(getTools());
 
-  const filesBefore = [readFile(memoryPath), readFile(instructionsPath)];
+  const filesBefore: [string, string] = [readFile(memoryPath), readFile(instructionsPath)];
 
   const messages: OllamaMessage[] = [
     { role: "system", content: systemPrompt },
     { role: "user", content: userPrompt },
   ];
 
-  for (let attempt = 0; ; attempt++) {
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     let result: OllamaChatResult;
     try {
       result = await ollamaChat(messages, tools);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
+      if (/rate.?limit|429|overloaded|quota|resource.?exhausted/i.test(msg)) {
+        throw new Error(`Quota exceeded: ${msg}`);
+      }
       throw new Error(`Ollama request failed: ${msg}`);
     }
 
@@ -228,6 +221,10 @@ export async function runCycle(
 
     if (toolCalls.length === 0) {
       logRaw("  (no tool calls emitted)");
+      if (attempt < MAX_RETRIES - 1) {
+        log(`  [retry ${attempt + 1}] no tool calls`);
+        continue;
+      }
       return { halt: false };
     }
 
@@ -251,18 +248,7 @@ export async function runCycle(
       logRaw(`  [tool_result] ${toolResult.output}`);
       logRaw(`  [tool_error] ${toolResult.error}`);
 
-      if (name === "bash") {
-        const cmd = typeof input.command === "string" ? input.command : "";
-        log(`  [bash] ${cmd}${toolResult.error ? " (error)" : ""}`);
-      } else if (name === "write_file") {
-        log(`  [write_file] ${input.path}${toolResult.error ? " (error)" : ""}`);
-      } else if (name === "git") {
-        log(`  [git] ${input.args}${toolResult.error ? " (error)" : ""}`);
-      } else if (name === "update_instructions") {
-        log(`  [update_instructions]`);
-      } else if (name === "halt") {
-        log(`  [halt] ${input.message}`);
-      }
+      logToolCall(name, input, toolResult);
 
       messages.push({
         role: "tool",
@@ -288,34 +274,23 @@ export async function runCycle(
     }
 
     // Check cycle completeness
-    const memoryAfter = readFile(memoryPath);
-    const instructionsAfter = readFile(instructionsPath);
-    const memoryChanged = memoryAfter !== filesBefore[0];
-    const instructionsChanged = instructionsAfter !== filesBefore[1];
+    const completeness = checkCycleCompleteness(memoryPath, instructionsPath, filesBefore);
 
-    const stateMatch = memoryAfter.match(/^## State\n(.+)/m);
-    const newState = stateMatch ? stateMatch[1].trim() : "";
-
-    const hasMatchingInstruction = newState === "done" ||
-      newState === "waiting_for_user" ||
-      instructionsAfter.includes(`state is "${newState}"`);
-
-    let problem = "";
-    if (!memoryChanged && !instructionsChanged) {
-      problem = "You did not update MEMORY.md or INSTRUCTIONS.md. The cycle is incomplete.";
-    } else if (memoryChanged && !hasMatchingInstruction) {
-      problem = `You updated MEMORY state to "${newState}" but INSTRUCTIONS.md has no instruction with a matching condition. The machine will stall.`;
+    if (completeness.halt) {
+      return { halt: true, haltMessage: completeness.haltMessage };
     }
 
-    if (problem) {
-      log(`  [retry ${attempt + 1}] ${memoryChanged ? "orphan state" : "no state change"}`);
-      messages.push({
-        role: "user",
-        content: `Tool calls executed (results above), but: ${problem} You MUST update both MEMORY.md (via bash) and INSTRUCTIONS.md (via update_instructions).`,
-      });
-      continue;
+    if (completeness.complete) {
+      return { halt: false };
     }
 
-    return { halt: false };
+    log(`  [retry ${attempt + 1}] ${completeness.problem.includes("did not update") ? "no state change" : "orphan state"}`);
+    messages.push({
+      role: "user",
+      content: `Tool calls executed (results above), but: ${completeness.problem} You MUST update both MEMORY.md (via bash) and INSTRUCTIONS.md (via update_instructions).`,
+    });
   }
+
+  log(`  [warn] cycle incomplete after ${MAX_RETRIES} retries`);
+  return { halt: false };
 }

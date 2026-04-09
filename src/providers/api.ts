@@ -1,28 +1,22 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { readFileSync } from "fs";
 import { resolve } from "path";
 import { getTools, executeTool } from "../tools.js";
 import { getSystemPrompt, getUserPrompt } from "../prompt.js";
 import { log, logRaw } from "../logger.js";
 import { QuotaExceededError } from "../errors.js";
 import { getWorkspacePath } from "../git.js";
+import { readFile, logToolCall, checkCycleCompleteness, MAX_RETRIES } from "./shared.js";
 
 const client = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
+const MODEL = process.env.ANTHROPIC_MODEL || "claude-haiku-4-5-20251001";
+
 export type CycleResult = {
   halt: boolean;
   haltMessage?: string;
 };
-
-function readFile(path: string): string {
-  try {
-    return readFileSync(path, "utf-8");
-  } catch {
-    return "";
-  }
-}
 
 export async function runCycle(
   instructionsPath: string,
@@ -32,17 +26,17 @@ export async function runCycle(
   const userPrompt = getUserPrompt(memoryPath, instructionsPath);
   const tools = getTools();
 
-  const filesBefore = [readFile(memoryPath), readFile(instructionsPath)];
+  const filesBefore: [string, string] = [readFile(memoryPath), readFile(instructionsPath)];
 
   const messages: Anthropic.MessageParam[] = [
     { role: "user", content: userPrompt },
   ];
 
-  for (let attempt = 0; ; attempt++) {
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     let response: Anthropic.Message;
     try {
       response = await client.messages.create({
-        model: "claude-haiku-4-5-20251001",
+        model: MODEL,
         max_tokens: 16384,
         system: systemPrompt,
         tools,
@@ -73,6 +67,10 @@ export async function runCycle(
 
     if (toolUses.length === 0) {
       logRaw("  (no tool calls emitted)");
+      if (attempt < MAX_RETRIES - 1) {
+        log(`  [retry ${attempt + 1}] no tool calls`);
+        continue;
+      }
       return { halt: false };
     }
 
@@ -84,30 +82,16 @@ export async function runCycle(
     for (const toolUse of toolUses) {
       const input = toolUse.input as Record<string, unknown>;
 
-      // Log full tool call to file
       logRaw(`  [tool_call] ${toolUse.name}`);
       logRaw(`  [tool_input] ${JSON.stringify(input)}`);
 
       const instanceDir = resolve(memoryPath, "..");
       const result = await executeTool(toolUse.name, input, instructionsPath, getWorkspacePath(instanceDir));
 
-      // Log full result to file
       logRaw(`  [tool_result] ${result.output}`);
       logRaw(`  [tool_error] ${result.error}`);
 
-      // Console gets a summary
-      if (toolUse.name === "bash") {
-        const cmd = typeof input.command === "string" ? input.command : "";
-        log(`  [bash] ${cmd}${result.error ? " (error)" : ""}`);
-      } else if (toolUse.name === "write_file") {
-        log(`  [write_file] ${input.path}${result.error ? " (error)" : ""}`);
-      } else if (toolUse.name === "git") {
-        log(`  [git] ${input.args}${result.error ? " (error)" : ""}`);
-      } else if (toolUse.name === "update_instructions") {
-        log(`  [update_instructions]`);
-      } else if (toolUse.name === "halt") {
-        log(`  [halt] ${input.message}`);
-      }
+      logToolCall(toolUse.name, input, result);
 
       toolResults.push({
         type: "tool_result",
@@ -136,41 +120,30 @@ export async function runCycle(
     }
 
     // Check cycle completeness
-    const memoryAfter = readFile(memoryPath);
-    const instructionsAfter = readFile(instructionsPath);
-    const memoryChanged = memoryAfter !== filesBefore[0];
-    const instructionsChanged = instructionsAfter !== filesBefore[1];
+    const completeness = checkCycleCompleteness(memoryPath, instructionsPath, filesBefore);
 
-    const stateMatch = memoryAfter.match(/^## State\n(.+)/m);
-    const newState = stateMatch ? stateMatch[1].trim() : "";
-
-    const hasMatchingInstruction = newState === "done" ||
-      newState === "waiting_for_user" ||
-      instructionsAfter.includes(`state is "${newState}"`);
-
-    let problem = "";
-    if (!memoryChanged && !instructionsChanged) {
-      problem = "You did not update MEMORY.md or INSTRUCTIONS.md. The cycle is incomplete.";
-    } else if (memoryChanged && !hasMatchingInstruction) {
-      problem = `You updated MEMORY state to "${newState}" but INSTRUCTIONS.md has no instruction with a matching condition. The machine will stall.`;
+    if (completeness.halt) {
+      return { halt: true, haltMessage: completeness.haltMessage };
     }
 
-    if (problem) {
-      log(`  [retry ${attempt + 1}] ${memoryChanged ? "orphan state" : "no state change"}`);
-      messages.push({ role: "assistant", content: response.content });
-      messages.push({
-        role: "user",
-        content: [
-          ...toolResults,
-          {
-            type: "text" as const,
-            text: `Tool calls executed (results above), but: ${problem} You MUST update both MEMORY.md (via bash) and INSTRUCTIONS.md (via update_instructions).`,
-          },
-        ],
-      });
-      continue;
+    if (completeness.complete) {
+      return { halt: false };
     }
 
-    return { halt: false };
+    log(`  [retry ${attempt + 1}] ${completeness.problem.includes("did not update") ? "no state change" : "orphan state"}`);
+    messages.push({ role: "assistant", content: response.content });
+    messages.push({
+      role: "user",
+      content: [
+        ...toolResults,
+        {
+          type: "text" as const,
+          text: `Tool calls executed (results above), but: ${completeness.problem} You MUST update both MEMORY.md (via bash) and INSTRUCTIONS.md (via update_instructions).`,
+        },
+      ],
+    });
   }
+
+  log(`  [warn] cycle incomplete after ${MAX_RETRIES} retries`);
+  return { halt: false };
 }

@@ -1,23 +1,14 @@
 import { execFileSync } from "child_process";
-import { readFileSync } from "fs";
 import { resolve } from "path";
 import { getSystemPrompt, getUserPrompt } from "../prompt.js";
 import { log, logRaw } from "../logger.js";
-
 import { QuotaExceededError } from "../errors.js";
+import { readFile, checkCycleCompleteness, MAX_RETRIES } from "./shared.js";
 
 export type CycleResult = {
   halt: boolean;
   haltMessage?: string;
 };
-
-function readFile(path: string): string {
-  try {
-    return readFileSync(path, "utf-8");
-  } catch {
-    return "";
-  }
-}
 
 const QUOTA_PATTERNS = [
   /quota/i,
@@ -40,11 +31,9 @@ export async function runCycle(
   const userPrompt = getUserPrompt(memoryPath, instructionsPath);
   const cwd = resolve(memoryPath, "..");
 
-  const memBefore = readFile(memoryPath);
-  const instBefore = readFile(instructionsPath);
+  const filesBefore: [string, string] = [readFile(memoryPath), readFile(instructionsPath)];
 
-  const maxRetries = 20;
-  for (let attempt = 0; ; attempt++) {
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     let stdout = "";
     let stderr = "";
     let exitCode = 0;
@@ -110,44 +99,20 @@ export async function runCycle(
       log(`  [claude-code] (no text output)`);
     }
 
-    // Check if halted
-    const memAfter = readFile(memoryPath);
-    const stateMatch = memAfter.match(/^## State\n(.+)/m);
-    const state = stateMatch ? stateMatch[1].trim() : "";
+    // Check cycle completeness
+    const completeness = checkCycleCompleteness(memoryPath, instructionsPath, filesBefore);
 
-    if (state === "done") {
-      const lastAction = memAfter.match(/^## Last Action\n([\s\S]*?)(?=\n## |\n*$)/m);
-      return { halt: true, haltMessage: lastAction ? lastAction[1].trim() : "Program complete" };
+    if (completeness.halt) {
+      return { halt: true, haltMessage: completeness.haltMessage };
     }
 
-    if (state === "waiting_for_user") {
+    if (completeness.complete) {
       return { halt: false };
     }
 
-    // Check completeness
-    const instAfter = readFile(instructionsPath);
-    const memChanged = memAfter !== memBefore;
-    const instChanged = instAfter !== instBefore;
-
-    if (memChanged || instChanged) {
-      const hasMatch = instAfter.includes(`state is "${state}"`);
-      if (hasMatch) {
-        return { halt: false };
-      }
-      if (attempt < maxRetries) {
-        log(`  [retry ${attempt + 1}] orphan state "${state}" — no matching instruction`);
-        continue;
-      }
-    } else {
-      if (attempt < maxRetries) {
-        log(`  [retry ${attempt + 1}] no state change`);
-        continue;
-      }
-    }
-
-    if (attempt >= maxRetries) {
-      log(`  [warn] cycle incomplete after ${maxRetries} retries`);
-      return { halt: false };
-    }
+    log(`  [retry ${attempt + 1}] ${completeness.problem.includes("did not update") ? "no state change" : "orphan state"}`);
   }
+
+  log(`  [warn] cycle incomplete after ${MAX_RETRIES} retries`);
+  return { halt: false };
 }

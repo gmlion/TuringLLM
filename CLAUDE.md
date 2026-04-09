@@ -56,9 +56,10 @@ Providers and models are configured via environment variables. Use a `.env` file
 
 ## Providers
 
-All providers except Claude Code use the same custom tools (bash, write_file, git, update_instructions, halt) with the shell managing the tool call loop. Retries are unbounded for tool errors and incomplete cycles.
+All providers except Claude Code use the same custom tools (bash, write_file, git, update_instructions, halt) with the shell managing the tool call loop. All providers cap retries at 20 for incomplete cycles.
 
-**API provider** (`TURING_PROVIDER=api`): Anthropic SDK. Uses claude-haiku-4-5-20251001. Requires `ANTHROPIC_API_KEY`.
+**API provider** (`TURING_PROVIDER=api`): Anthropic SDK. Requires `ANTHROPIC_API_KEY`.
+- `ANTHROPIC_MODEL` — model name (default: claude-haiku-4-5-20251001)
 
 **Claude Code provider** (`TURING_PROVIDER=claude-code`, default): Invokes `claude -p` as a subprocess with its native tools (Bash, Write, Edit). CC manages its own tool loop internally. The shell checks file changes after each invocation and retries if no progress. Note: CC's autonomy training can cause it to do too much per cycle or skip verification.
 - `CC_MODEL` — model name passed to `claude --model` (default: haiku)
@@ -75,6 +76,10 @@ All providers except Claude Code use the same custom tools (bash, write_file, gi
 **Local provider** (`TURING_PROVIDER=local`): Loads a GGUF model directly in-process via node-llama-cpp. No server needed. Model stays loaded across cycles. Streaming output. Native function calling via grammar constraints.
 - `LOCAL_MODEL_PATH` — path to a GGUF file (e.g., Ollama blob path)
 - `LOCAL_MODEL_URI` — or a HuggingFace URI to auto-download (e.g., `hf:Qwen/Qwen3-32B-GGUF/qwen3-32b-q4_k_m.gguf`)
+
+## Shared Configuration
+
+- `BASH_TIMEOUT` — timeout in seconds for bash tool commands (default: 300 / 5 minutes). Set to 0 to disable.
 
 ## Well-Known States
 

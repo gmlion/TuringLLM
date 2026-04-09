@@ -10,6 +10,13 @@ export type ToolResult = {
   error: boolean;
 };
 
+export const ALLOWED_GIT_COMMANDS = new Set([
+  "add", "blame", "branch", "cat-file", "checkout", "cherry-pick",
+  "commit", "describe", "diff", "init", "log", "ls-files", "ls-tree",
+  "merge", "mv", "rev-parse", "rm", "shortlog", "show", "stash",
+  "status", "switch", "tag",
+]);
+
 export function getTools(): Anthropic.Tool[] {
   return [
     {
@@ -64,7 +71,7 @@ export function getTools(): Anthropic.Tool[] {
     {
       name: "git",
       description:
-        "Run a git command. Use for branching, diffing, checking out previous states, or inspecting history. Do NOT use for committing — commits are handled automatically by the machine after each cycle.",
+        "Run a git command in the workspace repo. Allowed subcommands: add, blame, branch, cat-file, checkout, cherry-pick, commit, describe, diff, init, log, ls-files, ls-tree, merge, mv, rev-parse, rm, shortlog, show, stash, status, switch, tag. Other subcommands (push, rebase, reset, clean, etc.) are blocked.",
       input_schema: {
         type: "object" as const,
         properties: {
@@ -139,9 +146,12 @@ export async function executeTool(
         return { output: "Error: no command provided.", halt: false, error: true };
       }
       try {
+        const timeout = process.env.BASH_TIMEOUT
+          ? parseInt(process.env.BASH_TIMEOUT, 10) * 1000
+          : 5 * 60 * 1000; // 5 minutes default
         const stdout = execSync(command, {
           encoding: "utf-8",
-          timeout: 0,
+          timeout,
           maxBuffer: 1024 * 1024,
         });
         return { output: stdout || "(no output)", halt: false, error: false };
@@ -176,9 +186,14 @@ export async function executeTool(
       if (!workspacePath) {
         return { output: "Error: workspace path not configured.", halt: false, error: true };
       }
-      // Block destructive operations
-      if (/^\s*(push|rebase|reset\s+--hard|clean\s+-f)/i.test(args)) {
-        return { output: "Error: git push/rebase/reset --hard/clean are not allowed. Use git for branching, committing, diffing, log, checkout, and inspection.", halt: false, error: true };
+      // Whitelist: only allow known-safe git subcommands
+      const subcommand = args.trim().split(/\s+/)[0].toLowerCase();
+      if (!ALLOWED_GIT_COMMANDS.has(subcommand)) {
+        return {
+          output: `Error: "git ${subcommand}" is not allowed. Allowed: ${[...ALLOWED_GIT_COMMANDS].join(", ")}.`,
+          halt: false,
+          error: true,
+        };
       }
       try {
         const stdout = execSync(`git ${args}`, {
@@ -191,7 +206,7 @@ export async function executeTool(
       } catch (err: unknown) {
         const e = err as { stdout?: string; stderr?: string; status?: number };
         const output = `exit code ${e.status ?? 1}\nstdout: ${e.stdout ?? ""}\nstderr: ${e.stderr ?? ""}`;
-        return { output, halt: false, error: false };
+        return { output, halt: false, error: true };
       }
     }
     case "update_instructions": {
