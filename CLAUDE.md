@@ -32,7 +32,7 @@ No test suite or linter configured. After TypeScript changes, always `npm run bu
 
 - `src/main.ts` — Cycle loop, git commits, history snapshots, user interaction handling, provider dispatch
 - `src/prompt.ts` — System prompt and user prompt construction (inlines MEMORY + INSTRUCTIONS)
-- `src/tools.ts` — Tool definitions (bash, write_file, git, update_instructions, halt) and execution
+- `src/tools.ts` — Tool definitions (bash, write_file, git, update_instructions, ask_user, halt) and execution
 - `src/providers/api.ts` — Anthropic SDK provider with managed tool loop
 - `src/providers/claude-code.ts` — Claude Code CLI provider using native CC tools
 - `src/providers/openai.ts` — OpenAI-compatible API provider
@@ -45,7 +45,7 @@ No test suite or linter configured. After TypeScript changes, always `npm run bu
 
 ## Two Git Repos Per Instance
 
-- **Machine git** (instance root) — Hardwired. Auto-commits all files after each cycle. Commit message: `cycle N: <state>`. History dirs include the short hash: `history/0042-a3f1b2c/`. Tracks MEMORY, INSTRUCTIONS, and workspace changes.
+- **Machine git** (instance root) — Hardwired. Each instance gets its own `.git` repo (never inherits from a parent project repo). Auto-commits all files after each cycle. Commit message: `cycle N: <state>`. History dirs include the short hash: `history/0042-a3f1b2c/`. Tracks MEMORY, INSTRUCTIONS, and workspace changes.
 - **Project git** (`workspace/`) — LLM-controlled via the `git` tool. The LLM can branch, commit, diff, checkout freely. Used by interpreters like karpathy-loop for exploring alternative approaches.
 
 The machine git ignores `workspace/.git/` so nested repos don't conflict.
@@ -60,7 +60,8 @@ All providers except Claude Code use the same custom tools (bash, write_file, gi
 
 **API provider** (`TURING_PROVIDER=api`): Anthropic SDK. Uses claude-haiku-4-5-20251001. Requires `ANTHROPIC_API_KEY`.
 
-**Claude Code provider** (`TURING_PROVIDER=claude-code`, default): Invokes `claude -p --model haiku` as a subprocess with its native tools (Bash, Write, Edit). CC manages its own tool loop internally. The shell checks file changes after each invocation and retries if no progress. Note: CC's autonomy training can cause it to do too much per cycle or skip verification.
+**Claude Code provider** (`TURING_PROVIDER=claude-code`, default): Invokes `claude -p` as a subprocess with its native tools (Bash, Write, Edit). CC manages its own tool loop internally. The shell checks file changes after each invocation and retries if no progress. Note: CC's autonomy training can cause it to do too much per cycle or skip verification.
+- `CC_MODEL` — model name passed to `claude --model` (default: haiku)
 
 **OpenAI provider** (`TURING_PROVIDER=openai`): OpenAI-compatible API with function calling.
 - `OPENAI_API_KEY` — API key (required)
@@ -90,6 +91,7 @@ Interpreters live in `interpreters/<name>/`. Each has an `INSTRUCTIONS.md` and o
 - **default** (no argument to new-instance.sh) — Step-by-step executor. Reads PROGRAM.md steps, decomposes each into sub-instructions with verification.
 - **`interpreters/game-team`** — Game dev team simulation. Six roles (team lead, architect, game designer, developer, 2D artist, UI/UX). Preproduction phase: defines scope, debates tech stack (architect proposes, developer reviews), bootstraps project skeleton. Production phase: gathers opinions per feature, synthesizes, decomposes into sub-steps. Verification is honest about headless limitations — asks user when visual confirmation is needed. Interactive — asks user when specs are unclear. Feature planning loop reassesses the backlog after each feature. Supports parallel exploration via git branches.
 - **`interpreters/karpathy-loop`** — Tight code→test→fix→evaluate loop. No upfront planning. Supports breadth-first branching: when multiple approaches are viable, creates git branches and explores them round-robin before comparing and picking a winner.
+- **`interpreters/pair-architect`** — User as co-architect. All design decisions (scope, tech stack, data models, APIs, component boundaries) go through the user via `waiting_for_user`. Implementation details are autonomous. Feature backlog priority is user-confirmed. Visual verification also requires user.
 - **`interpreters/red-blue`** — Adversarial red-team/blue-team loop. Blue team builds and hardens code. Red team attacks with exploits, edge cases, and stress tests. Loop escalates until red team can't find issues. Ends with a comprehensive final audit. Best for building robust/secure systems.
 
 ### Creating a new interpreter
