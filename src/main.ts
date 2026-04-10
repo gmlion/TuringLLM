@@ -7,7 +7,7 @@ import { initLog, log, getLogPath } from "./logger.js";
 import { ensureMachineRepo, ensureProjectRepo, commitCycle } from "./git.js";
 import { getWorkspacePath } from "./git.js";
 import { ALLOWED_GIT_COMMANDS } from "./tools.js";
-import { sendTelegramMessage, waitForTelegramReply } from "./telegram.js";
+import { TelegramSession } from "./telegram.js";
 
 const BASE_DIR = process.cwd();
 
@@ -71,7 +71,8 @@ function getMemoryState(): string {
 
 function getPendingQuestions(): Array<{id: string, question: string}> {
   const memory = readFile(MEMORY_PATH);
-  const match = memory.match(/^## Pending Questions\n([\s\S]*?)(?=\n## [A-Z]|\s*$)/m);
+  const match = memory.match(/^## Pending Questions\n([\s\S]*?)(?=\n## [A-Z])/m)
+    || memory.match(/^## Pending Questions\n([\s\S]+)$/m);
   if (!match) return [];
   const items: Array<{id: string, question: string}> = [];
   const regex = /^- \*\*(\w+)\*\*:\s*(.+)/gm;
@@ -82,38 +83,163 @@ function getPendingQuestions(): Array<{id: string, question: string}> {
   return items;
 }
 
-async function askUserStdin(question: string): Promise<string> {
-  const rl = createInterface({ input: process.stdin, output: process.stdout });
-  return new Promise((resolve) => {
+// --- User session: unified async interface for stdin and Telegram ---
+
+export interface UserSession {
+  presentQuestion(id: string, question: string): Promise<void>;
+  wasPresented(id: string): boolean;
+  collectReplies(): Promise<string[]>;
+  waitForAll(ids: string[]): Promise<void>;
+  getAnswers(): Map<string, string>;
+}
+
+class StdinSession implements UserSession {
+  private presented: Set<string> = new Set();
+  private answers: Map<string, string> = new Map();
+  private pendingQueue: string[] = [];
+  private rl = createInterface({ input: process.stdin, output: process.stdout, terminal: false });
+  private listening = false;
+
+  constructor() {
+    this.rl.on("close", () => process.exit(0));
+    process.on("SIGINT", () => process.exit(0));
+  }
+
+  async presentQuestion(id: string, question: string): Promise<void> {
+    this.presented.add(id);
+    this.pendingQueue.push(id);
     log("");
-    const idMatch = question.match(/^(\w+):\s*/);
-    const header = idMatch ? ` ${idMatch[1]} ` : " USER INPUT NEEDED ";
-    const body = idMatch ? question.slice(idMatch[0].length) : question;
-    log(`┌─${header}${"─".repeat(Math.max(0, 52 - header.length))}┐`);
-    for (const line of body.split("\n")) {
-      log(`│ ${line}`);
+    log(`\u250c\u2500 ${id} ${"\u2500".repeat(Math.max(0, 50 - id.length))}\u2510`);
+    for (const line of question.split("\n")) {
+      log(`\u2502 ${line}`);
     }
-    log(`└${"─".repeat(54)}┘`);
-    process.stdout.write("  > ");
-    rl.question("", (answer) => {
-      rl.close();
-      resolve(answer);
+    log(`\u2514${"\u2500".repeat(54)}\u2518`);
+    this.promptNext();
+  }
+
+  wasPresented(id: string): boolean {
+    return this.presented.has(id);
+  }
+
+  private promptNext(): void {
+    const nextId = this.pendingQueue.find((id) => !this.answers.has(id));
+    if (!nextId) {
+      this.listening = false;
+      return;
+    }
+    if (this.listening) return;
+    this.listening = true;
+    process.stdout.write(`  ${nextId} > `);
+    this.rl.once("line", (answer) => {
+      this.listening = false;
+      this.answers.set(nextId, answer);
+      this.promptNext();
     });
-  });
+  }
+
+  async collectReplies(): Promise<string[]> {
+    return [...this.presented].filter((id) => this.answers.has(id));
+  }
+
+  async waitForAll(ids: string[]): Promise<void> {
+    this.promptNext();
+    while (!ids.every((id) => this.answers.has(id))) {
+      await new Promise((r) => setTimeout(r, 200));
+    }
+  }
+
+  getAnswers(): Map<string, string> {
+    return new Map(this.answers);
+  }
 }
 
-async function askUserTelegram(question: string): Promise<string> {
-  log(`  [telegram] Sending question...`);
-  const msgId = await sendTelegramMessage(TELEGRAM_TOKEN, TELEGRAM_CHAT_ID, question);
-  log(`  [telegram] Question sent, waiting for reply...`);
-  const reply = await waitForTelegramReply(TELEGRAM_TOKEN, TELEGRAM_CHAT_ID, msgId);
-  log(`  [telegram] Got reply: ${reply}`);
-  return reply;
+const userSession: UserSession = USE_TELEGRAM
+  ? new TelegramSession(TELEGRAM_TOKEN, TELEGRAM_CHAT_ID)
+  : new StdinSession();
+
+/** Present any new pending questions to the user (print to console / send to Telegram). */
+async function presentNewQuestions(): Promise<void> {
+  const questions = getPendingQuestions();
+  for (const q of questions) {
+    if (!userSession.wasPresented(q.id)) {
+      if (USE_TELEGRAM) log(`  [telegram] Sending ${q.id}: ${q.question}`);
+      await userSession.presentQuestion(q.id, q.question);
+    }
+  }
 }
 
-async function askUser(question: string): Promise<string> {
-  return USE_TELEGRAM ? askUserTelegram(question) : askUserStdin(question);
+/** Collect any user replies and write them to ## Answers in MEMORY. */
+async function collectReplies(): Promise<void> {
+  const newAnswerIds = await userSession.collectReplies();
+  if (newAnswerIds.length === 0) return;
+
+  const answers = userSession.getAnswers();
+  let memory = readFile(MEMORY_PATH);
+  let wrote = false;
+
+  for (const qId of newAnswerIds) {
+    const answer = answers.get(qId)!;
+    if (memory.includes(`- **${qId}**:`)) continue;
+    wrote = true;
+    log(`  [${qId} answered] ${answer}`);
+    const answersMatch = memory.match(/^## Answers\n/m);
+    if (answersMatch) {
+      memory = memory.replace(/^(## Answers\n)/m, `$1- **${qId}**: ${answer}\n`);
+    } else {
+      memory = memory + `\n## Answers\n- **${qId}**: ${answer}\n`;
+    }
+  }
+
+  if (wrote) writeFileSync(MEMORY_PATH, memory, "utf-8");
 }
+
+async function handleUserInteraction(): Promise<void> {
+  const questions = getPendingQuestions();
+
+  // Ensure all questions are presented
+  await presentNewQuestions();
+
+  if (questions.length === 0) {
+    // No pending questions but state is waiting_for_user
+    await userSession.presentQuestion("Q0", "(the machine is asking for input but provided no question)");
+    await userSession.waitForAll(["Q0"]);
+    const answer = userSession.getAnswers().get("Q0") || "";
+    log(`  [user answered] ${answer}`);
+    const memory = readFile(MEMORY_PATH);
+    const updated = memory
+      .replace(/^(## State\n).+/m, "$1user_responded")
+      + `\n## Answers\n- **Q0**: ${answer}\n`;
+    writeFileSync(MEMORY_PATH, updated, "utf-8");
+    return;
+  }
+
+  // Wait for all pending questions to be answered
+  const questionIds = questions.map((q) => q.id);
+  log(`  Waiting for replies to: ${questionIds.join(", ")}...`);
+  await userSession.waitForAll(questionIds);
+
+  // Write any answers not yet in MEMORY
+  const answers = userSession.getAnswers();
+  let memory = readFile(MEMORY_PATH);
+  for (const q of questions) {
+    const answer = answers.get(q.id);
+    if (!answer || memory.includes(`- **${q.id}**:`)) continue;
+    log(`  [${q.id} answered] ${answer}`);
+    const answersMatch = memory.match(/^## Answers\n/m);
+    if (answersMatch) {
+      memory = memory.replace(/^(## Answers\n)/m, `$1- **${q.id}**: ${answer}\n`);
+    } else {
+      memory = memory + `\n## Answers\n- **${q.id}**: ${answer}\n`;
+    }
+  }
+  writeFileSync(MEMORY_PATH, memory, "utf-8");
+
+  memory = readFile(MEMORY_PATH);
+  const updated = memory.replace(/^(## State\n).+/m, "$1user_responded");
+  writeFileSync(MEMORY_PATH, updated, "utf-8");
+}
+
+// --- Syscalls (stateful mode) ---
 
 const STATEFUL = process.env.TURING_STATEFUL === "1";
 const SYSCALLS_PATH = resolve(BASE_DIR, "SYSCALLS.md");
@@ -179,40 +305,7 @@ function executeSyscalls(): void {
   writeFileSync(SYSCALLS_PATH, results.join("\n\n") + "\n", "utf-8");
 }
 
-async function handleUserInteraction(): Promise<void> {
-  const questions = getPendingQuestions();
-
-  if (questions.length === 0) {
-    const answer = await askUser("(the machine is asking for input but provided no question)");
-    log(`  [user answered] ${answer}`);
-    const memory = readFile(MEMORY_PATH);
-    const updated = memory
-      .replace(/^(## State\n).+/m, "$1user_responded")
-      + `\n## Answers\n- **Q0**: ${answer}\n`;
-    writeFileSync(MEMORY_PATH, updated, "utf-8");
-    return;
-  }
-
-  for (const q of questions) {
-    const answer = await askUser(`${q.id}: ${q.question}`);
-    log(`  [${q.id} answered] ${answer}`);
-
-    // Append answer to ## Answers immediately (saves partial progress)
-    let memory = readFile(MEMORY_PATH);
-    const answersMatch = memory.match(/^## Answers\n/m);
-    if (answersMatch) {
-      memory = memory.replace(/^(## Answers\n)/m, `$1- **${q.id}**: ${answer}\n`);
-    } else {
-      memory = memory + `\n## Answers\n- **${q.id}**: ${answer}\n`;
-    }
-    writeFileSync(MEMORY_PATH, memory, "utf-8");
-  }
-
-  // Set state to user_responded after all questions answered
-  const memory = readFile(MEMORY_PATH);
-  const updated = memory.replace(/^(## State\n).+/m, "$1user_responded");
-  writeFileSync(MEMORY_PATH, updated, "utf-8");
-}
+// --- Provider dispatch ---
 
 async function runCycle(instructionsPath: string, memoryPath: string) {
   switch (PROVIDER) {
@@ -241,6 +334,8 @@ async function runCycle(instructionsPath: string, memoryPath: string) {
   }
 }
 
+// --- Main loop ---
+
 async function main() {
   initLog(BASE_DIR);
 
@@ -249,6 +344,7 @@ async function main() {
   log(`  MEMORY:       ${MEMORY_PATH}`);
   log(`  INSTRUCTIONS: ${INSTRUCTIONS_PATH}`);
   log(`  Log:          ${getLogPath()}`);
+  if (USE_TELEGRAM) log(`  Telegram:     enabled (chat ${TELEGRAM_CHAT_ID})`);
 
   mkdirSync(HISTORY_DIR, { recursive: true });
   ensureMachineRepo(BASE_DIR);
@@ -259,6 +355,9 @@ async function main() {
   log("");
 
   for (let cycle = startCycle; cycle < startCycle + MAX_CYCLES; cycle++) {
+    // Collect any user replies that arrived since last cycle
+    await collectReplies();
+
     const currentState = getMemoryState();
 
     if (currentState === "waiting_for_user") {
@@ -294,21 +393,19 @@ async function main() {
 
     // Stateful mode: execute syscalls after LLM writes them
     if (STATEFUL) {
-      // Check for no-match before executing syscalls
       const memoryContent = readFile(MEMORY_PATH);
       const matchedMatch = memoryContent.match(/^## Matched Instruction\n(.+)/m);
       const matchedValue = matchedMatch ? matchedMatch[1].trim().toLowerCase() : "";
 
       if (matchedValue === "none") {
         const state = getMemoryState();
-        log(`  [no-match] No instruction matched state "${state}" — asking user`);
-        const updated = memoryContent
-          .replace(/^(## State\n).+/m, "$1waiting_for_user")
-          .replace(/^## Pending Questions\n[\s\S]*?(?=\n## [A-Z]|\s*$)/m, "");
-        writeFileSync(MEMORY_PATH,
-          updated + `\n## Pending Questions\n- **Q0**: No instruction in INSTRUCTIONS.md matched state "${state}". What should the machine do next?\n`,
-          "utf-8"
-        );
+        const hasPendingQuestions = getPendingQuestions().length > 0;
+        log(`  [no-match] No instruction matched state "${state}" \u2014 ${hasPendingQuestions ? "pending questions exist, waiting for user" : "asking user"}`);
+        let updated = memoryContent.replace(/^(## State\n).+/m, "$1waiting_for_user");
+        if (!hasPendingQuestions) {
+          updated = updated + `\n## Pending Questions\n- **Q0**: No instruction in INSTRUCTIONS.md matched state "${state}". What should the machine do next?\n`;
+        }
+        writeFileSync(MEMORY_PATH, updated, "utf-8");
         const hash = commitCycle(BASE_DIR, cycle, "waiting_for_user");
         snapshot(cycle, hash);
         await handleUserInteraction();
@@ -326,6 +423,9 @@ async function main() {
         return;
       }
 
+      // Present any new pending questions immediately
+      await presentNewQuestions();
+
       if (state === "waiting_for_user") {
         await handleUserInteraction();
       }
@@ -338,15 +438,14 @@ async function main() {
 
     // If the LLM couldn't match any instruction, ask the user
     if (result.noMatch) {
-      log(`  [no-match] No instruction matched state "${state}" — asking user`);
+      const hasPendingQuestions = getPendingQuestions().length > 0;
+      log(`  [no-match] No instruction matched state "${state}" \u2014 ${hasPendingQuestions ? "pending questions exist, waiting for user" : "asking user"}`);
       const memory = readFile(MEMORY_PATH);
-      const updated = memory
-        .replace(/^(## State\n).+/m, "$1waiting_for_user")
-        .replace(/^## Pending Questions\n[\s\S]*?(?=\n## [A-Z]|\s*$)/m, "");
-      writeFileSync(MEMORY_PATH,
-        updated + `\n## Pending Questions\n- **Q0**: No instruction in INSTRUCTIONS.md matched state "${state}". What should the machine do next?\n`,
-        "utf-8"
-      );
+      let updated = memory.replace(/^(## State\n).+/m, "$1waiting_for_user");
+      if (!hasPendingQuestions) {
+        updated = updated + `\n## Pending Questions\n- **Q0**: No instruction in INSTRUCTIONS.md matched state "${state}". What should the machine do next?\n`;
+      }
+      writeFileSync(MEMORY_PATH, updated, "utf-8");
     }
 
     const finalState = result.noMatch ? "waiting_for_user" : state;
@@ -358,6 +457,9 @@ async function main() {
       return;
     }
 
+    // Present any new pending questions immediately
+    await presentNewQuestions();
+
     if (finalState === "waiting_for_user") {
       await handleUserInteraction();
     }
@@ -365,7 +467,7 @@ async function main() {
     log("");
   }
 
-  log(`\nMax cycles (${MAX_CYCLES}) reached — halting.`);
+  log(`\nMax cycles (${MAX_CYCLES}) reached \u2014 halting.`);
 }
 
 main().catch((err) => {

@@ -49,7 +49,7 @@ Use Q1, Q2, Q3, etc. Increment from the highest existing ID.
 
 This is non-blocking — do NOT change state. Keep working on tasks that don't depend on the answers.
 
-When ALL remaining work is blocked on unanswered questions, set state to exactly "waiting_for_user" (this is a shell-level keyword — no other state name will trigger user interaction). The shell will present each pending question to the user one at a time, write their answers under ## Answers in MEMORY, and set state to "user_responded". You MUST have an instruction whose condition handles "user_responded" — otherwise the machine stalls.
+When ALL remaining work is blocked on unanswered questions, set state to exactly "waiting_for_user" (this is a shell-level keyword — no other state name will trigger user interaction). Do NOT invent custom waiting states like "waiting_for_X" or "awaiting_X" — only "waiting_for_user" triggers the shell. The shell will present each pending question to the user one at a time, write their answers under ## Answers in MEMORY, and set state to "user_responded". You MUST have an instruction whose condition handles "user_responded" — otherwise the machine stalls after the user answers.
 
 When you see ## Answers in MEMORY, consume the answers, remove them from ## Answers, and remove the corresponding items from ## Pending Questions.
 

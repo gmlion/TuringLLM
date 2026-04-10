@@ -1,3 +1,5 @@
+import type { UserSession } from "./main.js";
+
 const API_BASE = "https://api.telegram.org/bot";
 
 export async function sendTelegramMessage(
@@ -8,7 +10,7 @@ export async function sendTelegramMessage(
   const res = await fetch(`${API_BASE}${token}/sendMessage`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ chat_id: chatId, text, parse_mode: "Markdown" }),
+    body: JSON.stringify({ chat_id: chatId, text }),
   });
   const data = (await res.json()) as { ok: boolean; result?: { message_id: number } };
   if (!data.ok || !data.result) {
@@ -17,38 +19,78 @@ export async function sendTelegramMessage(
   return data.result.message_id;
 }
 
-export async function waitForTelegramReply(
-  token: string,
-  chatId: string,
-  afterMessageId: number,
-  pollIntervalMs: number = 3000
-): Promise<string> {
-  let offset = 0;
-  while (true) {
-    const url = `${API_BASE}${token}/getUpdates?offset=${offset}&timeout=30`;
+type TelegramUpdate = {
+  update_id: number;
+  message?: {
+    message_id: number;
+    chat: { id: number };
+    text?: string;
+    reply_to_message?: { message_id: number };
+  };
+};
+
+export class TelegramSession implements UserSession {
+  private token: string;
+  private chatId: string;
+  private offset: number = 0;
+  private sentQuestions: Map<string, number> = new Map();
+  private answers: Map<string, string> = new Map();
+
+  constructor(token: string, chatId: string) {
+    this.token = token;
+    this.chatId = chatId;
+  }
+
+  async presentQuestion(id: string, question: string): Promise<void> {
+    const msgId = await sendTelegramMessage(
+      this.token,
+      this.chatId,
+      `*${id}*: ${question}`
+    );
+    this.sentQuestions.set(id, msgId);
+  }
+
+  wasPresented(id: string): boolean {
+    return this.sentQuestions.has(id);
+  }
+
+  getAnswers(): Map<string, string> {
+    return new Map(this.answers);
+  }
+
+  async collectReplies(): Promise<string[]> {
+    const url = `${API_BASE}${this.token}/getUpdates?offset=${this.offset}&timeout=0`;
     const res = await fetch(url);
-    const data = (await res.json()) as {
-      ok: boolean;
-      result: Array<{
-        update_id: number;
-        message?: { message_id: number; chat: { id: number }; text?: string };
-      }>;
-    };
+    const data = (await res.json()) as { ok: boolean; result: TelegramUpdate[] };
+
+    const newAnswers: string[] = [];
 
     if (data.ok && data.result.length > 0) {
       for (const update of data.result) {
-        offset = update.update_id + 1;
-        if (
-          update.message &&
-          String(update.message.chat.id) === chatId &&
-          update.message.message_id > afterMessageId &&
-          update.message.text
-        ) {
-          return update.message.text;
+        this.offset = update.update_id + 1;
+        const msg = update.message;
+        if (!msg || String(msg.chat.id) !== this.chatId || !msg.text) continue;
+
+        // Only match replies that are reply_to_message to one of our sent questions
+        if (!msg.reply_to_message) continue;
+        for (const [qId, sentMsgId] of this.sentQuestions) {
+          if (msg.reply_to_message.message_id === sentMsgId && !this.answers.has(qId)) {
+            this.answers.set(qId, msg.text);
+            newAnswers.push(qId);
+            break;
+          }
         }
       }
     }
 
-    await new Promise((r) => setTimeout(r, pollIntervalMs));
+    return newAnswers;
+  }
+
+  async waitForAll(ids: string[], pollIntervalMs: number = 3000): Promise<void> {
+    while (true) {
+      await this.collectReplies();
+      if (ids.every((id) => this.answers.has(id))) return;
+      await new Promise((r) => setTimeout(r, pollIntervalMs));
+    }
   }
 }
