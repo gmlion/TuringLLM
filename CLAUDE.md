@@ -81,6 +81,8 @@ All providers except Claude Code use the same custom tools (bash, write_file, gi
 ## Shared Configuration
 
 - `BASH_TIMEOUT` — timeout in seconds for bash tool commands (default: 300 / 5 minutes). Set to 0 to disable.
+- `TELEGRAM_BOT_TOKEN` — Telegram bot token (from @BotFather). When set with `TELEGRAM_CHAT_ID`, user questions are sent via Telegram instead of stdin.
+- `TELEGRAM_CHAT_ID` — Telegram chat ID for the user. Run `./setup-telegram.sh <TOKEN>` to detect automatically.
 
 ## Condition Matching
 

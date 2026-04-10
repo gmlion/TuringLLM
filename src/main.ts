@@ -7,6 +7,7 @@ import { initLog, log, getLogPath } from "./logger.js";
 import { ensureMachineRepo, ensureProjectRepo, commitCycle } from "./git.js";
 import { getWorkspacePath } from "./git.js";
 import { ALLOWED_GIT_COMMANDS } from "./tools.js";
+import { sendTelegramMessage, waitForTelegramReply } from "./telegram.js";
 
 const BASE_DIR = process.cwd();
 
@@ -22,6 +23,9 @@ const HISTORY_DIR = resolve(BASE_DIR, "history");
 const MAX_CYCLES = 100;
 
 const PROVIDER = process.env.TURING_PROVIDER || "claude-code";
+const TELEGRAM_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "";
+const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID || "";
+const USE_TELEGRAM = !!(TELEGRAM_TOKEN && TELEGRAM_CHAT_ID);
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -78,11 +82,10 @@ function getPendingQuestions(): Array<{id: string, question: string}> {
   return items;
 }
 
-async function askUser(question: string): Promise<string> {
+async function askUserStdin(question: string): Promise<string> {
   const rl = createInterface({ input: process.stdin, output: process.stdout });
   return new Promise((resolve) => {
     log("");
-    // Extract ID prefix (e.g., "Q1: ") for the header if present
     const idMatch = question.match(/^(\w+):\s*/);
     const header = idMatch ? ` ${idMatch[1]} ` : " USER INPUT NEEDED ";
     const body = idMatch ? question.slice(idMatch[0].length) : question;
@@ -97,6 +100,19 @@ async function askUser(question: string): Promise<string> {
       resolve(answer);
     });
   });
+}
+
+async function askUserTelegram(question: string): Promise<string> {
+  log(`  [telegram] Sending question...`);
+  const msgId = await sendTelegramMessage(TELEGRAM_TOKEN, TELEGRAM_CHAT_ID, question);
+  log(`  [telegram] Question sent, waiting for reply...`);
+  const reply = await waitForTelegramReply(TELEGRAM_TOKEN, TELEGRAM_CHAT_ID, msgId);
+  log(`  [telegram] Got reply: ${reply}`);
+  return reply;
+}
+
+async function askUser(question: string): Promise<string> {
+  return USE_TELEGRAM ? askUserTelegram(question) : askUserStdin(question);
 }
 
 const STATEFUL = process.env.TURING_STATEFUL === "1";
