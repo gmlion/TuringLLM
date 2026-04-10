@@ -58,7 +58,7 @@ function buildFunctions(
   instructionsPath: string,
   workspacePath: string | undefined
 ) {
-  const results: { name: string; output: string; error: boolean; halt: boolean }[] = [];
+  const results: { name: string; output: string; error: boolean }[] = [];
 
   const functions: Record<string, ReturnType<typeof defineChatSessionFunction>> = {};
 
@@ -88,7 +88,6 @@ function buildFunctions(
           name: toolName,
           output: result.output,
           error: result.error,
-          halt: result.halt,
         });
 
         return result.output;
@@ -152,11 +151,6 @@ export async function runCycle(
       logRaw("  (no tool calls)");
       log(`  [retry ${attempt + 1}] no tool calls`);
       continue;
-    }
-
-    const haltResult = results.find((r) => r.halt);
-    if (haltResult) {
-      return { halt: true, haltMessage: haltResult.output };
     }
 
     // Check cycle completeness

@@ -32,7 +32,7 @@ No test suite or linter configured. After TypeScript changes, always `npm run bu
 
 - `src/main.ts` — Cycle loop, git commits, history snapshots, user interaction handling, provider dispatch
 - `src/prompt.ts` — System prompt and user prompt construction (inlines MEMORY + INSTRUCTIONS)
-- `src/tools.ts` — Tool definitions (bash, write_file, git, update_instructions, ask_user, halt) and execution
+- `src/tools.ts` — Tool definitions (bash, write_file, git, update_instructions) and execution
 - `src/providers/api.ts` — Anthropic SDK provider with managed tool loop
 - `src/providers/claude-code.ts` — Claude Code CLI provider using native CC tools
 - `src/providers/openai.ts` — OpenAI-compatible API provider
@@ -57,7 +57,7 @@ Providers and models are configured via environment variables. Use a `.env` file
 
 ## Providers
 
-All providers except Claude Code use the same custom tools (bash, write_file, git, update_instructions, halt) with the shell managing the tool call loop. All providers cap retries at 20 for incomplete cycles.
+All providers except Claude Code use the same custom tools (bash, write_file, git, update_instructions) with the shell managing the tool call loop. All providers cap retries at 20 for incomplete cycles.
 
 **API provider** (`TURING_PROVIDER=api`): Anthropic SDK. Requires `ANTHROPIC_API_KEY`.
 - `ANTHROPIC_MODEL` — model name (default: claude-haiku-4-5-20251001)
@@ -92,7 +92,7 @@ When the LLM writes `## Matched Instruction: none`, the shell automatically ente
 
 The shell intercepts these MEMORY states:
 - `done` — halts the machine
-- `waiting_for_user` — prompts user via stdin, writes answer to `## Answer` in MEMORY, sets state to `user_responded`
+- `waiting_for_user` — reads `## Pending Questions` from MEMORY, prompts user one question at a time, writes answers to `## Answers` in MEMORY, sets state to `user_responded`. Questions are non-blocking: the LLM adds them to `## Pending Questions` without changing state and keeps working. Only sets `waiting_for_user` when all remaining work is blocked on unanswered questions.
 
 ## Interpreters
 
@@ -120,7 +120,7 @@ An interpreter's INSTRUCTIONS.md must:
 
 5. **Decompose → execute → verify**: When work needs to happen, decompose into sub-instructions. Each action must be followed by verification. The last sub-instruction returns to the strategy.
 
-6. **Finish**: An instruction (condition: state is "done") that calls halt.
+6. **Finish**: An instruction (condition: state is "done") — the shell intercepts this state and stops the machine.
 
 Supporting `.md` files (role descriptions, templates) are copied into the instance alongside INSTRUCTIONS.md. Reference them by filename in your instructions.
 

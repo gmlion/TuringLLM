@@ -65,23 +65,32 @@ function getMemoryState(): string {
   return match ? match[1].trim() : "";
 }
 
-function getMemoryQuestion(): string {
+function getPendingQuestions(): Array<{id: string, question: string}> {
   const memory = readFile(MEMORY_PATH);
-  const match = memory.match(/^## Question\n([\s\S]*?)(?=\n## [A-Z])/m);
-  if (match) return match[1].trim();
-  const fallback = memory.match(/^## Question\n([\s\S]*)$/m);
-  return fallback ? fallback[1].trim() : "";
+  const match = memory.match(/^## Pending Questions\n([\s\S]*?)(?=\n## [A-Z]|\s*$)/m);
+  if (!match) return [];
+  const items: Array<{id: string, question: string}> = [];
+  const regex = /^- \*\*(\w+)\*\*:\s*(.+)/gm;
+  let m;
+  while ((m = regex.exec(match[1])) !== null) {
+    items.push({ id: m[1], question: m[2] });
+  }
+  return items;
 }
 
 async function askUser(question: string): Promise<string> {
   const rl = createInterface({ input: process.stdin, output: process.stdout });
   return new Promise((resolve) => {
     log("");
-    log("┌─ USER INPUT NEEDED ─────────────────────────────────");
-    for (const line of question.split("\n")) {
+    // Extract ID prefix (e.g., "Q1: ") for the header if present
+    const idMatch = question.match(/^(\w+):\s*/);
+    const header = idMatch ? ` ${idMatch[1]} ` : " USER INPUT NEEDED ";
+    const body = idMatch ? question.slice(idMatch[0].length) : question;
+    log(`┌─${header}${"─".repeat(Math.max(0, 52 - header.length))}┐`);
+    for (const line of body.split("\n")) {
       log(`│ ${line}`);
     }
-    log("└────────────────────────────────────────────────────");
+    log(`└${"─".repeat(54)}┘`);
     process.stdout.write("  > ");
     rl.question("", (answer) => {
       rl.close();
@@ -93,14 +102,12 @@ async function askUser(question: string): Promise<string> {
 const STATEFUL = process.env.TURING_STATEFUL === "1";
 const SYSCALLS_PATH = resolve(BASE_DIR, "SYSCALLS.md");
 
-function executeSyscalls(): { halted: boolean; haltMessage: string } {
+function executeSyscalls(): void {
   const content = readFile(SYSCALLS_PATH);
-  if (!content.trim()) return { halted: false, haltMessage: "" };
+  if (!content.trim()) return;
 
   const blocks = content.split(/^---$/m).map(b => b.trim()).filter(Boolean);
   const results: string[] = [];
-  let halted = false;
-  let haltMessage = "";
 
   for (let i = 0; i < blocks.length; i++) {
     const block = blocks[i];
@@ -148,29 +155,46 @@ function executeSyscalls(): { halted: boolean; haltMessage: string } {
           results.push(`## Result ${i + 1}: git\nexit code ${e.status ?? 1}\nstdout: ${e.stdout ?? ""}\nstderr: ${e.stderr ?? ""}`);
         }
       }
-    } else if (firstLine.startsWith("halt:")) {
-      haltMessage = firstLine.slice(5).trim() || rest;
-      log(`  [halt] ${haltMessage}`);
-      halted = true;
     } else {
       results.push(`## Result ${i + 1}: unknown\nError: unknown action: ${firstLine}`);
     }
   }
 
   writeFileSync(SYSCALLS_PATH, results.join("\n\n") + "\n", "utf-8");
-  return { halted, haltMessage };
 }
 
 async function handleUserInteraction(): Promise<void> {
-  const question = getMemoryQuestion();
-  const answer = await askUser(question || "(the machine is asking for input but provided no question)");
-  log(`  [user answered] ${answer}`);
+  const questions = getPendingQuestions();
 
+  if (questions.length === 0) {
+    const answer = await askUser("(the machine is asking for input but provided no question)");
+    log(`  [user answered] ${answer}`);
+    const memory = readFile(MEMORY_PATH);
+    const updated = memory
+      .replace(/^(## State\n).+/m, "$1user_responded")
+      + `\n## Answers\n- **Q0**: ${answer}\n`;
+    writeFileSync(MEMORY_PATH, updated, "utf-8");
+    return;
+  }
+
+  for (const q of questions) {
+    const answer = await askUser(`${q.id}: ${q.question}`);
+    log(`  [${q.id} answered] ${answer}`);
+
+    // Append answer to ## Answers immediately (saves partial progress)
+    let memory = readFile(MEMORY_PATH);
+    const answersMatch = memory.match(/^## Answers\n/m);
+    if (answersMatch) {
+      memory = memory.replace(/^(## Answers\n)/m, `$1- **${q.id}**: ${answer}\n`);
+    } else {
+      memory = memory + `\n## Answers\n- **${q.id}**: ${answer}\n`;
+    }
+    writeFileSync(MEMORY_PATH, memory, "utf-8");
+  }
+
+  // Set state to user_responded after all questions answered
   const memory = readFile(MEMORY_PATH);
-  const updated = memory
-    .replace(/^(## State\n).+/m, "$1user_responded")
-    .replace(/^## Answer\n[\s\S]*?(?=\n## |\s*$)/m, "")
-    + `\n## Answer\n${answer}\n`;
+  const updated = memory.replace(/^(## State\n).+/m, "$1user_responded");
   writeFileSync(MEMORY_PATH, updated, "utf-8");
 }
 
@@ -264,9 +288,9 @@ async function main() {
         log(`  [no-match] No instruction matched state "${state}" — asking user`);
         const updated = memoryContent
           .replace(/^(## State\n).+/m, "$1waiting_for_user")
-          .replace(/^## Question\n[\s\S]*?(?=\n## [A-Z]|\s*$)/m, "");
+          .replace(/^## Pending Questions\n[\s\S]*?(?=\n## [A-Z]|\s*$)/m, "");
         writeFileSync(MEMORY_PATH,
-          updated + `\n## Question\nNo instruction in INSTRUCTIONS.md matched state "${state}". What should the machine do next?\n`,
+          updated + `\n## Pending Questions\n- **Q0**: No instruction in INSTRUCTIONS.md matched state "${state}". What should the machine do next?\n`,
           "utf-8"
         );
         const hash = commitCycle(BASE_DIR, cycle, "waiting_for_user");
@@ -276,13 +300,13 @@ async function main() {
         continue;
       }
 
-      const syscallResult = executeSyscalls();
+      executeSyscalls();
       const state = getMemoryState();
       const hash = commitCycle(BASE_DIR, cycle, state);
       snapshot(cycle, hash);
 
-      if (syscallResult.halted || state === "done") {
-        log(`\nMachine halted: ${syscallResult.haltMessage || "done"}`);
+      if (state === "done") {
+        log(`\nMachine halted: done`);
         return;
       }
 
@@ -302,9 +326,9 @@ async function main() {
       const memory = readFile(MEMORY_PATH);
       const updated = memory
         .replace(/^(## State\n).+/m, "$1waiting_for_user")
-        .replace(/^## Question\n[\s\S]*?(?=\n## [A-Z]|\s*$)/m, "");
+        .replace(/^## Pending Questions\n[\s\S]*?(?=\n## [A-Z]|\s*$)/m, "");
       writeFileSync(MEMORY_PATH,
-        updated + `\n## Question\nNo instruction in INSTRUCTIONS.md matched state "${state}". What should the machine do next?\n`,
+        updated + `\n## Pending Questions\n- **Q0**: No instruction in INSTRUCTIONS.md matched state "${state}". What should the machine do next?\n`,
         "utf-8"
       );
     }
@@ -313,8 +337,8 @@ async function main() {
     const hash = commitCycle(BASE_DIR, cycle, finalState);
     snapshot(cycle, hash);
 
-    if (result.halt || finalState === "done") {
-      log(`\nMachine halted: ${result.haltMessage || "done"}`);
+    if (finalState === "done") {
+      log(`\nMachine halted: done`);
       return;
     }
 

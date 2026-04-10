@@ -1,12 +1,10 @@
 import { execSync } from "child_process";
 import { mkdirSync, writeFileSync } from "fs";
-import { createInterface } from "readline";
 import { dirname } from "path";
 import type Anthropic from "@anthropic-ai/sdk";
 
 export type ToolResult = {
   output: string;
-  halt: boolean;
   error: boolean;
 };
 
@@ -83,54 +81,7 @@ export function getTools(): Anthropic.Tool[] {
         required: ["args"],
       },
     },
-    {
-      name: "ask_user",
-      description:
-        "Ask the user a question and wait for their answer. Use when you need clarification about the spec, when you cannot verify something (e.g., visual output in a headless environment), or when the user's input is required to proceed.",
-      input_schema: {
-        type: "object" as const,
-        properties: {
-          question: {
-            type: "string",
-            description: "The question to ask the user",
-          },
-        },
-        required: ["question"],
-      },
-    },
-    {
-      name: "halt",
-      description:
-        "Stop the machine. Call when the program has reached its goal or cannot make further progress.",
-      input_schema: {
-        type: "object" as const,
-        properties: {
-          message: {
-            type: "string",
-            description: "Reason for halting",
-          },
-        },
-        required: ["message"],
-      },
-    },
   ];
-}
-
-async function askUserQuestion(question: string): Promise<string> {
-  const rl = createInterface({ input: process.stdin, output: process.stdout });
-  return new Promise((resolve) => {
-    console.log("");
-    console.log("┌─ USER INPUT NEEDED ─────────────────────────────────");
-    for (const line of question.split("\n")) {
-      console.log(`│ ${line}`);
-    }
-    console.log("└────────────────────────────────────────────────────");
-    process.stdout.write("  > ");
-    rl.question("", (answer) => {
-      rl.close();
-      resolve(answer);
-    });
-  });
 }
 
 export async function executeTool(
@@ -143,7 +94,7 @@ export async function executeTool(
     case "bash": {
       const command = typeof input.command === "string" ? input.command : String(input.command ?? "");
       if (!command) {
-        return { output: "Error: no command provided.", halt: false, error: true };
+        return { output: "Error: no command provided.", error: true };
       }
       try {
         const timeout = process.env.BASH_TIMEOUT
@@ -154,44 +105,43 @@ export async function executeTool(
           timeout,
           maxBuffer: 1024 * 1024,
         });
-        return { output: stdout || "(no output)", halt: false, error: false };
+        return { output: stdout || "(no output)", error: false };
       } catch (err: unknown) {
         const e = err as { stdout?: string; stderr?: string; status?: number };
         const stderr = e.stderr ?? "";
         const output = `exit code ${e.status ?? 1}\nstdout: ${e.stdout ?? ""}\nstderr: ${stderr}`;
         const isSyntaxError = /syntax error|unexpected EOF|here-document|bad substitution/i.test(stderr);
-        return { output, halt: false, error: isSyntaxError };
+        return { output, error: isSyntaxError };
       }
     }
     case "write_file": {
       const path = String(input.path ?? "");
       const content = String(input.content ?? "");
       if (!path) {
-        return { output: "Error: no path provided", halt: false, error: true };
+        return { output: "Error: no path provided", error: true };
       }
       try {
         mkdirSync(dirname(path), { recursive: true });
         writeFileSync(path, content, "utf-8");
-        return { output: "OK", halt: false, error: false };
+        return { output: "OK", error: false };
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
-        return { output: `Error: ${msg}`, halt: false, error: true };
+        return { output: `Error: ${msg}`, error: true };
       }
     }
     case "git": {
       const args = typeof input.args === "string" ? input.args : String(input.args ?? "");
       if (!args) {
-        return { output: "Error: no git args provided.", halt: false, error: true };
+        return { output: "Error: no git args provided.", error: true };
       }
       if (!workspacePath) {
-        return { output: "Error: workspace path not configured.", halt: false, error: true };
+        return { output: "Error: workspace path not configured.", error: true };
       }
       // Whitelist: only allow known-safe git subcommands
       const subcommand = args.trim().split(/\s+/)[0].toLowerCase();
       if (!ALLOWED_GIT_COMMANDS.has(subcommand)) {
         return {
           output: `Error: "git ${subcommand}" is not allowed. Allowed: ${[...ALLOWED_GIT_COMMANDS].join(", ")}.`,
-          halt: false,
           error: true,
         };
       }
@@ -202,30 +152,18 @@ export async function executeTool(
           maxBuffer: 1024 * 1024,
           cwd: workspacePath,
         });
-        return { output: stdout || "(no output)", halt: false, error: false };
+        return { output: stdout || "(no output)", error: false };
       } catch (err: unknown) {
         const e = err as { stdout?: string; stderr?: string; status?: number };
         const output = `exit code ${e.status ?? 1}\nstdout: ${e.stdout ?? ""}\nstderr: ${e.stderr ?? ""}`;
-        return { output, halt: false, error: true };
+        return { output, error: true };
       }
     }
     case "update_instructions": {
       writeFileSync(instructionsPath, String(input.content ?? ""), "utf-8");
-      return { output: "OK", halt: false, error: false };
-    }
-    case "ask_user": {
-      const question = String(input.question ?? "");
-      if (!question) {
-        return { output: "Error: no question provided", halt: false, error: true };
-      }
-      const answer = await askUserQuestion(question);
-      return { output: answer, halt: false, error: false };
-    }
-    case "halt": {
-      const message = String(input.message ?? "halted");
-      return { output: message, halt: true, error: false };
+      return { output: "OK", error: false };
     }
     default:
-      return { output: `Unknown tool: ${name}`, halt: false, error: true };
+      return { output: `Unknown tool: ${name}`, error: true };
   }
 }

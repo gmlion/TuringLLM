@@ -111,8 +111,6 @@ export async function runCycle(
     messages.push(assistantMsg);
 
     let hasError = false;
-    let halted = false;
-    let haltMessage = "";
 
     for (const tc of toolCalls) {
       let input: Record<string, unknown>;
@@ -146,17 +144,9 @@ export async function runCycle(
         content: result.output,
       });
 
-      if (result.halt) {
-        halted = true;
-        haltMessage = result.output;
-      }
       if (result.error) {
         hasError = true;
       }
-    }
-
-    if (halted) {
-      return { halt: true, haltMessage };
     }
 
     if (hasError) {

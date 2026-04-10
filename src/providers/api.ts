@@ -71,8 +71,6 @@ export async function runCycle(
 
     const toolResults: Anthropic.ToolResultBlockParam[] = [];
     let hasError = false;
-    let halted = false;
-    let haltMessage = "";
 
     for (const toolUse of toolUses) {
       const input = toolUse.input as Record<string, unknown>;
@@ -94,17 +92,9 @@ export async function runCycle(
         content: result.output,
         is_error: result.error,
       });
-      if (result.halt) {
-        halted = true;
-        haltMessage = result.output;
-      }
       if (result.error) {
         hasError = true;
       }
-    }
-
-    if (halted) {
-      return { halt: true, haltMessage };
     }
 
     if (hasError) {

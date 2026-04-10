@@ -42,7 +42,16 @@ Project artifacts (code, assets, etc.) go in the workspace/ directory. This dire
 
 # Asking the user
 
-To ask the user a question, set MEMORY state to "waiting_for_user" and write the question under ## Question in MEMORY.md. The shell will prompt the user and write their answer under ## Answer, then set state to "user_responded". Before entering "waiting_for_user", you MUST have an instruction in INSTRUCTIONS.md with condition: MEMORY state is "user_responded" — otherwise the machine stalls after the user answers.
+To ask the user, add questions to ## Pending Questions in MEMORY.md:
+  - **Q1**: Your question here
+  - **Q2**: Another question
+Use Q1, Q2, Q3, etc. Increment from the highest existing ID.
+
+This is non-blocking — do NOT change state. Keep working on tasks that don't depend on the answers.
+
+When ALL remaining work is blocked on unanswered questions, set state to exactly "waiting_for_user" (this is a shell-level keyword — no other state name will trigger user interaction). The shell will present each pending question to the user one at a time, write their answers under ## Answers in MEMORY, and set state to "user_responded". You MUST have an instruction whose condition handles "user_responded" — otherwise the machine stalls.
+
+When you see ## Answers in MEMORY, consume the answers, remove them from ## Answers, and remove the corresponding items from ## Pending Questions.
 
 # Rules
 
@@ -57,8 +66,7 @@ const API_TOOLS_SECTION = `
 - **write_file**: Write content to a file. Use for authoring files (HTML, CSS, scripts, config). Never use bash heredocs for this.
 - **update_instructions**: Rewrite INSTRUCTIONS.md. Use whenever the instruction set needs to change.
 - **git**: Run a git command (branch, diff, log, checkout, etc.). The machine auto-commits after each cycle — do NOT commit yourself. Use git for branching to explore alternatives, diffing to inspect changes, and checking out previous states.
-- **ask_user**: Ask the user a question and get their answer. Use when you need clarification, when you cannot verify something (e.g., visual output in a headless environment), or when user input is required.
-- **halt**: Stop the machine.
+To halt: set MEMORY state to "done". The shell will stop the machine.
 
 Call multiple tools together in one response.
 
@@ -82,7 +90,7 @@ CRITICAL: You are ONE cycle of a Turing machine. Do ONE thing per cycle, then st
 - **Never skip verification.** If the instruction says "test" or "verify", you MUST actually run the code (e.g., use a syntax check, node --check, or a lightweight test). Do not just read code and claim it works.
 - **Report real output.** Capture and include actual command output in MEMORY.md. If something fails, write the failure. The next cycle will handle it.
 - **Honest verification.** You are headless — no browser, no GUI. If you cannot verify something with the tools you have (build, run, syntax check, node execution), say so. Never claim visual output is correct if you cannot see it.
-- **Ask the user when uncertain about *what* to build.** If the spec is ambiguous, you cannot verify something (e.g., visual output), or you need clarification about requirements — do NOT guess. Set MEMORY state to "waiting_for_user" with your question under ## Question. The shell will prompt the user and deliver their answer. But if the uncertainty is about *how* to build it (implementation approach, algorithm, optimization), prefer exploring alternatives via git branches instead of asking.`;
+- **Ask the user when uncertain about *what* to build.** If the spec is ambiguous, you cannot verify something (e.g., visual output), or you need clarification about requirements — do NOT guess. Add your question to ## Pending Questions in MEMORY.md and keep working on other things. Only set state to "waiting_for_user" when ALL remaining work is blocked on unanswered questions. But if the uncertainty is about *how* to build it (implementation approach, algorithm, optimization), prefer exploring alternatives via git branches instead of asking.`;
 
 const OLLAMA_SYSTEM_PROMPT = `You are a Turing machine. You are given MEMORY.md (state) and INSTRUCTIONS.md (program). Each cycle:
 1. Read ## State in MEMORY.
@@ -94,11 +102,11 @@ If NO condition matches, write ## Matched Instruction as "none" in MEMORY.md and
 
 You MUST use tool calls. Never output commands as text. Always call the bash or write_file tool.
 
-Write MEMORY.md via bash to capture command output. Include ## Matched Instruction (brief description of which instruction matched, or "none"). Write project files via write_file. Rewrite INSTRUCTIONS.md via update_instructions. Run git commands via bash in workspace/. Call halt to stop.
+Write MEMORY.md via bash to capture command output. Include ## Matched Instruction (brief description of which instruction matched, or "none"). Write project files via write_file. Rewrite INSTRUCTIONS.md via update_instructions. Run git commands via bash in workspace/. To halt: set MEMORY state to "done".
 
 Environment: headless CLI, no browser. Project files go in workspace/. MEMORY.md and INSTRUCTIONS.md are in the current directory. The machine auto-commits after each cycle.
 
-To ask the user: set state to "waiting_for_user", write question under ## Question. An instruction for "user_responded" must exist.`;
+To ask the user: add questions to ## Pending Questions in MEMORY (- **Q1**: question). This is non-blocking — keep working. Only set state to exactly "waiting_for_user" when ALL work is blocked (this is a shell keyword — no other state name triggers user interaction). The shell writes answers under ## Answers, sets state to "user_responded". An instruction for "user_responded" must exist.`;
 
 const STATEFUL_SYSTEM_PROMPT = `You are a Turing machine. Each cycle you are invoked once, you act, and you are destroyed.
 
@@ -137,12 +145,12 @@ update_instructions:
 # Strategy...
 ---
 git: log --oneline -5
----
-halt: Program complete
 
 The shell executes ALL actions in order and replaces SYSCALLS.md with results before the next cycle.
 
-To ask the user: set state to "waiting_for_user" with ## Question in MEMORY. Leave SYSCALLS empty.
+To halt: set MEMORY state to "done". The shell will stop the machine.
+
+To ask the user: add questions to ## Pending Questions in MEMORY (- **Q1**: question). This is non-blocking — keep working on other tasks. Only set state to exactly "waiting_for_user" when ALL work is blocked (this is a shell keyword — no other state name triggers user interaction). The shell writes answers under ## Answers, sets state to "user_responded". Leave SYSCALLS empty when waiting.
 
 # Rules
 

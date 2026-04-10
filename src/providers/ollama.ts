@@ -227,8 +227,6 @@ export async function runCycle(
     messages.push(assistantMsg);
 
     let hasError = false;
-    let halted = false;
-    let haltMessage = "";
 
     for (const tc of toolCalls) {
       const name = tc.function.name;
@@ -250,17 +248,9 @@ export async function runCycle(
         content: toolResult.output,
       });
 
-      if (toolResult.halt) {
-        halted = true;
-        haltMessage = toolResult.output;
-      }
       if (toolResult.error) {
         hasError = true;
       }
-    }
-
-    if (halted) {
-      return { halt: true, haltMessage };
     }
 
     if (hasError) {

@@ -28,10 +28,6 @@ export function logToolCall(name: string, input: Record<string, unknown>, result
     log(`  [git] ${input.args}${result.error ? " (error)" : ""}`);
   } else if (name === "update_instructions") {
     log(`  [update_instructions]`);
-  } else if (name === "halt") {
-    log(`  [halt] ${input.message}`);
-  } else if (name === "ask_user") {
-    log(`  [ask_user]`);
   }
 }
 
