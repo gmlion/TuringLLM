@@ -177,9 +177,10 @@ async function collectReplies(): Promise<void> {
   let memory = readFile(MEMORY_PATH);
   let wrote = false;
 
+  const existingAnswers = memory.match(/^## Answers\n([\s\S]*?)(?=\n## [A-Z]|$)/m)?.[1] || "";
   for (const qId of newAnswerIds) {
     const answer = answers.get(qId)!;
-    if (memory.includes(`- **${qId}**:`)) continue;
+    if (existingAnswers.includes(`- **${qId}**:`)) continue;
     wrote = true;
     log(`  [${qId} answered] ${answer}`);
     const answersMatch = memory.match(/^## Answers\n/m);
@@ -221,9 +222,10 @@ async function handleUserInteraction(): Promise<void> {
   // Write any answers not yet in MEMORY
   const answers = userSession.getAnswers();
   let memory = readFile(MEMORY_PATH);
+  const answersSection = memory.match(/^## Answers\n([\s\S]*?)(?=\n## [A-Z]|$)/m)?.[1] || "";
   for (const q of questions) {
     const answer = answers.get(q.id);
-    if (!answer || memory.includes(`- **${q.id}**:`)) continue;
+    if (!answer || answersSection.includes(`- **${q.id}**:`)) continue;
     log(`  [${q.id} answered] ${answer}`);
     const answersMatch = memory.match(/^## Answers\n/m);
     if (answersMatch) {

@@ -71,7 +71,6 @@ export class TelegramSession implements UserSession {
         const msg = update.message;
         if (!msg || String(msg.chat.id) !== this.chatId || !msg.text) continue;
 
-        // Only match replies that are reply_to_message to one of our sent questions
         if (!msg.reply_to_message) continue;
         for (const [qId, sentMsgId] of this.sentQuestions) {
           if (msg.reply_to_message.message_id === sentMsgId && !this.answers.has(qId)) {
