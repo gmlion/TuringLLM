@@ -5,8 +5,10 @@ import { log } from "./logger.js";
 
 function run(cmd: string, cwd: string): string {
   try {
-    return execSync(cmd, { encoding: "utf-8", cwd }).trim();
-  } catch {
+    return execSync(cmd, { encoding: "utf-8", cwd, stdio: ["pipe", "pipe", "pipe"] }).trim();
+  } catch (err: unknown) {
+    const e = err as { stderr?: string };
+    if (e.stderr) log(`  [git] ${e.stderr.trim()}`);
     return "";
   }
 }

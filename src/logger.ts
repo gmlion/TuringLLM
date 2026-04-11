@@ -8,6 +8,15 @@ export function initLog(baseDir: string) {
   mkdirSync(logDir, { recursive: true });
   const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
   logFilePath = resolve(logDir, `run-${timestamp}.log`);
+
+  // Capture stderr to log file
+  const origError = console.error;
+  console.error = (...args: unknown[]) => {
+    origError(...args);
+    if (logFilePath) {
+      appendFileSync(logFilePath, args.map(String).join(" ") + "\n", "utf-8");
+    }
+  };
 }
 
 export function log(message: string) {

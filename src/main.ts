@@ -1,5 +1,5 @@
 import { config } from "dotenv";
-import { resolve, dirname } from "path";
+import { resolve, dirname, basename } from "path";
 import { mkdirSync, copyFileSync, readFileSync, writeFileSync, readdirSync, existsSync } from "fs";
 import { execSync } from "child_process";
 import { createInterface } from "readline";
@@ -29,6 +29,26 @@ const USE_TELEGRAM = !!(TELEGRAM_TOKEN && TELEGRAM_CHAT_ID);
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+export async function withBackoff<T>(
+  fn: () => Promise<T>,
+  opts: { label: string; maxRetries?: number; initialDelaySec?: number; maxDelaySec?: number; shouldRetry?: (err: unknown) => boolean }
+): Promise<T> {
+  const maxRetries = opts.maxRetries ?? 5;
+  const maxDelay = opts.maxDelaySec ?? 300;
+  let delay = opts.initialDelaySec ?? 5;
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      if (attempt >= maxRetries || (opts.shouldRetry && !opts.shouldRetry(err))) throw err;
+      log(`  [${opts.label}] ${err instanceof Error ? err.message : err}`);
+      log(`  [${opts.label}] retrying in ${delay}s... (attempt ${attempt + 1}/${maxRetries})`);
+      await sleep(delay * 1000);
+      delay = Math.min(delay * 2, maxDelay);
+    }
+  }
 }
 
 function getStartCycle(): number {
@@ -75,10 +95,10 @@ function getPendingQuestions(): Array<{id: string, question: string}> {
     || memory.match(/^## Pending Questions\n([\s\S]+)$/m);
   if (!match) return [];
   const items: Array<{id: string, question: string}> = [];
-  const regex = /^- \*\*(\w+)\*\*:\s*(.+)/gm;
-  let m;
-  while ((m = regex.exec(match[1])) !== null) {
-    items.push({ id: m[1], question: m[2] });
+  const parts = match[1].split(/^(?=- \*\*\w+\*\*:)/gm).filter(Boolean);
+  for (const part of parts) {
+    const m = part.match(/^- \*\*(\w+)\*\*:\s*([\s\S]*)/);
+    if (m) items.push({ id: m[1], question: m[2].trim() });
   }
   return items;
 }
@@ -153,9 +173,31 @@ class StdinSession implements UserSession {
   }
 }
 
-const userSession: UserSession = USE_TELEGRAM
-  ? new TelegramSession(TELEGRAM_TOKEN, TELEGRAM_CHAT_ID)
-  : new StdinSession();
+const INSTANCE_NAME = basename(BASE_DIR);
+const stdinFallback = new StdinSession();
+const telegramSession = USE_TELEGRAM
+  ? new TelegramSession(TELEGRAM_TOKEN, TELEGRAM_CHAT_ID, INSTANCE_NAME)
+  : null;
+
+function getUserSession(): UserSession {
+  if (telegramSession && !telegramSession.degraded) return telegramSession;
+  if (telegramSession?.degraded) log("  [telegram] Degraded — falling back to stdin");
+  return stdinFallback;
+}
+
+// Proxy that checks degraded state on each call
+const userSession: UserSession = {
+  presentQuestion: (id, q) => getUserSession().presentQuestion(id, q),
+  wasPresented: (id) => (telegramSession?.wasPresented(id) || stdinFallback.wasPresented(id)),
+  collectReplies: () => getUserSession().collectReplies(),
+  waitForAll: (ids) => getUserSession().waitForAll(ids),
+  getAnswers: () => {
+    const answers = new Map<string, string>();
+    if (telegramSession) for (const [k, v] of telegramSession.getAnswers()) answers.set(k, v);
+    for (const [k, v] of stdinFallback.getAnswers()) answers.set(k, v);
+    return answers;
+  },
+};
 
 /** Present any new pending questions to the user (print to console / send to Telegram). */
 async function presentNewQuestions(): Promise<void> {
@@ -373,25 +415,16 @@ async function main() {
 
     log(`--- Cycle ${cycle} ---`);
 
-    let result;
-    let backoff = 60;
-    for (;;) {
-      try {
-        result = await runCycle(INSTRUCTIONS_PATH, MEMORY_PATH);
-        break;
-      } catch (err: unknown) {
-        if ((err as { name?: string })?.name === "QuotaExceededError") {
-          const qErr = err as { retryAfterSeconds?: number | null; message: string };
-          const waitSec = qErr.retryAfterSeconds ?? backoff;
-          log(`  [quota] ${qErr.message}`);
-          log(`  [quota] retrying in ${waitSec}s...`);
-          await sleep(waitSec * 1000);
-          backoff = Math.min(backoff * 2, 600);
-          continue;
-        }
-        throw err;
+    const result = await withBackoff(
+      () => runCycle(INSTRUCTIONS_PATH, MEMORY_PATH),
+      {
+        label: "quota",
+        initialDelaySec: 60,
+        maxDelaySec: 600,
+        maxRetries: 10,
+        shouldRetry: (err) => (err as { name?: string })?.name === "QuotaExceededError",
       }
-    }
+    );
 
     // Stateful mode: execute syscalls after LLM writes them
     if (STATEFUL) {
