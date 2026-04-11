@@ -8,6 +8,7 @@ export type CycleResult = {
   halt: boolean;
   haltMessage?: string;
   noMatch?: boolean;
+  summary?: string;
 };
 
 export function readFile(path: string): string {

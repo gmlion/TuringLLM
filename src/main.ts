@@ -91,14 +91,22 @@ function getMemoryState(): string {
 
 function getPendingQuestions(): Array<{id: string, question: string}> {
   const memory = readFile(MEMORY_PATH);
-  const match = memory.match(/^## Pending Questions\n([\s\S]*?)(?=\n## [A-Z])/m)
-    || memory.match(/^## Pending Questions\n([\s\S]+)$/m);
+  const match = memory.match(/^## Pending Questions[^\n]*\n([\s\S]*?)(?=\n## [A-Z])/m)
+    || memory.match(/^## Pending Questions[^\n]*\n([\s\S]+)$/m);
   if (!match) return [];
   const items: Array<{id: string, question: string}> = [];
-  const parts = match[1].split(/^(?=- \*\*\w+\*\*:)/gm).filter(Boolean);
+  // Split on any line starting with "- " followed by a bold label (**, __, or plain "Q<n>:")
+  const parts = match[1].split(/^(?=- )/gm).filter(Boolean);
   for (const part of parts) {
-    const m = part.match(/^- \*\*(\w+)\*\*:\s*([\s\S]*)/);
-    if (m) items.push({ id: m[1], question: m[2].trim() });
+    // Try: - **label**: question
+    let m = part.match(/^- \*\*([^*]+)\*\*:?\s*([\s\S]*)/);
+    // Try: - __label__: question
+    if (!m) m = part.match(/^- __([^_]+)__:?\s*([\s\S]*)/);
+    // Try: - Q1: question (no bold)
+    if (!m) m = part.match(/^- (Q\d+[^:]*?):\s*([\s\S]*)/);
+    // Fallback: - anything: question (use first word as id)
+    if (!m) m = part.match(/^- ([^:]+):\s*([\s\S]*)/);
+    if (m) items.push({ id: m[1].trim(), question: m[2].trim() });
   }
   return items;
 }
@@ -107,9 +115,9 @@ function getPendingQuestions(): Array<{id: string, question: string}> {
 
 export interface UserSession {
   presentQuestion(id: string, question: string): Promise<void>;
-  wasPresented(id: string): boolean;
+  wasPresented(id: string, question: string): boolean;
   collectReplies(): Promise<string[]>;
-  waitForAll(ids: string[]): Promise<void>;
+  waitForAny(pollIntervalMs?: number): Promise<string[]>;
   getAnswers(): Map<string, string>;
 }
 
@@ -120,10 +128,6 @@ class StdinSession implements UserSession {
   private rl = createInterface({ input: process.stdin, output: process.stdout, terminal: false });
   private listening = false;
 
-  constructor() {
-    this.rl.on("close", () => process.exit(0));
-    process.on("SIGINT", () => process.exit(0));
-  }
 
   async presentQuestion(id: string, question: string): Promise<void> {
     this.presented.add(id);
@@ -137,7 +141,7 @@ class StdinSession implements UserSession {
     this.promptNext();
   }
 
-  wasPresented(id: string): boolean {
+  wasPresented(id: string, _question: string): boolean {
     return this.presented.has(id);
   }
 
@@ -157,13 +161,19 @@ class StdinSession implements UserSession {
     });
   }
 
+  private previouslyCollected: Set<string> = new Set();
+
   async collectReplies(): Promise<string[]> {
-    return [...this.presented].filter((id) => this.answers.has(id));
+    const newIds = [...this.presented].filter((id) => this.answers.has(id) && !this.previouslyCollected.has(id));
+    for (const id of newIds) this.previouslyCollected.add(id);
+    return newIds;
   }
 
-  async waitForAll(ids: string[]): Promise<void> {
+  async waitForAny(): Promise<string[]> {
     this.promptNext();
-    while (!ids.every((id) => this.answers.has(id))) {
+    while (true) {
+      const newIds = await this.collectReplies();
+      if (newIds.length > 0) return newIds;
       await new Promise((r) => setTimeout(r, 200));
     }
   }
@@ -173,10 +183,12 @@ class StdinSession implements UserSession {
   }
 }
 
+process.on("SIGINT", () => process.exit(0));
+
 const INSTANCE_NAME = basename(BASE_DIR);
 const stdinFallback = new StdinSession();
 const telegramSession = USE_TELEGRAM
-  ? new TelegramSession(TELEGRAM_TOKEN, TELEGRAM_CHAT_ID, INSTANCE_NAME)
+  ? new TelegramSession(TELEGRAM_TOKEN, TELEGRAM_CHAT_ID, INSTANCE_NAME, BASE_DIR)
   : null;
 
 function getUserSession(): UserSession {
@@ -188,9 +200,9 @@ function getUserSession(): UserSession {
 // Proxy that checks degraded state on each call
 const userSession: UserSession = {
   presentQuestion: (id, q) => getUserSession().presentQuestion(id, q),
-  wasPresented: (id) => (telegramSession?.wasPresented(id) || stdinFallback.wasPresented(id)),
+  wasPresented: (id, q) => getUserSession().wasPresented(id, q),
   collectReplies: () => getUserSession().collectReplies(),
-  waitForAll: (ids) => getUserSession().waitForAll(ids),
+  waitForAny: (p) => getUserSession().waitForAny(p),
   getAnswers: () => {
     const answers = new Map<string, string>();
     if (telegramSession) for (const [k, v] of telegramSession.getAnswers()) answers.set(k, v);
@@ -199,11 +211,20 @@ const userSession: UserSession = {
   },
 };
 
+/** Forward cycle summary to Telegram when there are pending questions. */
+async function sendCycleSummary(cycle: number, summary: string | undefined): Promise<void> {
+  if (!telegramSession || telegramSession.degraded || !summary) return;
+  const questions = getPendingQuestions();
+  if (questions.length === 0) return;
+  const text = `[${INSTANCE_NAME}] Cycle ${cycle}\n\n${summary}`;
+  await telegramSession.sendInfo(text);
+}
+
 /** Present any new pending questions to the user (print to console / send to Telegram). */
 async function presentNewQuestions(): Promise<void> {
   const questions = getPendingQuestions();
   for (const q of questions) {
-    if (!userSession.wasPresented(q.id)) {
+    if (!userSession.wasPresented(q.id, q.question)) {
       if (USE_TELEGRAM) log(`  [telegram] Sending ${q.id}: ${q.question}`);
       await userSession.presentQuestion(q.id, q.question);
     }
@@ -237,47 +258,36 @@ async function collectReplies(): Promise<void> {
 }
 
 async function handleUserInteraction(): Promise<void> {
-  const questions = getPendingQuestions();
-
-  // Ensure all questions are presented
+  // Ensure all pending questions are presented
   await presentNewQuestions();
 
+  const questions = getPendingQuestions();
   if (questions.length === 0) {
-    // No pending questions but state is waiting_for_user
     await userSession.presentQuestion("Q0", "(the machine is asking for input but provided no question)");
-    await userSession.waitForAll(["Q0"]);
-    const answer = userSession.getAnswers().get("Q0") || "";
-    log(`  [user answered] ${answer}`);
-    const memory = readFile(MEMORY_PATH);
-    const updated = memory
-      .replace(/^(## State\n).+/m, "$1user_responded")
-      + `\n## Answers\n- **Q0**: ${answer}\n`;
-    writeFileSync(MEMORY_PATH, updated, "utf-8");
-    return;
   }
 
-  // Wait for all pending questions to be answered
-  const questionIds = questions.map((q) => q.id);
-  log(`  Waiting for replies to: ${questionIds.join(", ")}...`);
-  await userSession.waitForAll(questionIds);
+  // Wait for at least one answer to arrive
+  const questionIds = questions.length > 0 ? questions.map((q) => q.id) : ["Q0"];
+  log(`  Waiting for any reply to: ${questionIds.join(", ")}...`);
+  const newIds = await userSession.waitForAny();
 
-  // Write any answers not yet in MEMORY
+  // Write new answers to MEMORY
   const answers = userSession.getAnswers();
   let memory = readFile(MEMORY_PATH);
   const answersSection = memory.match(/^## Answers\n([\s\S]*?)(?=\n## [A-Z]|$)/m)?.[1] || "";
-  for (const q of questions) {
-    const answer = answers.get(q.id);
-    if (!answer || answersSection.includes(`- **${q.id}**:`)) continue;
-    log(`  [${q.id} answered] ${answer}`);
-    const answersMatch = memory.match(/^## Answers\n/m);
-    if (answersMatch) {
-      memory = memory.replace(/^(## Answers\n)/m, `$1- **${q.id}**: ${answer}\n`);
+  for (const qId of newIds) {
+    const answer = answers.get(qId);
+    if (!answer || answersSection.includes(`- **${qId}**:`)) continue;
+    log(`  [${qId} answered] ${answer}`);
+    if (memory.match(/^## Answers\n/m)) {
+      memory = memory.replace(/^(## Answers\n)/m, `$1- **${qId}**: ${answer}\n`);
     } else {
-      memory = memory + `\n## Answers\n- **${q.id}**: ${answer}\n`;
+      memory = memory + `\n## Answers\n- **${qId}**: ${answer}\n`;
     }
   }
   writeFileSync(MEMORY_PATH, memory, "utf-8");
 
+  // Set state to user_responded
   memory = readFile(MEMORY_PATH);
   const updated = memory.replace(/^(## State\n).+/m, "$1user_responded");
   writeFileSync(MEMORY_PATH, updated, "utf-8");
@@ -458,7 +468,8 @@ async function main() {
         return;
       }
 
-      // Present any new pending questions immediately
+      // Forward cycle summary and present any new pending questions
+      await sendCycleSummary(cycle, result.summary);
       await presentNewQuestions();
 
       if (state === "waiting_for_user") {
@@ -492,7 +503,8 @@ async function main() {
       return;
     }
 
-    // Present any new pending questions immediately
+    // Forward cycle summary and present any new pending questions
+    await sendCycleSummary(cycle, result.summary);
     await presentNewQuestions();
 
     if (finalState === "waiting_for_user") {

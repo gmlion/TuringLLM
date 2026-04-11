@@ -97,6 +97,7 @@ touch "$DIR/SYSCALLS.md"
 cat > "$DIR/.gitignore" << 'EOF'
 .api_key
 .env
+.telegram-state.json
 logs/
 history/
 workspace/.git/

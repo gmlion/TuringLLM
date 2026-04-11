@@ -98,15 +98,15 @@ export async function runCycle(
     const completeness = checkCycleCompleteness(memoryPath, instructionsPath, filesBefore);
 
     if (completeness.halt) {
-      return { halt: true, haltMessage: completeness.haltMessage };
+      return { halt: true, haltMessage: completeness.haltMessage, summary: resultText };
     }
 
     if (completeness.noMatch) {
-      return { halt: false, noMatch: true };
+      return { halt: false, noMatch: true, summary: resultText };
     }
 
     if (completeness.complete) {
-      return { halt: false };
+      return { halt: false, summary: resultText };
     }
 
     log(`  [retry ${attempt + 1}] ${completeness.problem.includes("did not update") ? "no state change" : "orphan state"}`);
