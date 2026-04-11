@@ -2,6 +2,8 @@ import { createHash } from "crypto";
 import { readFileSync, writeFileSync } from "fs";
 import type { UserSession } from "./main.js";
 import { withBackoff } from "./main.js";
+// Note: UserSession interface and withBackoff are still in main.ts
+// to avoid circular deps. Could be extracted to a shared module later.
 
 const API_BASE = "https://api.telegram.org/bot";
 

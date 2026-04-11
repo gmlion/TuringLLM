@@ -52,7 +52,10 @@ export async function runCycle(
       });
     } catch (err: unknown) {
       if (err instanceof QuotaExceededError) throw err;
-      const e = err as { stdout?: string; stderr?: string; status?: number };
+      const e = err as { stdout?: string; stderr?: string; status?: number; signal?: string };
+      if (e.signal === "SIGINT" || e.status === 130) {
+        process.exit(0);
+      }
       stdout = (e.stdout || "").trim();
       stderr = (e.stderr || "").trim();
       exitCode = e.status ?? 1;
