@@ -28,14 +28,18 @@ export async function runCycle(
 
   const filesBefore: [string, string] = [readFile(memoryPath), readFile(instructionsPath)];
 
+  let retryContext = "";
+
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     let stdout = "";
     let stderr = "";
     let exitCode = 0;
 
+    const prompt = retryContext ? `${userPrompt}\n\n${retryContext}` : userPrompt;
+
     try {
       const args = [
-        "-p", userPrompt,
+        "-p", prompt,
         "--system-prompt", systemPrompt,
         "--model", process.env.CC_MODEL || "haiku",
         "--output-format", "json",
@@ -112,7 +116,8 @@ export async function runCycle(
       return { halt: false, summary: resultText };
     }
 
-    log(`  [retry ${attempt + 1}] ${completeness.problem.includes("did not update") ? "no state change" : "orphan state"}`);
+    retryContext = `RETRY: Previous attempt failed. ${completeness.problem} You MUST update MEMORY.md with the new ## State before stopping.`;
+    log(`  [retry ${attempt + 1}] ${completeness.problem}`);
   }
 
   log(`  [warn] cycle incomplete after ${MAX_RETRIES} retries`);
