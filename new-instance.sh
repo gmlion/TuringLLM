@@ -54,6 +54,11 @@ if [ -n "$INTERPRETER" ]; then
       cp "$f" "$DIR/$base"
     fi
   done
+
+  # Copy dynamics directory if it exists
+  if [ -d "$INTERP_DIR/dynamics" ]; then
+    cp -r "$INTERP_DIR/dynamics" "$DIR/dynamics"
+  fi
 else
   cat > "$DIR/INSTRUCTIONS.md" << 'INSTEOF'
 # Strategy

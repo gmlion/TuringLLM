@@ -61,3 +61,14 @@ export function writeAnswer(memory: string, id: string, answer: string): string 
 export function setState(memory: string, state: string): string {
   return memory.replace(/^(## State\n).+/m, `$1${state}`);
 }
+
+/** Extract push target from MEMORY (path after ## Push header). */
+export function parsePush(memory: string): string | null {
+  const match = memory.match(/^## Push\n(.+)/m);
+  return match ? match[1].trim() : null;
+}
+
+/** Remove the ## Push section from MEMORY. */
+export function removePush(memory: string): string {
+  return memory.replace(/\n?## Push\n[^\n]*(\n(?!## )[^\n]*)*/m, "");
+}

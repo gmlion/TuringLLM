@@ -53,6 +53,17 @@ When ALL remaining work is blocked on unanswered questions, set state to exactly
 
 When you see ## Answers in MEMORY, consume the answers, remove them from ## Answers, and remove the corresponding items from ## Pending Questions.
 
+# Dynamics (Push/Pop)
+
+To delegate work to a reusable instruction set, write ## Push in MEMORY with the file path (relative to instance dir):
+
+  ## Push
+  dynamics/consult.md
+
+The shell will save your current state and instructions, load the target file as the new instruction set, and set state to "empty". Write any context the target instructions need into MEMORY sections before pushing.
+
+When the pushed instruction set finishes (sets state to "done"), the shell automatically restores your instructions and sets state to "{your_saved_state}_completed". Dynamics can nest — a pushed instruction set can push another.
+
 # Rules
 
 - MEMORY and INSTRUCTIONS are already in this prompt. Do NOT read them from disk.
@@ -107,7 +118,9 @@ Write MEMORY.md via bash to capture command output. Include ## Matched Instructi
 
 Environment: headless CLI, no browser. Project files go in workspace/. MEMORY.md and INSTRUCTIONS.md are in the current directory. The machine auto-commits after each cycle.
 
-To ask the user: add questions to ## Pending Questions in MEMORY (- **Q1**: question). This is non-blocking — keep working. Only set state to exactly "waiting_for_user" when ALL work is blocked (this is a shell keyword — no other state name triggers user interaction). The shell writes answers under ## Answers, sets state to "user_responded". An instruction for "user_responded" must exist.`;
+To ask the user: add questions to ## Pending Questions in MEMORY (- **Q1**: question). This is non-blocking — keep working. Only set state to exactly "waiting_for_user" when ALL work is blocked (this is a shell keyword — no other state name triggers user interaction). The shell writes answers under ## Answers, sets state to "user_responded". An instruction for "user_responded" must exist.
+
+To delegate work to a reusable instruction set, write ## Push in MEMORY with the file path: ## Push / dynamics/consult.md. The shell saves your state and instructions, loads the target, sets state to "empty". When the dynamic sets state to "done", the shell restores your instructions and sets state to "{saved_state}_completed". Dynamics can nest.`;
 
 const STATEFUL_SYSTEM_PROMPT = `You are a Turing machine. Each cycle you are invoked once, you act, and you are destroyed.
 
@@ -152,6 +165,17 @@ The shell executes ALL actions in order and replaces SYSCALLS.md with results be
 To halt: set MEMORY state to "done". The shell will stop the machine.
 
 To ask the user: add questions to ## Pending Questions in MEMORY (- **Q1**: question). This is non-blocking — keep working on other tasks. Only set state to exactly "waiting_for_user" when ALL work is blocked (this is a shell keyword — no other state name triggers user interaction). The shell writes answers under ## Answers, sets state to "user_responded". Leave SYSCALLS empty when waiting.
+
+# Dynamics (Push/Pop)
+
+To delegate work to a reusable instruction set, write ## Push in MEMORY with the file path (relative to instance dir):
+
+  ## Push
+  dynamics/consult.md
+
+The shell will save your current state and instructions, load the target file as the new instruction set, and set state to "empty". Write any context the target instructions need into MEMORY sections before pushing.
+
+When the pushed instruction set finishes (sets state to "done"), the shell automatically restores your instructions and sets state to "{your_saved_state}_completed". Dynamics can nest — a pushed instruction set can push another.
 
 # Rules
 

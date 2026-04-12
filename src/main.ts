@@ -5,7 +5,7 @@
  * interaction, and repeats. All markdown parsing is in memory.ts,
  * all configuration in config.ts.
  */
-import { mkdirSync, copyFileSync, readFileSync, writeFileSync, readdirSync } from "fs";
+import { mkdirSync, copyFileSync, readFileSync, writeFileSync, readdirSync, existsSync } from "fs";
 import { execSync } from "child_process";
 import { resolve, dirname } from "path";
 import { createInterface } from "readline";
@@ -15,13 +15,14 @@ import { ALLOWED_GIT_COMMANDS } from "./tools.js";
 import { TelegramSession } from "./telegram.js";
 import {
   BASE_DIR, MEMORY_PATH, INSTRUCTIONS_PATH, HISTORY_DIR, SYSCALLS_PATH,
-  MAX_CYCLES, PROVIDER, STATEFUL, INSTANCE_NAME,
+  CALL_STACK_PATH, MAX_CYCLES, PROVIDER, STATEFUL, INSTANCE_NAME,
   TELEGRAM_TOKEN, TELEGRAM_CHAT_ID, USE_TELEGRAM,
 } from "./config.js";
 import {
   parseState, parsePendingQuestions, getAnswersSection,
-  writeAnswer, setState, type PendingQuestion,
+  writeAnswer, setState, parsePush, removePush, type PendingQuestion,
 } from "./memory.js";
+import { loadCallStack, saveCallStack } from "./call-stack.js";
 
 // --- Utilities ---
 
@@ -313,6 +314,9 @@ function snapshot(cycle: number, hash: string) {
   mkdirSync(dir, { recursive: true });
   copyFileSync(MEMORY_PATH, resolve(dir, "MEMORY.md"));
   copyFileSync(INSTRUCTIONS_PATH, resolve(dir, "INSTRUCTIONS.md"));
+  if (existsSync(CALL_STACK_PATH)) {
+    copyFileSync(CALL_STACK_PATH, resolve(dir, ".call-stack.json"));
+  }
 }
 
 function handleNoMatch(state: string): void {
@@ -324,6 +328,46 @@ function handleNoMatch(state: string): void {
     memory += `\n## Pending Questions\n- **Q0**: No instruction in INSTRUCTIONS.md matched state "${state}". What should the machine do next?\n`;
   }
   writeFileSync(MEMORY_PATH, memory, "utf-8");
+}
+
+// --- Call stack helpers ---
+
+function handlePop(callStack: import("./call-stack.js").StackEntry[]): void {
+  while (getMemoryState() === "done" && callStack.length > 0) {
+    const entry = callStack.pop()!;
+    writeFileSync(INSTRUCTIONS_PATH, entry.instructions, "utf-8");
+    let memory = readFile(MEMORY_PATH);
+    memory = setState(memory, entry.returnState + "_completed");
+    writeFileSync(MEMORY_PATH, memory, "utf-8");
+    saveCallStack(CALL_STACK_PATH, callStack);
+    log(`  [pop] → ${entry.returnState}_completed (depth ${callStack.length})`);
+  }
+}
+
+function handlePush(callStack: import("./call-stack.js").StackEntry[]): void {
+  const pushTarget = parsePush(readFile(MEMORY_PATH));
+  if (!pushTarget) return;
+
+  const targetPath = resolve(BASE_DIR, pushTarget);
+  const targetContent = readFile(targetPath);
+  if (!targetContent) {
+    log(`  [push] ERROR: ${pushTarget} not found or empty, skipping`);
+    let memory = readFile(MEMORY_PATH);
+    memory = removePush(memory);
+    writeFileSync(MEMORY_PATH, memory, "utf-8");
+    return;
+  }
+
+  const currentInstructions = readFile(INSTRUCTIONS_PATH);
+  const currentState = getMemoryState();
+  callStack.push({ returnState: currentState, instructions: currentInstructions });
+  writeFileSync(INSTRUCTIONS_PATH, targetContent, "utf-8");
+  let memory = readFile(MEMORY_PATH);
+  memory = removePush(memory);
+  memory = setState(memory, "empty");
+  writeFileSync(MEMORY_PATH, memory, "utf-8");
+  saveCallStack(CALL_STACK_PATH, callStack);
+  log(`  [push] ${pushTarget} (depth ${callStack.length})`);
 }
 
 // --- Main loop ---
@@ -342,12 +386,28 @@ async function main() {
   ensureMachineRepo(BASE_DIR);
   ensureProjectRepo(BASE_DIR);
 
+  const callStack = loadCallStack(CALL_STACK_PATH);
+
   const startCycle = getStartCycle();
   log(`  Resuming from cycle ${startCycle}`);
+  if (callStack.length > 0) log(`  Call stack depth: ${callStack.length}`);
   log("");
 
   for (let cycle = startCycle; cycle < startCycle + MAX_CYCLES; cycle++) {
     await collectReplies();
+
+    // Deterministic stack management (before LLM invocation)
+    if (getMemoryState() === "done") {
+      if (callStack.length > 0) {
+        handlePop(callStack);
+      } else {
+        log(`\nMachine halted: done`);
+        return;
+      }
+    }
+    if (parsePush(readFile(MEMORY_PATH))) {
+      handlePush(callStack);
+    }
 
     const currentState = getMemoryState();
 
@@ -393,8 +453,6 @@ async function main() {
       const hash = commitCycle(BASE_DIR, cycle, state);
       snapshot(cycle, hash);
 
-      if (state === "done") { log(`\nMachine halted: done`); return; }
-
       await sendCycleSummary(cycle, result.summary);
       await presentNewQuestions();
       if (state === "waiting_for_user") await handleUserInteraction();
@@ -413,8 +471,6 @@ async function main() {
     const finalState = result.noMatch ? "waiting_for_user" : state;
     const hash = commitCycle(BASE_DIR, cycle, finalState);
     snapshot(cycle, hash);
-
-    if (finalState === "done") { log(`\nMachine halted: done`); return; }
 
     await sendCycleSummary(cycle, result.summary);
     await presentNewQuestions();
