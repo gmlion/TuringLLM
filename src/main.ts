@@ -20,9 +20,9 @@ import {
 } from "./config.js";
 import {
   parseState, parsePendingQuestions, getAnswersSection,
-  writeAnswer, setState, parsePush, removePush, type PendingQuestion,
+  writeAnswer, setState, type PendingQuestion,
 } from "./memory.js";
-import { loadCallStack, saveCallStack } from "./call-stack.js";
+import { loadCallStack, saveCallStack, applyPop, applyPush } from "./call-stack.js";
 
 // --- Utilities ---
 
@@ -330,44 +330,49 @@ function handleNoMatch(state: string): void {
   writeFileSync(MEMORY_PATH, memory, "utf-8");
 }
 
-// --- Call stack helpers ---
+// --- Call stack shell wiring ---
 
-function handlePop(callStack: import("./call-stack.js").StackEntry[]): void {
-  while (getMemoryState() === "done" && callStack.length > 0) {
-    const entry = callStack.pop()!;
-    writeFileSync(INSTRUCTIONS_PATH, entry.instructions, "utf-8");
-    let memory = readFile(MEMORY_PATH);
-    memory = setState(memory, entry.returnState + "_completed");
-    writeFileSync(MEMORY_PATH, memory, "utf-8");
+/**
+ * Run the pre-LLM stack block: cascade-pop on done, then push if ## Push is
+ * present. Writes updated memory/instructions/stack to disk and returns
+ * whether the machine should halt (state=done at depth 0).
+ */
+function runStackBlock(callStack: import("./call-stack.js").StackEntry[]): boolean {
+  const popped = applyPop(callStack, readFile(MEMORY_PATH), readFile(INSTRUCTIONS_PATH));
+  if (popped.events.length > 0) {
+    writeFileSync(MEMORY_PATH, popped.memory, "utf-8");
+    writeFileSync(INSTRUCTIONS_PATH, popped.instructions, "utf-8");
+    callStack.length = 0;
+    callStack.push(...popped.stack);
     saveCallStack(CALL_STACK_PATH, callStack);
-    log(`  [pop] → ${entry.returnState}_completed (depth ${callStack.length})`);
-  }
-}
-
-function handlePush(callStack: import("./call-stack.js").StackEntry[]): void {
-  const pushTarget = parsePush(readFile(MEMORY_PATH));
-  if (!pushTarget) return;
-
-  const targetPath = resolve(BASE_DIR, pushTarget);
-  const targetContent = readFile(targetPath);
-  if (!targetContent) {
-    log(`  [push] ERROR: ${pushTarget} not found or empty, skipping`);
-    let memory = readFile(MEMORY_PATH);
-    memory = removePush(memory);
-    writeFileSync(MEMORY_PATH, memory, "utf-8");
-    return;
+    for (const ev of popped.events) {
+      log(`  [pop] \u2192 ${ev.returnState}_completed (depth ${ev.depthAfter})`);
+    }
   }
 
-  const currentInstructions = readFile(INSTRUCTIONS_PATH);
-  const currentState = getMemoryState();
-  callStack.push({ returnState: currentState, instructions: currentInstructions });
-  writeFileSync(INSTRUCTIONS_PATH, targetContent, "utf-8");
-  let memory = readFile(MEMORY_PATH);
-  memory = removePush(memory);
-  memory = setState(memory, "empty");
-  writeFileSync(MEMORY_PATH, memory, "utf-8");
-  saveCallStack(CALL_STACK_PATH, callStack);
-  log(`  [push] ${pushTarget} (depth ${callStack.length})`);
+  if (getMemoryState() === "done" && callStack.length === 0) return true;
+
+  const pushed = applyPush(
+    callStack,
+    readFile(MEMORY_PATH),
+    readFile(INSTRUCTIONS_PATH),
+    (p) => {
+      const content = readFile(resolve(BASE_DIR, p));
+      return content || null;
+    },
+  );
+  if (pushed.ok) {
+    writeFileSync(MEMORY_PATH, pushed.memory, "utf-8");
+    writeFileSync(INSTRUCTIONS_PATH, pushed.instructions, "utf-8");
+    callStack.length = 0;
+    callStack.push(...pushed.stack);
+    saveCallStack(CALL_STACK_PATH, callStack);
+    log(`  [push] ${pushed.target} (depth ${callStack.length})`);
+  } else if (pushed.reason === "missing-target") {
+    writeFileSync(MEMORY_PATH, pushed.memory, "utf-8");
+    log(`  [push] ERROR: ${pushed.target} not found or empty, skipping`);
+  }
+  return false;
 }
 
 // --- Main loop ---
@@ -397,16 +402,9 @@ async function main() {
     await collectReplies();
 
     // Deterministic stack management (before LLM invocation)
-    if (getMemoryState() === "done") {
-      if (callStack.length > 0) {
-        handlePop(callStack);
-      } else {
-        log(`\nMachine halted: done`);
-        return;
-      }
-    }
-    if (parsePush(readFile(MEMORY_PATH))) {
-      handlePush(callStack);
+    if (runStackBlock(callStack)) {
+      log(`\nMachine halted: done`);
+      return;
     }
 
     const currentState = getMemoryState();
