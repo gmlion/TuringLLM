@@ -18,7 +18,7 @@ instances/foo/run.sh                           # run
 ./visualize.sh foo                             # launch web visualizer for an instance
 ```
 
-No test suite or linter configured. After TypeScript changes, always `npm run build` before running instances.
+After TypeScript changes, always `npm run build` before running instances. A `node:test` suite lives in `src/test/` — run it with `npm test` (builds + runs). No linter is configured.
 
 ## Architecture — Three Layers
 
@@ -30,9 +30,13 @@ No test suite or linter configured. After TypeScript changes, always `npm run bu
 
 ## Source Files
 
-- `src/main.ts` — Cycle loop, git commits, history snapshots, user interaction handling, provider dispatch
+- `src/main.ts` — Cycle loop, git commits, history snapshots, user interaction, provider dispatch, stack management
+- `src/config.ts` — Environment and path configuration (loads .env, exports paths and provider flags)
+- `src/memory.ts` — Pure MEMORY.md parsers and transforms (`parseState`, `parsePush`, `removePush`, etc.)
+- `src/call-stack.ts` — Instruction call stack: persistence (`.call-stack.json`) and pure push/pop transforms
 - `src/prompt.ts` — System prompt and user prompt construction (inlines MEMORY + INSTRUCTIONS)
 - `src/tools.ts` — Tool definitions (bash, write_file, git, update_instructions) and execution
+- `src/telegram.ts` — Telegram bot integration (non-blocking user questions via chat)
 - `src/providers/api.ts` — Anthropic SDK provider with managed tool loop
 - `src/providers/claude-code.ts` — Claude Code CLI provider using native CC tools
 - `src/providers/openai.ts` — OpenAI-compatible API provider
@@ -43,6 +47,7 @@ No test suite or linter configured. After TypeScript changes, always `npm run bu
 - `src/errors.ts` — QuotaExceededError for graceful pause on rate limits (exit 0, resumable)
 - `src/git.ts` — Two git repos per instance: machine git (instance root, auto-commits per cycle) and project git (workspace/, LLM-controlled)
 - `src/server.ts` — Static file server for the visualizer
+- `src/test/` — `node:test` suite for memory, call-stack, prompt, and stack integration scenarios
 
 ## Two Git Repos Per Instance
 
@@ -92,9 +97,45 @@ When the LLM writes `## Matched Instruction: none`, the shell automatically ente
 
 ## Well-Known States
 
-The shell intercepts these MEMORY states:
-- `done` — halts the machine
+The shell intercepts these MEMORY states before each LLM invocation:
+
+- `done` — If the call stack is empty, halts the machine. If the call stack has frames (a dynamic is active), the shell pops one frame: restores the caller's instructions and sets state to `{returnState}_completed` (where `returnState` is the state the caller was in when it pushed). Cascade-pops while state remains `done`.
 - `waiting_for_user` — reads `## Pending Questions` from MEMORY, prompts user one question at a time, writes answers to `## Answers` in MEMORY, sets state to `user_responded`. Questions are non-blocking: the LLM adds them to `## Pending Questions` without changing state and keeps working. Only sets `waiting_for_user` when all remaining work is blocked on unanswered questions.
+
+The shell also intercepts the `## Push` MEMORY section (see Dynamics below).
+
+## Dynamics (Call Stack)
+
+A **dynamic** is a reusable instruction file that can be invoked from the running instruction set via push/pop semantics — like calling a subroutine. The shell owns the stack; the LLM signals intent through MEMORY.
+
+**Push.** The LLM writes `## Push` in MEMORY with a file path relative to the instance directory:
+
+```
+## Push
+dynamics/consult.md
+```
+
+Before the next LLM invocation, the shell:
+1. Saves the current `{state, instructions}` as a new frame on the call stack.
+2. Loads the target file as the new `INSTRUCTIONS.md`.
+3. Strips the `## Push` section from MEMORY.
+4. Sets state to `empty` so the dynamic starts fresh.
+
+The dynamic then runs its own state machine over the MEMORY the caller left behind. The caller is expected to write any context the dynamic needs into dedicated MEMORY sections before pushing.
+
+**Pop.** When the dynamic sets state to `done`, the shell pops the top frame, restores the caller's instructions, and sets state to `{caller_state}_completed` — where `caller_state` is the state the caller was in at push time. The caller must have an instruction that matches `{caller_state}_completed` to consume the returned result.
+
+The `_completed` suffix prevents an infinite loop: the caller's original `{caller_state}` instruction (which did the push) does not immediately re-fire.
+
+**Nesting.** Dynamics can push further dynamics. Each push adds a frame; pops cascade while state remains `done`.
+
+**Persistence.** The stack is persisted to `.call-stack.json` in the instance directory after every change. Snapshots in `history/NNNN-<hash>/` include a copy of the stack so past cycles are fully reconstructable.
+
+**Authoring dynamics.** Create `interpreters/<name>/dynamics/<thing>.md` alongside `INSTRUCTIONS.md`. The `new-instance.sh` script copies the whole `dynamics/` directory into each new instance. A dynamic file follows the same format as `INSTRUCTIONS.md` (a state machine with conditions/actions), must have an entry condition for state `empty`, and must eventually set state `done` to return control to the caller.
+
+**Missing push targets.** If `## Push` points at a non-existent or empty file, the shell logs an error, strips `## Push` from MEMORY, and continues with the caller unchanged (no frame is pushed). The LLM sees the next cycle without the push request and can adapt.
+
+**Implementation.** All push/pop semantics live in `src/call-stack.ts` as pure functions (`applyPush`, `applyPop`) that take `{stack, memory, instructions}` and return the transformed state. The shell in `src/main.ts` runs them before each LLM invocation and writes results back to disk. This split is why the stack logic is unit-tested independently of the main loop.
 
 ## Interpreters
 
@@ -128,13 +169,15 @@ Supporting `.md` files (role descriptions, templates) are copied into the instan
 ```
 instances/foo/
 ├── PROGRAM.md         # User's program (read-only to machine)
-├── INSTRUCTIONS.md    # Strategy + generated sub-instructions
-├── MEMORY.md          # Current state
+├── INSTRUCTIONS.md    # Strategy + generated sub-instructions (or a dynamic, while one is active)
+├── MEMORY.md          # Current state; may contain ## Push to delegate to a dynamic
+├── .call-stack.json   # Saved call stack (empty array at depth 0)
 ├── .env               # Provider/model config (gitignored)
 ├── workspace/         # Project artifacts (has its own git repo)
+├── dynamics/          # Reusable instruction files copied from the interpreter (optional)
 ├── run.sh             # Launch script
 ├── .api_key           # Cached API key (gitignored)
 ├── .gitignore         # Ignores .api_key, .env, logs/, history/, workspace/.git/
-├── history/           # Snapshot per cycle (0001-a3f1b2c/)
+├── history/           # Snapshot per cycle (0001-a3f1b2c/ — includes .call-stack.json)
 └── logs/              # Full run logs (run-<timestamp>.log)
 ```
