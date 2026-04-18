@@ -43,9 +43,11 @@ export function parsePendingQuestions(memory: string): PendingQuestion[] {
   return items;
 }
 
-/** Extract the ## Answers section content (without header). */
+/** Extract the ## Answers section content (without header, trailing newlines trimmed). */
 export function getAnswersSection(memory: string): string {
-  return memory.match(/^## Answers\n([\s\S]*?)(?=\n## [A-Z]|$)/m)?.[1] || "";
+  const match = memory.match(/^## Answers\n([\s\S]*?)(?=\n## [A-Z])/m)
+    || memory.match(/^## Answers\n([\s\S]+)$/m);
+  return match ? match[1].replace(/\n+$/, "") : "";
 }
 
 /** Append an answer to the ## Answers section. Pure string transform. */
