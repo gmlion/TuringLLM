@@ -26,15 +26,55 @@ reuse by later groups.
 5. **No speculative dynamics.** If something would only be used by one
    interpreter, inline it. Promote to `dynamics/` only on second use.
 
+## Cross-cutting building blocks
+
+Two pieces sit above the phase list. They are not bound to any group; every
+phase can build on them.
+
+### Skill library (Voyager-inspired)
+
+A persistent archive of successful sub-computations that any interpreter can
+draw from. Directly inspired by Voyager's skill library (see `patterns.md`
+Group 3). Orthogonal to the stack — it is *data* the dynamics consume, not
+a new control-flow primitive.
+
+- **Convention:** `workspace/skills/<name>.md` files, each a standalone
+  prompt + metadata header (trigger conditions, expected MEMORY in/out,
+  provenance: which interpreter+instance produced it).
+- **Index:** `workspace/skills/index.json` for fast lookup by trigger
+  keyword or semantic tag.
+- **New dynamic `invoke-skill.md`:** given a skill name and input MEMORY
+  sections, loads the skill and runs it as if it were a dynamic.
+- **New dynamic `install-skill.md`:** pushed at the end of a successful
+  sub-computation to generalise it into a skill and append to the index.
+- **First consumers:** Phase 3 (plan-execute may save high-utility plans),
+  Phase 5 (debate may save strong opinion patterns), Phase 7 (AFlow's
+  operator library is a skill library by another name).
+- **Implementation order:** introduce the convention + `invoke-skill.md`
+  in the same change that introduces the first consumer (Phase 3a).
+  `install-skill.md` can follow when a second phase wants to contribute
+  skills.
+
+### ReAct tool-calling convention
+
+Every phase that invokes shell tools (bash, write_file, git) follows the
+**ReAct** convention (`patterns.md` Group 1): the LLM reasons in a
+`Thought:` preamble, names the tool call as an `Action:`, and reads the
+result as an `Observation:` before the next thought. The current shell
+prompt already encourages this; the note here is to **not regress it**.
+No dynamic required — it is a prompting standard, enforced through the
+system prompt.
+
 ## Group order and prerequisites
 
 | Group from patterns.md | Covered in | Needs |
 |---|---|---|
 | 2 — Iterative refinement | Phase 1, Phase 2 | — |
-| 3 — Planning & decomposition | Phase 3 | `evaluate.md` from Phase 1 |
+| 3 — Planning & decomposition | Phase 3 (+ optional ReWOO variant) | `evaluate.md` from Phase 1 |
 | 6 — Fixed-SOP teams | Phase 4 (game-team retirement) | `evaluate.md` |
-| 5 — Peer collaboration | Phase 5 | `reflect.md` from Phase 1 |
-| 4 — Search | Phase 6 | `evaluate.md` |
+| 5 — Peer collaboration | Phase 5 (Debate), Phase 5b (MoA) | `reflect.md` from Phase 1 |
+| 4 — Search | Phase 6 (ToT, optional GoT variant) | `evaluate.md` |
+| 4 + 2 + 8 crossover | Phase 6b (LATS) | Phases 1c, 6, MCTS harness from Phase 7 |
 | 8 — Meta-frameworks | Phase 7 (+ optional Phase 8) | everything |
 
 Groups 1 (prompting techniques), 7 (dynamic teams), and 9 (libraries) are
@@ -47,6 +87,8 @@ is copied wholesale by `new-instance.sh`. Names and contracts are normative.
 
 | Dynamic | Introduced in | MEMORY in | MEMORY out | Stack depth |
 |---|---|---|---|---|
+| `invoke-skill.md` | cross-cutting | `## Skill Name`, `## Skill Inputs` | `## Skill Output` | 1 |
+| `install-skill.md` | cross-cutting | `## Skill Name`, `## Skill Body`, `## Metadata` | (writes to `workspace/skills/`) | 0 |
 | `self-critique.md` | 1a | `## Draft` | `## Critique`, `## Refined` | 1 |
 | `evaluate.md` | 1b | `## Attempt`, `## Criterion` | `## Verdict`, `## Feedback` | 1 |
 | `reflect.md` | 1c | `## Attempt`, `## Verdict` | `## Lesson` | 1 |
@@ -54,12 +96,14 @@ is copied wholesale by `new-instance.sh`. Names and contracts are normative.
 | `answer-independently.md` | 2 | `## Question` | `## Answer` | 1 |
 | `plan.md` | 3a | `## Goal` | `## Plan` | 1 |
 | `execute-step.md` | 3a | `## Current Step`, `## Context` | `## Step Result` | 1+ (may re-push plan) |
+| `execute-batch.md` | 3a (ReWOO variant) | `## Plan` with `#E` placeholders | `## Resolved Plan` | 1 |
 | `worker.md` | 3b | `## Current Subtask` | `## Subtask Result` | 1 |
 | `investigate.md` | 3c | `## Sub-question` | `## Finding` | N (recursive) |
 | `synthesize.md` | 3c | `## Findings` | `## Report` | 1 |
 | `role-<name>.md` | 4a | prior role's section | this role's section | 1 |
 | `dialogue.md` | 4b | `## Topic`, `## Participants` | `## Conclusion` | 1 |
 | `opine.md` | 5 | `## Question`, `## Round` | `## Opinion` (appended) | 1 |
+| `propose.md` | 5b | `## Prompt`, `## Persona` | `## Proposal` (appended) | 1 |
 | `expand-node.md` | 6 | `## Parent Thought` | `## Children`, `## Value` | N |
 | `evaluate-workflow.md` | 7 | `## Candidate Workflow` | `## Score`, `## Trace` | 2 |
 
@@ -156,6 +200,13 @@ Linear plan, sequential execution, replanning on failure.
 - **Reuse:** `evaluate.md` from 1b.
 - Demo `PROGRAM.md`: set up a Python project with tests and CI config.
 - **Validation:** log shows at least one replan triggered by a step failure.
+- **Optional second demo — ReWOO variant** (`patterns.md` Group 3). Same
+  `plan.md` but different executor: `plan.md` emits a full plan with
+  `#E1, #E2, …` placeholders for tool outputs; a new dynamic
+  `execute-batch.md` runs all tools in one pass and substitutes results
+  before a final synthesis. Same interpreter shell, different strategy
+  prompt and one extra dynamic. Shows the interleaved-vs-batched trade-off
+  cheaply. Build only after the interleaved path is solid.
 
 ### 3b. `interpreters/orchestrator-workers/`
 
@@ -229,10 +280,10 @@ Phase-dialogue between role pairs.
 
 ---
 
-## Phase 5 — Peer collaboration (patterns.md Group 5)
+## Phase 5 — Peer collaboration: Debate (patterns.md Group 5)
 
-Single interpreter. CAMEL is skipped (two-role conversation adds little over
-4b's dialogue dynamic).
+First of two Group-5 interpreters. CAMEL is skipped (two-role conversation
+adds little over 4b's dialogue dynamic).
 
 **Deliverable:** `interpreters/debate/`.
 
@@ -243,10 +294,39 @@ Single interpreter. CAMEL is skipped (two-role conversation adds little over
   nudge agents off stuck points.
 - Demo `PROGRAM.md`: an ambiguous-answer question ("Postgres or SQLite for
   use case U?").
+- **Cheap fallback — SPP** (`patterns.md` Group 5). For cost-constrained
+  runs, a single LLM cycles through personas in one context window. No new
+  dynamic: strategy pushes `opine.md` N times against the same worker with
+  different persona headers. Same interpreter can expose both modes via a
+  config switch.
 
 ---
 
-## Phase 6 — Search (patterns.md Group 4)
+## Phase 5b — Peer collaboration: Mixture of Agents (patterns.md Group 5)
+
+Layered ensembling, genuinely distinct from Debate. N proposers answer
+**independently** (no cross-visibility), an aggregator synthesises; layers
+can stack.
+
+**Deliverable:** `interpreters/moa/`.
+
+- Strategy: layer coordinator. For each layer, pushes `propose.md` N times
+  with distinct system prompts; collects proposals; runs an aggregator
+  prompt inline (no dynamic needed) to produce the layer output; feeds it
+  as the prompt to the next layer.
+- New dynamic: `propose.md` — receives `## Prompt` and `## Persona`,
+  returns `## Proposal`. Distinct from `opine.md` because proposers must
+  *not* see each other's output within a layer.
+- **Reuse:** none. `opine.md` is deliberately not reused — the access
+  pattern is opposite (opine shares the list, propose must not).
+- Demo `PROGRAM.md`: the same question as Phase 5, so outputs are
+  directly comparable between Debate and MoA on identical inputs.
+- **Validation:** per-proposer contexts verified to contain no sibling
+  proposals in that layer.
+
+---
+
+## Phase 6 — Search: Tree of Thoughts (patterns.md Group 4)
 
 Deepest stack in the codebase before the meta-framework. First meaningful
 use of the per-instance project git for parallel-branch snapshots.
@@ -261,6 +341,39 @@ use of the per-instance project git for parallel-branch snapshots.
   don't share state.
 - **Reuse:** `evaluate.md` from 1b.
 - Demo `PROGRAM.md`: Game of 24 or a small code-search problem.
+- **Optional variant — GoT** (`patterns.md` Group 4). Swap the tree-shaped
+  frontier for a DAG: `expand-node.md` can additionally emit `aggregate`
+  edges merging two existing thoughts into a new one. Same dynamic,
+  different strategy bookkeeping. Worth building only if a demo requires
+  cross-branch join (ToT's tree is usually enough).
+
+---
+
+## Phase 6b — Search + refinement + meta: LATS (patterns.md Group 4 × 2 × 8)
+
+Language Agent Tree Search: MCTS over ToT-style thoughts, Reflexion-style
+lessons at evaluation time, environment feedback as reward. This phase
+is **the natural bridge between Phase 6 and Phase 7** — it reuses ToT's
+dynamic and Reflexion's memory, and introduces MCTS machinery that
+Phase 7 also needs.
+
+**Deliverable:** `interpreters/lats/`.
+
+- Strategy: MCTS controller (selection / expansion / simulation /
+  back-prop). Persists the tree + per-node statistics in MEMORY
+  (`## Search Tree`, `## N / Q / V`).
+- **Reuse (no new dynamics):**
+  - `expand-node.md` (Phase 6) — unchanged, for node expansion.
+  - `evaluate.md` (Phase 1b) — as the simulation/rollout value.
+  - `reflect.md` (Phase 1c) — pushed on simulation failure to harvest a
+    lesson propagated into the tree's `## Lessons` section, consumed on
+    future expansions at the same node.
+- **New infrastructure:** MCTS helper code in the strategy (not a
+  dynamic) — reusable by Phase 7.
+- Demo `PROGRAM.md`: a task with executable feedback (write a function
+  that passes a given test suite; route a small maze).
+- **Why this ordering:** building LATS before Phase 7 lets Phase 7 import
+  the MCTS helper verbatim, rather than inventing it inside AFlow.
 
 ---
 
@@ -279,7 +392,8 @@ everything below to already work.
   it via a nested shell invocation (same binary, different instance dir),
   collects the score from its final MEMORY.
 - **Reuse:** operator library seeded from 1a (self-refine), 1c (reflexion),
-  3b (orchestrator-workers), 5 (debate).
+  3b (orchestrator-workers), 5 (debate), 5b (MoA). MCTS helper imported
+  from Phase 6b.
 - Demo `PROGRAM.md`: a small automatically-scorable benchmark (a subset of
   GSM8K or HumanEval).
 
@@ -297,27 +411,65 @@ running cleanly on at least one benchmark.
 
 ---
 
+## Open questions / future shell work
+
+Items outside the interpreter plan that would multiply the value of the
+interpreters. Each is a **shell-level change**, not a phase.
+
+- **MemGPT-style memory architecture** (`patterns.md` Addenda). Today
+  MEMORY.md is append-then-concatenate. A MemGPT-style paging system
+  (`recall` / `save` / `page-in` / `page-out` as explicit operations
+  against a tiered store) would upgrade every long-running interpreter.
+  Biggest win: Phase 3c (Deep Research's `## Findings` grows unboundedly)
+  and Phase 7 (AFlow's MCTS tree spills out of context). Flagged as
+  the single most impactful shell change.
+- **Curated tool surface (SWE-agent ACI)** (`patterns.md` Group 3). For
+  coding-heavy programs, the current generic `bash` + `write_file` pair
+  underperforms an LLM-ergonomic set: file viewer with scroll,
+  edit-at-line, directory search. Worth prototyping as an opt-in tool
+  layer selected per instance via `.env`. Scope: shell change, not a new
+  interpreter.
+- **DSPy-style prompt compilation** (`patterns.md` Group 9). Auto-
+  optimising prompts against a metric on a training set. Would multiply
+  Phase 7's value — AFlow searches the workflow space, but each node's
+  prompt is hand-written; a compiler would search prompt space inside
+  each node. Requires a metric harness the shell doesn't have yet.
+- **Parallel stack frames** (already noted previously). Several phases
+  (3b, 5, 5b, 6) would benefit from concurrent pops. Shell change.
+
+---
+
 ## Out of scope for this plan
 
-- **Group 1 (Prompting techniques)** — CoT and Self-Consistency are single
-  LLM calls, not agent designs. They are prompt affordances available to any
-  interpreter and do not warrant their own.
+- **Group 1 (Prompting techniques)** — CoT, Self-Consistency, ReAct,
+  Self-Discover. Prompting affordances available to any interpreter.
+  ReAct specifically is a **shell-level convention** (see "Cross-cutting
+  building blocks" above), not a phase.
 - **Group 7 (Dynamic teams)** — AgentVerse, AutoAgents, XAgents (plural).
   AgentVerse and AutoAgents are covered **in spirit** by Phase 3b + Phase 7
   (dynamic decomposition + operator library). XAgents (plural, rule-based
   IF-THEN) clashes with the shell's fuzzy-NL-condition design and is not
   pursued.
-- **Group 9 (Libraries)** — AutoGen and Superpowers are infrastructure, not
-  interpreters. Superpowers' skill *content* (4-phase systematic debugging,
-  TDD methodology) is a good source to mine when building dynamics for
-  Phase 4b (ChatDev coder↔reviewer pair) — but no "Superpowers interpreter"
-  will be built.
+- **Group 9 (Libraries)** — AutoGen, Superpowers, DSPy, LangGraph, CrewAI.
+  Infrastructure, not interpreters. Superpowers' skill *content* (4-phase
+  systematic debugging, TDD methodology) is a good source to mine when
+  building dynamics for Phase 4b. DSPy's compiler concept is listed under
+  "Open questions" above.
+- **Voyager as its own interpreter** — absorbed into the skill-library
+  building block above. Voyager's skill-library idea is the contribution
+  worth adopting; its Minecraft curriculum loop is too domain-specific.
+- **AutoGPT / BabyAGI** — historical ancestors of Phase 3a. Nothing to
+  build separately.
+- **Generative Agents** (`patterns.md` Group 5) — simulation, not task
+  solving. Out of scope.
+- **GPTSwarm** (`patterns.md` Group 8) — gradient-based workflow
+  optimisation. Different paradigm from AFlow's MCTS. Out of scope
+  unless a training-loop harness is added.
 - **EvoAgentX, DyLAN** — supersets of Phase 7/8 in scope; revisit only if a
   specific research question requires them.
-- **Parallel worker execution.** Today the shell pops sequentially. Several
-  phases (3b orchestrator, 5 debate, 6 ToT) would benefit from parallel
-  frames. This is a **shell change**, not an interpreter change, and is
-  tracked separately.
+- **Computer Use / Operator** (`patterns.md` Addenda) — modality, not a
+  pattern. Requires a screenshot+mouse tool layer the shell does not
+  have. Out of scope.
 
 ---
 
