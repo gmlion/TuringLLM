@@ -136,6 +136,35 @@ TURING_PROVIDER=api instances/my-project/run.sh
 
 Instances are resumable. Stop anytime (Ctrl+C or quota exceeded) and restart with `run.sh` — the cycle counter picks up where it left off.
 
+## Dynamics (Call Stack)
+
+A **dynamic** is a reusable instruction file invoked like a subroutine. The running instruction set delegates by writing `## Push` in MEMORY:
+
+```
+## Push
+dynamics/consult-team.md
+```
+
+The shell saves the current `{state, instructions}` onto a call stack, loads the dynamic as the new `INSTRUCTIONS.md`, and sets state to `empty`. When the dynamic sets state to `done`, the shell pops the stack, restores the caller's instructions, and sets state to `{caller_state}_completed`.
+
+```
+    ┌─── caller ───┐
+    │ state: needs_opinion                 ┌─ dynamic ──┐
+    │ ## Push: dynamics/consult.md ──────► │ state: empty
+    └──────────────┘                       │ ...
+                                           │ state: done ───┐
+    ┌─── caller ───┐                       └────────────────┘
+    │ state: needs_opinion_completed ◄────────── pop
+    └──────────────┘
+```
+
+- Dynamics can nest (a dynamic can push another).
+- Stack is persisted to `.call-stack.json` and snapshotted into each `history/` entry.
+- Missing push targets are logged and ignored — no frame is pushed.
+- Author dynamics in `interpreters/<name>/dynamics/*.md`; they are copied into each new instance.
+
+Implementation: `src/call-stack.ts` (pure `applyPush` / `applyPop` transforms), called from the cycle loop in `src/main.ts`. Unit-tested under `src/test/`.
+
 ## Interpreters
 
 An interpreter defines how PROGRAM.md gets executed. It's a reusable strategy that lives in `interpreters/<name>/`.
@@ -214,9 +243,11 @@ or omit any strategy instruction. Only the "# Sub-instructions" section below ch
 ```
 instances/foo/
 ├── PROGRAM.md         # User's program (read-only to machine)
-├── INSTRUCTIONS.md    # Strategy + generated sub-instructions
-├── MEMORY.md          # Current state
+├── INSTRUCTIONS.md    # Strategy + generated sub-instructions (swapped when a dynamic is active)
+├── MEMORY.md          # Current state; may carry ## Push to delegate
+├── .call-stack.json   # Saved call stack (empty at depth 0)
 ├── workspace/         # Project artifacts (own git repo)
+├── dynamics/          # Reusable instruction files (optional, provided by the interpreter)
 ├── run.sh             # Launch script
 ├── *.md               # Interpreter support files (role descriptions, etc.)
 ├── .api_key           # Cached API key (gitignored)
@@ -224,7 +255,8 @@ instances/foo/
 ├── history/           # Snapshots per cycle
 │   ├── 0001-a3f1b2c/
 │   │   ├── MEMORY.md
-│   │   └── INSTRUCTIONS.md
+│   │   ├── INSTRUCTIONS.md
+│   │   └── .call-stack.json
 │   └── ...
 └── logs/              # Full run logs
     └── run-2026-04-06T*.log
