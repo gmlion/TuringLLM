@@ -1,298 +1,321 @@
 # Agentic workflow interpreters — implementation plan
 
 What to build on top of the current shell (cycle loop + call stack) to cover
-the agentic-pattern landscape surveyed in `research.md`.
+the agentic-pattern landscape. Read `patterns.md` first for the conceptual
+taxonomy — this document is the implementation projection of that taxonomy
+onto the repo.
 
-This plan is intentionally incremental. Each phase produces an interpreter
-that runs on its own, and each phase harvests reusable dynamics from prior
-phases so later interpreters stay small.
+The plan is organised **by conceptual group**, with phases within a group
+ordered from simplest to most nested. Each phase produces one or more
+interpreters that run on their own, and each group harvests its dynamics for
+reuse by later groups.
 
 ## Guiding principles
 
 1. **Dynamics are the reuse unit.** Anything that recurs across interpreters
-   (self-critique, evaluation, verification, planning, role-play) lives as a
-   dynamic and is copied into every instance. Interpreters orchestrate
-   dynamics; they do not reimplement them.
-2. **Start small, climb the L-axis.** Build L0 dynamics first, then L1
-   interpreters that consume them, then L2–L5, and only then L6 meta-frameworks
-   that compose earlier interpreters.
-3. **Retire `interpreters/game-team` deliberately.** Its slot is covered by
-   the L4 and L5 phases below. Deletion happens when at least one L4
-   interpreter exists and the README no longer references game-team.
-4. **Every interpreter ships with a demo PROGRAM.md** so a user can run it
-   immediately via `./new-instance.sh foo interpreters/<name>`.
-5. **No speculative features.** If a dynamic would only be used by one
+   (critique, evaluation, reflection, verification, planning, role-play)
+   lives as a dynamic and is copied into every instance. Interpreters
+   orchestrate dynamics; they do not reimplement them.
+2. **Group-first, phase-second.** Build an entire conceptual group before
+   moving to the next one. Within a group, start with the variant that needs
+   the fewest new dynamics.
+3. **Retire `interpreters/game-team` deliberately** in Phase 4. That phase
+   exists for this purpose.
+4. **Every interpreter ships with a demo `PROGRAM.md`** so a user can run it
+   via `./new-instance.sh foo interpreters/<name>`.
+5. **No speculative dynamics.** If something would only be used by one
    interpreter, inline it. Promote to `dynamics/` only on second use.
 
----
+## Group order and prerequisites
+
+| Group from patterns.md | Covered in | Needs |
+|---|---|---|
+| 2 — Iterative refinement | Phase 1, Phase 2 | — |
+| 3 — Planning & decomposition | Phase 3 | `evaluate.md` from Phase 1 |
+| 6 — Fixed-SOP teams | Phase 4 (game-team retirement) | `evaluate.md` |
+| 5 — Peer collaboration | Phase 5 | `reflect.md` from Phase 1 |
+| 4 — Search | Phase 6 | `evaluate.md` |
+| 8 — Meta-frameworks | Phase 7 (+ optional Phase 8) | everything |
+
+Groups 1 (prompting techniques), 7 (dynamic teams), and 9 (libraries) are
+**not built as interpreters** — see "Out of scope" at the bottom.
 
 ## Reusable dynamics library
 
 Built up progressively. Each lives under `interpreters/<name>/dynamics/` and
-is copied wholesale by `new-instance.sh`. Names and contracts below are
-normative.
+is copied wholesale by `new-instance.sh`. Names and contracts are normative.
 
-| Dynamic | Introduced in phase | MEMORY in | MEMORY out | Stack depth |
+| Dynamic | Introduced in | MEMORY in | MEMORY out | Stack depth |
 |---|---|---|---|---|
-| `self-critique.md` | 1 | `## Draft` | `## Critique`, `## Refined` | 1 |
-| `evaluate.md` | 2 | `## Attempt`, `## Criterion` | `## Verdict`, `## Feedback` | 1 |
-| `reflect.md` | 2 | `## Attempt`, `## Verdict` | `## Lesson` | 1 |
-| `verify.md` | 3 | `## Draft` | `## Verification Questions`, `## Revised` | 2 |
-| `plan.md` | 4 | `## Goal` | `## Plan` (ordered steps) | 1 |
-| `execute-step.md` | 4 | `## Current Step`, `## Context` | `## Step Result` | 1+ (may re-push plan) |
-| `worker.md` | 6 | `## Current Subtask` | `## Subtask Result` | 1 |
-| `role-<name>.md` | 5 | phase-specific doc section | next phase-specific doc section | 1 |
-| `dialogue.md` | 5 | `## Topic`, `## Participants` | `## Conclusion` | 1 |
-| `opine.md` | 6 | `## Question`, `## Round` | `## Opinion` (appended) | 1 |
-| `investigate.md` | 6 | `## Sub-question` | `## Finding` | N (recursive) |
-| `synthesize.md` | 6 | `## Findings` | `## Report` | 1 |
-| `expand-node.md` | 7 | `## Parent Thought` | `## Children`, `## Value` | N (search depth) |
-| `evaluate-workflow.md` | 8 | `## Candidate Workflow` | `## Score`, `## Trace` | 2 |
+| `self-critique.md` | 1a | `## Draft` | `## Critique`, `## Refined` | 1 |
+| `evaluate.md` | 1b | `## Attempt`, `## Criterion` | `## Verdict`, `## Feedback` | 1 |
+| `reflect.md` | 1c | `## Attempt`, `## Verdict` | `## Lesson` | 1 |
+| `verify.md` | 2 | `## Draft` | `## Verification Questions`, `## Revised` | 2 |
+| `answer-independently.md` | 2 | `## Question` | `## Answer` | 1 |
+| `plan.md` | 3a | `## Goal` | `## Plan` | 1 |
+| `execute-step.md` | 3a | `## Current Step`, `## Context` | `## Step Result` | 1+ (may re-push plan) |
+| `worker.md` | 3b | `## Current Subtask` | `## Subtask Result` | 1 |
+| `investigate.md` | 3c | `## Sub-question` | `## Finding` | N (recursive) |
+| `synthesize.md` | 3c | `## Findings` | `## Report` | 1 |
+| `role-<name>.md` | 4a | prior role's section | this role's section | 1 |
+| `dialogue.md` | 4b | `## Topic`, `## Participants` | `## Conclusion` | 1 |
+| `opine.md` | 5 | `## Question`, `## Round` | `## Opinion` (appended) | 1 |
+| `expand-node.md` | 6 | `## Parent Thought` | `## Children`, `## Value` | N |
+| `evaluate-workflow.md` | 7 | `## Candidate Workflow` | `## Score`, `## Trace` | 2 |
 
 ---
 
-## Phase order
+## Phase 1 — Iterative refinement (patterns.md Group 2)
 
-Phases 1–3 build foundation. Phase 4 is the first real useful interpreter.
-Phase 5 retires game-team. Phases 6–7 cover the sweet spot. Phase 8 is the
-ambitious finale.
+Three interpreters that are **variants of the same architectural pattern**:
+`generate → critique → revise`. Built together because they share dynamics
+by design.
 
-### Phase 1 — Self-Refine (L0/L1 smoke test)
+### 1a. `interpreters/self-refine/`
 
-**Why first.** Minimal push/pop, 1-frame stack, validates the shell's dynamic
-machinery end-to-end. If this doesn't work, nothing later will.
+The minimal case. One role critiques its own output.
 
-**Deliverable:** `interpreters/self-refine/`.
+- States: `empty → drafted → refined → done`.
+- Dynamic: `self-critique.md` — pushed when `drafted`, returns `## Critique`
+  and `## Refined`, sets state `done`.
+- Demo `PROGRAM.md`: write a concise function docstring.
+- **Validation:** loops drafted↔refined at least twice before critique says
+  "accepted".
 
-**What to implement:**
-- `INSTRUCTIONS.md` with states `empty → drafted → refined → done`.
-- `dynamics/self-critique.md` — pushed when state is `drafted`, returns
-  `## Critique` and `## Refined` in MEMORY, sets state `done`.
-- A demo `PROGRAM.md` with a short writing/coding task (e.g. "write a
-  concise function doc").
+### 1b. `interpreters/evaluator-optimizer/`
 
-**Reuse:** none (it's the base).
+Two roles, no memory across iterations.
 
-**Validation:** the interpreter should loop drafted↔refined at least twice
-before the critique says "accepted", then reach `done`.
-
----
-
-### Phase 2 — Reflexion (L1)
-
-**Why next.** Introduces the actor/evaluator/reflect triad that everything
-higher up reuses. Also the first interpreter that keeps cross-attempt memory.
-
-**Deliverable:** `interpreters/reflexion/`.
-
-**What to implement:**
-- Strategy: Actor loop that reads `## Lessons` before each attempt.
-- `dynamics/evaluate.md` — generic, takes `## Attempt` and `## Criterion`,
+- States: `empty → drafted → evaluated → (revise|done)`.
+- Dynamic: `evaluate.md` — generic, takes `## Attempt` and `## Criterion`,
   returns `## Verdict` (pass/fail) + `## Feedback`.
-- `dynamics/reflect.md` — takes `## Attempt` and `## Verdict`, returns
-  `## Lesson`, appended to `## Lessons`.
-- Demo PROGRAM.md with a task that benefits from retries (e.g. "solve this
-  riddle" or "write code passing these tests").
+- **Reuse:** strategy-level only; no dynamic is shared with 1a because the
+  critic/self-critic framing genuinely differs (external feedback vs.
+  self-edit). They do share scaffolding helpers at the source level.
+- Demo `PROGRAM.md`: translate a paragraph to a target register (e.g.
+  technical → plain language) with a clear acceptance criterion.
 
-**Reuse:** `self-critique.md` is *not* reused — Reflexion's evaluator is a
-distinct role from a self-critic, and collapsing them muddles the pattern.
-They can share scaffolding code (prompt builder helpers) but live as
-separate dynamic files.
+### 1c. `interpreters/reflexion/`
 
-**Validation:** at least two failed attempts in logs with distinct lessons
-accumulated; third attempt should materially improve.
+Evaluator–Optimizer **plus** episodic memory of verbal lessons. This is the
+key upgrade.
+
+- States: `empty → attempting → evaluated → reflecting → attempting → … → done`.
+- **Reuses:** `evaluate.md` from 1b verbatim.
+- New dynamic: `reflect.md` — takes `## Attempt` and `## Verdict`, returns
+  `## Lesson`, appended to `## Lessons` (persisted across attempts).
+- Strategy reads `## Lessons` before each attempt.
+- Demo `PROGRAM.md`: a task that genuinely benefits from retries (a riddle;
+  code that must pass a hidden test suite).
+- **Validation:** at least two failed attempts with distinct lessons
+  accumulated; third attempt shows material improvement referencing a
+  prior lesson.
+
+### Why the three together
+
+Building 1b before 1c is what lets 1c reuse `evaluate.md`. Building 1a first
+validates push/pop at depth 1 before anything else is attempted.
 
 ---
 
-### Phase 3 — Chain-of-Verification (L0 with nesting)
+## Phase 2 — Chain-of-Verification (patterns.md Group 2, nested variant)
 
-**Why now.** First interpreter requiring **depth-2 stack** (verify.md pushes
-answer-independently.md per question). Stress-tests the snapshot/restore of
-nested frames.
+Still iterative refinement, but the critique step is *decomposed* into
+independent verification Q&A. First interpreter that requires **stack depth
+2**, so it doubles as a snapshot/restore stress test for the shell.
 
 **Deliverable:** `interpreters/cove/`.
 
-**What to implement:**
-- Strategy: drafter that produces a factual claim, then pushes `verify.md`.
-- `dynamics/verify.md`: generates N verification questions, for each pushes
-  `dynamics/answer-independently.md`, collects answers, revises the draft.
-- Demo PROGRAM.md with a question where hallucination is likely (e.g. "list
-  the authors of paper X").
-
-**Reuse:** none.
-
-**Validation:** snapshot a cycle mid-verify and confirm `.call-stack.json`
-contains two frames.
+- Strategy: drafter emits a factual claim, pushes `verify.md`.
+- New dynamic: `verify.md` — generates N verification questions, for each
+  pushes `answer-independently.md`, collects answers, emits `## Revised`.
+- New dynamic: `answer-independently.md` — answers one question with no
+  access to the draft.
+- Demo `PROGRAM.md`: a question where hallucination is likely ("list the
+  authors of paper X and their affiliations").
+- **Reuse:** none. Both dynamics are new.
+- **Validation:** mid-verify, `.call-stack.json` contains two frames.
 
 ---
 
-### Phase 4 — Plan-and-Execute (L1, workhorse)
+## Phase 3 — Planning & decomposition (patterns.md Group 3)
 
-**Why now.** First general-purpose interpreter. This is what most users
-actually want. Also the first one with recursion (execute-step may re-push
-plan).
+Three interpreters. Built together because Plan-and-Execute's dynamics
+(`plan.md`, `execute-step.md`) are consumed by Orchestrator–Workers and
+Deep Research.
 
-**Deliverable:** `interpreters/plan-execute/`.
+### 3a. `interpreters/plan-execute/`
 
-**What to implement:**
+Linear plan, sequential execution, replanning on failure.
+
 - Strategy: planner/replanner holding `## Plan`.
-- `dynamics/plan.md` — produces an ordered step list given `## Goal`.
-- `dynamics/execute-step.md` — executes one step. May call `bash`,
-  `write_file`, or push `plan.md` recursively if the step is too coarse
-  (heuristic: "this step contains more than N sub-actions → decompose").
-- Strategy logic: after each step result, decide advance vs. replan.
-- Demo PROGRAM.md with a small engineering task (e.g. "set up a Python
-  project with tests and CI config").
+- New dynamic: `plan.md` — produces an ordered step list for `## Goal`.
+- New dynamic: `execute-step.md` — executes one step. May re-push `plan.md`
+  if the step is too coarse (recursion) or push `evaluate.md` as a step-
+  acceptance gate.
+- **Reuse:** `evaluate.md` from 1b.
+- Demo `PROGRAM.md`: set up a Python project with tests and CI config.
+- **Validation:** log shows at least one replan triggered by a step failure.
 
-**Reuse:** `evaluate.md` from phase 2 is pushed before marking a step as
-complete, reusing the evaluator as a step-acceptance gate.
+### 3b. `interpreters/orchestrator-workers/`
 
-**Validation:** log trace should show at least one replan triggered by a
-step failure.
+Dynamic fan-out with generic workers.
 
----
+- Strategy: orchestrator holds `## Subtasks` (decomposed on the fly per
+  task) and `## Results`. Pushes `worker.md` per subtask in sequence,
+  synthesises.
+- New dynamic: `worker.md` — receives `## Current Subtask`, returns
+  `## Subtask Result`. Internally pushes `execute-step.md` for executable
+  subtasks, otherwise runs a reasoning loop.
+- **Reuse:** `execute-step.md` from 3a.
+- Demo `PROGRAM.md`: analyse 5 files in `workspace/inputs/` and produce a
+  unified summary.
 
-### Phase 5 — L4 team interpreters (**replace game-team**)
+### 3c. `interpreters/deep-research/`
 
-**Why now.** We have planning and evaluation; a fixed-SOP team interpreter
-is now cheap to build. This phase explicitly retires game-team.
-
-**Deliverable:** two interpreters.
-
-#### 5a. `interpreters/metagpt/`
-
-- Strategy: SOP sequencer walking PM → Architect → Engineer → QA.
-- `dynamics/role-pm.md`, `role-architect.md`, `role-engineer.md`,
-  `role-qa.md` — each reads the prior role's document section, writes its
-  own.
-- Typed hand-off via MEMORY sections: `## PRD`, `## Design`, `## Tasks`,
-  `## Code Review`.
-- Demo PROGRAM.md: build a small CLI tool.
-
-#### 5b. `interpreters/chatdev/`
-
-- Strategy: phase sequencer (design, coding, testing, documenting).
-- `dynamics/dialogue.md` parameterised by `## Participants` and `## Topic`;
-  pairs like CEO↔CTO, coder↔reviewer.
-- Role descriptions in `roles/*.md` referenced from MEMORY.
-- Demo PROGRAM.md: build the same CLI tool as MetaGPT — lets us compare
-  outputs.
-
-**Reuse:** `evaluate.md` (phase 2) used by the QA / reviewer roles.
-
-**Retirement of game-team:**
-- After both 5a and 5b run end-to-end on their demos, delete
-  `interpreters/game-team/`.
-- Update `CLAUDE.md`: remove the "Existing interpreters" entry for
-  game-team, add entries for `metagpt` and `chatdev` with one-line
-  descriptions.
-- Update `README.md` examples that reference game-team.
-- Keep the shell-level features that game-team exercised (fuzzy NL
-  conditions, non-blocking questions, `## Push` from strategy) — these
-  belong to the shell, not to game-team, and are reused by 5a/5b.
-
----
-
-### Phase 6 — L5 dynamic-composition interpreters (sweet spot)
-
-**Why now.** The shell's stack was designed for this shape. With dynamics
-from phases 1–5 in hand, these are thin orchestrators.
-
-**Deliverable:** three interpreters.
-
-#### 6a. `interpreters/orchestrator-workers/`
-
-- Strategy: orchestrator holds `## Subtasks` (decomposed on the fly per task)
-  and `## Results`. Pushes `worker.md` per subtask, in sequence. Synthesises.
-- `dynamics/worker.md`: generic, receives `## Current Subtask` and returns
-  `## Subtask Result`. Uses `execute-step.md` internally if the subtask is
-  executable (code/bash), otherwise runs a reasoning loop.
-- Demo PROGRAM.md: a task that clearly benefits from fan-out (e.g. "analyse
-  these 5 files and produce a unified summary").
-
-#### 6b. `interpreters/debate/`
-
-- Strategy: round coordinator. Runs R rounds, each round pushes
-  `dynamics/opine.md` for each of N agents with distinct personas.
-- Opinions accumulated into `## Opinions`, aggregated at end.
-- Demo PROGRAM.md: an ambiguous-answer question (e.g. "should we use
-  Postgres or SQLite for this use case?").
-
-#### 6c. `interpreters/deep-research/`
+Recursive decomposition producing a report.
 
 - Strategy: researcher holds `## Open Questions` and `## Findings`.
-- `dynamics/investigate.md` — may push itself recursively if the
-  sub-question is too broad.
-- `dynamics/synthesize.md` — final report into `workspace/report.md`.
-- Demo PROGRAM.md: an open-ended research prompt.
-
-**Reuse:** phase 4 `plan.md` / `execute-step.md` are pushed by `worker.md`
-when a subtask itself needs a plan. Phase 2 `reflect.md` is pushed by the
-debate coordinator between rounds to nudge agents off stuck points.
+- New dynamic: `investigate.md` — may push itself recursively when a
+  sub-question is still too broad.
+- New dynamic: `synthesize.md` — writes the final report to
+  `workspace/report.md`.
+- **Reuse:** none directly from 3a/3b (the questions are not plans).
+- Demo `PROGRAM.md`: an open research prompt ("compare approaches X, Y, Z
+  for problem P").
 
 ---
 
-### Phase 7 — Tree of Thoughts (L2, stack-depth stress test)
+## Phase 4 — Fixed-SOP teams (patterns.md Group 6) — **replaces game-team**
 
-**Why now.** Exercises deepest stack in the codebase and the first meaningful
+Two interpreters, one task. The same demo `PROGRAM.md` should run on both so
+outputs are comparable. This phase exists specifically to retire
+`interpreters/game-team`.
+
+### 4a. `interpreters/metagpt/`
+
+Document hand-off between roles.
+
+- Strategy: SOP sequencer walking PM → Architect → Engineer → QA.
+- New dynamics: `role-pm.md`, `role-architect.md`, `role-engineer.md`,
+  `role-qa.md` — each reads the prior role's MEMORY section, writes its own.
+- Typed hand-off sections: `## PRD`, `## Design`, `## Tasks`, `## Code Review`.
+- **Reuse:** QA role pushes `evaluate.md` from 1b.
+- Demo `PROGRAM.md`: build a small CLI tool.
+
+### 4b. `interpreters/chatdev/`
+
+Phase-dialogue between role pairs.
+
+- Strategy: phase sequencer (design, coding, testing, documenting).
+- New dynamic: `dialogue.md` — parameterised by `## Participants` and
+  `## Topic`; pairs like CEO↔CTO, coder↔reviewer.
+- Role descriptions in `roles/*.md` referenced from MEMORY.
+- **Reuse:** reviewer pairs push `evaluate.md`.
+- Demo `PROGRAM.md`: the **same** CLI tool as 4a.
+
+### Retirement checklist
+
+1. Run both 4a and 4b end-to-end on their shared demo.
+2. Delete `interpreters/game-team/`.
+3. Update `CLAUDE.md` "Existing interpreters": remove game-team, add entries
+   for `metagpt` and `chatdev` describing the document-hand-off vs.
+   phase-dialogue distinction.
+4. Update `README.md` examples that reference game-team.
+5. Confirm the shell-level features game-team exercised — fuzzy NL
+   conditions, non-blocking `## Pending Questions`, `## Push` from
+   strategy — are still exercised by 4a/4b. These belong to the shell, not
+   to any interpreter, and must not regress.
+
+---
+
+## Phase 5 — Peer collaboration (patterns.md Group 5)
+
+Single interpreter. CAMEL is skipped (two-role conversation adds little over
+4b's dialogue dynamic).
+
+**Deliverable:** `interpreters/debate/`.
+
+- Strategy: round coordinator. Runs R rounds; each round pushes `opine.md`
+  for each of N agents with distinct personas.
+- New dynamic: `opine.md` — appends to `## Opinions` list.
+- **Reuse:** between rounds, coordinator may push `reflect.md` from 1c to
+  nudge agents off stuck points.
+- Demo `PROGRAM.md`: an ambiguous-answer question ("Postgres or SQLite for
+  use case U?").
+
+---
+
+## Phase 6 — Search (patterns.md Group 4)
+
+Deepest stack in the codebase before the meta-framework. First meaningful
 use of the per-instance project git for parallel-branch snapshots.
 
-**Deliverable:** `interpreters/tot/`.
+**Deliverable:** `interpreters/tot/` (Tree of Thoughts).
 
-**What to implement:**
 - Strategy: search controller holding the frontier and visited set in MEMORY.
-- `dynamics/expand-node.md` — generates k children, evaluates each, pops with
-  scored children. Recursive per best child.
-- Integration with `workspace/`'s project git: each ToT branch gets a git
-  branch; the controller `checkout`s before expanding, so sibling branches
-  don't see each other's state.
-- Demo PROGRAM.md: the classic Game-of-24 or a small code-search problem.
-
-**Reuse:** `evaluate.md` from phase 2.
+- New dynamic: `expand-node.md` — generates k children, evaluates each,
+  pops with scored children. Recursive per best child (BFS or DFS).
+- Project-git integration: each ToT branch gets a git branch in
+  `workspace/`; the controller `checkout`s before expanding so siblings
+  don't share state.
+- **Reuse:** `evaluate.md` from 1b.
+- Demo `PROGRAM.md`: Game of 24 or a small code-search problem.
 
 ---
 
-### Phase 8 — Meta-framework (L6 finale)
+## Phase 7 — Meta-framework (patterns.md Group 8)
 
-**Why last.** Requires everything below to already work, since it composes
-earlier interpreters as candidates.
+The framework composes earlier interpreters as candidate workflows. Requires
+everything below to already work.
 
 **Deliverable:** `interpreters/aflow-lite/`.
 
-**What to implement:**
 - Strategy: MCTS controller over a library of Operators (Ensemble, Review,
-  Revise, …). Tree persisted in MEMORY (`## MCTS Tree`).
-- `dynamics/evaluate-workflow.md`: materialises a candidate workflow as a
-  throwaway `INSTRUCTIONS.md` in `workspace/candidates/NNN/`, launches it
-  via a nested shell invocation (same binary, different instance dir),
+  Revise, …) seeded from earlier phases. Tree persisted in MEMORY
+  (`## MCTS Tree`).
+- New dynamic: `evaluate-workflow.md` — materialises a candidate workflow
+  as a throwaway `INSTRUCTIONS.md` in `workspace/candidates/NNN/`, launches
+  it via a nested shell invocation (same binary, different instance dir),
   collects the score from its final MEMORY.
-- Baselines as Operator library seeds: phase 1 (self-refine), phase 2
-  (reflexion), phase 6a (orchestrator-workers), phase 6b (debate).
-- Demo PROGRAM.md: a small benchmark where we can automatically score
-  answers (e.g. a set of GSM8K problems or HumanEval items).
+- **Reuse:** operator library seeded from 1a (self-refine), 1c (reflexion),
+  3b (orchestrator-workers), 5 (debate).
+- Demo `PROGRAM.md`: a small automatically-scorable benchmark (a subset of
+  GSM8K or HumanEval).
 
-**Optional follow-on (Phase 9):** ADAS-style meta-agent that writes new
-interpreter `INSTRUCTIONS.md` in code rather than composing Operators. This
-is the philosophically closest match to the Turing-machine premise
-(machine-writes-its-own-program) and is the logical end-state of the
-project.
+---
 
-**Reuse:** everything.
+## Phase 8 (optional) — Meta-agent (patterns.md Group 8, ADAS flavour)
+
+A meta-interpreter that **writes new interpreter `INSTRUCTIONS.md` files** in
+code, tests them, archives the strong ones. Philosophically the closest match
+to the Turing-machine premise (machine writes its own program) and the
+logical end-state of the project.
+
+**Deliverable:** `interpreters/adas-lite/`. Only attempted after Phase 7 is
+running cleanly on at least one benchmark.
 
 ---
 
 ## Out of scope for this plan
 
-- **AutoGen / Superpowers** (L7 libraries) — they are *not* interpreters.
-  Superpowers' skill content (4-phase debugging, TDD methodology) can be
-  cherry-picked as dynamics inside L1 / L4 interpreters, but we do not
-  build a "Superpowers interpreter".
-- **EvoAgentX, DyLAN** — covered in spirit by Phase 8 + optional Phase 9.
-  No separate interpreter unless a specific research question requires it.
-- **XAgents (plural, rule-based)** — low priority; its IF-THEN style clashes
-  with the shell's fuzzy-NL-condition design.
-- **Parallel worker execution.** Today the shell pops sequentially. Some
-  phases (6a orchestrator, 6b debate, 7 ToT) would benefit from parallel
+- **Group 1 (Prompting techniques)** — CoT and Self-Consistency are single
+  LLM calls, not agent designs. They are prompt affordances available to any
+  interpreter and do not warrant their own.
+- **Group 7 (Dynamic teams)** — AgentVerse, AutoAgents, XAgents (plural).
+  AgentVerse and AutoAgents are covered **in spirit** by Phase 3b + Phase 7
+  (dynamic decomposition + operator library). XAgents (plural, rule-based
+  IF-THEN) clashes with the shell's fuzzy-NL-condition design and is not
+  pursued.
+- **Group 9 (Libraries)** — AutoGen and Superpowers are infrastructure, not
+  interpreters. Superpowers' skill *content* (4-phase systematic debugging,
+  TDD methodology) is a good source to mine when building dynamics for
+  Phase 4b (ChatDev coder↔reviewer pair) — but no "Superpowers interpreter"
+  will be built.
+- **EvoAgentX, DyLAN** — supersets of Phase 7/8 in scope; revisit only if a
+  specific research question requires them.
+- **Parallel worker execution.** Today the shell pops sequentially. Several
+  phases (3b orchestrator, 5 debate, 6 ToT) would benefit from parallel
   frames. This is a **shell change**, not an interpreter change, and is
   tracked separately.
 
@@ -300,13 +323,18 @@ project.
 
 ## Definition of done (per phase)
 
-Each phase is considered complete when:
+Each phase is complete when:
 
-1. The interpreter runs its demo `PROGRAM.md` to `state: done` on a default
-   provider (Claude Code or Anthropic API) without manual intervention.
-2. `history/` contains a coherent snapshot sequence that can be replayed in
-   the visualiser.
-3. The `CLAUDE.md` "Existing interpreters" list is updated.
-4. A one-paragraph README-style section is added to this file (or a
-   sibling `notes.md`) describing anything surprising discovered during
-   implementation — so phase N+1 can avoid repeating the pain.
+1. Every interpreter in the phase runs its demo `PROGRAM.md` to
+   `state: done` on a default provider (Claude Code or Anthropic API)
+   without manual intervention.
+2. `history/` contains a coherent snapshot sequence that replays in the
+   visualiser.
+3. `CLAUDE.md` "Existing interpreters" is updated to list the new
+   interpreters with one-line descriptions pointing at their conceptual
+   group in `patterns.md`.
+4. Any new dynamic introduced in the phase has an entry in the table at
+   the top of this document, matching its actual MEMORY contract.
+5. A one-paragraph note is added to a sibling `notes.md` describing
+   anything surprising discovered during implementation, so the next
+   phase can avoid the same pain.
