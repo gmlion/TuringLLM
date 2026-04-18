@@ -11,8 +11,10 @@ import { readFileSync, writeFileSync } from "fs";
 export type StackEntry = { returnState: string; instructions: string };
 
 export function loadCallStack(path: string): StackEntry[] {
-  try { return JSON.parse(readFileSync(path, "utf-8")); }
-  catch { return []; }
+  try {
+    const parsed = JSON.parse(readFileSync(path, "utf-8"));
+    return Array.isArray(parsed) ? parsed : [];
+  } catch { return []; }
 }
 
 export function saveCallStack(path: string, stack: StackEntry[]): void {
