@@ -5,7 +5,8 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/main.js",
-    "visualize": "node dist/server.js"
+    "visualize": "node dist/server.js",
+    "test": "tsc && node --test \"dist/test/**/*.test.js\""
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
