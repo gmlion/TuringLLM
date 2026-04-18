@@ -35,15 +35,16 @@ The groups below are defined primarily by Axis A. Axis B is noted per entry.
 
 | Group | Core idea | Representative patterns |
 |---|---|---|
-| 1. Prompting techniques | Squeeze more out of a single LLM call | CoT, Self-Consistency |
+| 1. Prompting techniques | Squeeze more out of a single LLM call | CoT, Self-Consistency, ReAct, Self-Discover |
 | 2. Iterative refinement | Rework the same answer until it is good | Self-Refine, Evaluator–Optimizer, Reflexion, Chain-of-Verification |
-| 3. Planning & decomposition | Break the task, execute the parts | Plan-and-Execute, Deep Research, Orchestrator–Workers, XAgent |
-| 4. Search | Explore alternative solutions, prune | Tree of Thoughts |
-| 5. Peer collaboration | Multiple roles work the same task from different angles | CAMEL, Multi-Agent Debate |
+| 3. Planning & decomposition | Break the task, execute the parts | Plan-and-Execute, ReWOO, Deep Research, Orchestrator–Workers, XAgent, Voyager, AutoGPT/BabyAGI, SWE-agent/OpenHands |
+| 4. Search | Explore alternative solutions, prune | Tree of Thoughts, Graph of Thoughts, LATS |
+| 5. Peer collaboration | Multiple roles work the same task from different angles | CAMEL, Multi-Agent Debate, Generative Agents, Mixture of Agents, SPP |
 | 6. Fixed-SOP teams | Hard-coded pipeline of specialists | MetaGPT, ChatDev, nWave |
 | 7. Dynamic teams | Roles assembled or generated per task | AgentVerse, AutoAgents, XAgents |
-| 8. Meta-frameworks | The workflow itself is the output | AFlow, ADAS, EvoAgentX, DyLAN |
-| 9. Libraries (not patterns) | Infrastructure that hosts the above | AutoGen, Superpowers |
+| 8. Meta-frameworks | The workflow itself is the output | AFlow, ADAS, EvoAgentX, DyLAN, GPTSwarm |
+| 9. Libraries (not patterns) | Infrastructure that hosts the above | AutoGen, Superpowers, DSPy, LangGraph, CrewAI |
+| Addenda | Patterns that straddle the taxonomy | MemGPT, Computer Use / Operator |
 
 ---
 
@@ -58,6 +59,20 @@ Wei et al., 2022. Ask the model to reason step by step before answering.
 
 ### Self-Consistency
 Wang et al., 2022. Sample N CoT traces, majority-vote the final answer.
+
+### ReAct
+*Yao et al., ICLR 2023 (arXiv:2210.03629).* Interleaves
+`Thought: → Action: → Observation:` tuples in a single prompting loop. The
+model reasons, picks a tool, sees the result, reasons again. Foundational
+substrate for almost every tool-using agent (Plan-and-Execute, XAgent,
+AutoGPT, SWE-agent). If you had to name one prompting pattern that made
+modern agents possible, this is it.
+
+### Self-Discover
+*Zhou et al., 2024 (arXiv:2402.03620).* The model selects, adapts, and
+composes reasoning modules (decomposition, analogy, critique, …) into a
+**task-specific reasoning structure** *before* solving. Structural
+prompting: the scaffold is the output of the first stage.
 
 ---
 
@@ -116,12 +131,19 @@ an executor performs them one at a time, a replanner updates the list in
 light of each result. If a step is too coarse, it can spawn its own
 sub-plan.
 
+### ReWOO
+*Xu et al., 2023 (arXiv:2305.18323).* **R**easoning **W**ith**O**ut
+**O**bservation. Emits a full plan up-front with placeholder tokens
+(`#E1`, `#E2`, …) for tool outputs, executes all tools in a batch, then
+substitutes the results before a final synthesis. Reduces token cost and
+the cascade failures that interleaved ReAct suffers from when an early
+observation derails later reasoning.
+
 ### Deep Research
 Product pattern (OpenAI Deep Research, Anthropic Research, Perplexity Pro);
-academically close to *Self-Ask* (Press et al.) and *ReWOO* (Xu et al.).
-Question → decompose into sub-questions → search/read/synthesise each →
-aggregate. Recursive when a sub-question is still too broad. Output is
-typically a report.
+academically close to *Self-Ask* (Press et al.). Question → decompose into
+sub-questions → search/read/synthesise each → aggregate. Recursive when a
+sub-question is still too broad. Output is typically a report.
 
 ### Orchestrator–Workers
 *Anthropic, "Building Effective Agents", 2024.* An orchestrator LLM
@@ -137,6 +159,34 @@ and-Execute with the planner/executor split explicit and the planner
 allowed to rewrite the plan at any time. Compared against AutoGPT on ~50
 real-world tasks.
 
+### Voyager
+*Wang et al., NVIDIA, 2023 (arXiv:2305.16291).* Lifelong learning agent in
+Minecraft. Three components: an **automatic curriculum** that picks the
+next skill to learn, a **skill library** of callable code (each skill is
+saved as a JavaScript function), and an iterative prompting loop that
+refines a skill by running it in the environment and incorporating the
+error traceback. Canonical "skill library" pattern — the only Group 3
+member in which successful subtasks are **permanently installed** and
+reused on later tasks.
+
+### AutoGPT / BabyAGI
+*Richards, 2023; Nakajima, 2023.* Community projects that turned LLM
+agents into a mainstream topic. **AutoGPT** = task queue + executor +
+objective. **BabyAGI** = create-task / execute-task / prioritise-task
+cycle. Both are simpler and less principled than Plan-and-Execute, but
+historically the spark: they showed that a loop of LLM calls with tool
+access plus a persistent TODO list produces surprisingly useful
+behaviour.
+
+### SWE-agent / OpenHands
+*Yang et al., Princeton, 2024 (arXiv:2405.15793); OpenHands (formerly
+OpenDevin) 2024 community project.* Coding-specific agents. Main
+contribution is the **Agent–Computer Interface (ACI)**: a deliberately
+small, LLM-ergonomic tool set (file viewer with scroll, edit-at-line,
+directory search, bash) rather than raw shell access. Strong SWE-bench
+performance without novel planning — the lesson is that **tool surface
+design matters as much as the planner**.
+
 ---
 
 ## Group 4 — Search
@@ -150,6 +200,21 @@ which splits the task without branching).
 evaluate their value, expand the best (BFS or DFS), prune weak branches.
 Strongest on problems with a clear value function (Game of 24, small
 puzzles, constrained code search).
+
+### Graph of Thoughts (GoT)
+*Besta et al., 2023 (arXiv:2308.09687).* Generalises ToT by allowing
+thoughts to form an arbitrary **DAG** instead of a tree. Edges are typed
+operations — generate, aggregate, refine, backtrack — so independently
+explored branches can be merged. Expresses strategies ToT cannot, such
+as "solve two sub-problems in parallel, then combine".
+
+### LATS — Language Agent Tree Search
+*Zhou et al., 2023 (arXiv:2310.04406).* **MCTS** over ToT-style thoughts,
+with Reflexion-style self-reflection at evaluation time and environment
+feedback as the reward signal. A three-way crossover of Group 4 (ToT),
+Group 2 (Reflexion), and Group 8 (tree search as meta-loop). Typically
+stronger than plain ToT when the environment returns executable
+feedback.
 
 ---
 
@@ -168,6 +233,30 @@ conversational.
 *Du et al., 2023; with antecedents in Irving et al., 2018.* N agents produce
 answers, read each other's, revise for one or more rounds. Convergence by
 mutual critique. Known to improve factuality on knowledge-heavy tasks.
+
+### Generative Agents
+*Park et al., Stanford, 2023 (arXiv:2304.03442).* The "Smallville" paper.
+Each agent keeps a **memory stream** (a timestamped log of observations
+and actions), runs a **reflection** step that summarises the stream into
+higher-order insights, and a **planning** step conditioned on both. Goal
+is believable simulation rather than task-solving, but the memory+
+reflection+planning triple is now a reference architecture for any
+long-running persona-based agent.
+
+### Mixture of Agents (MoA)
+*Wang et al., 2024 (arXiv:2406.04692).* Layered architecture: N
+**proposer** LLMs independently answer the prompt, an **aggregator** LLM
+synthesises them, and layers can be stacked so one layer's aggregate is
+the next layer's prompt. Agents within a layer do **not** see each other
+(unlike Debate) — ensembling rather than argumentation. Reported SOTA on
+AlpacaEval using open models.
+
+### Solo Performance Prompting (SPP)
+*Wang et al., 2023 (arXiv:2307.05300).* A single LLM dynamically
+identifies useful personas for the task and stages a "conversation"
+among them inside one context window. The single-agent limit of Group 5
+— peer collaboration without actually spawning peers. Useful when
+multi-agent infrastructure is unavailable.
 
 ---
 
@@ -258,7 +347,15 @@ of AFlow in scope.
 ### DyLAN — Dynamic LLM-Agent Network
 *Liu, Zhang, Li, Y. Liu, D. Yang, COLM 2024 (arXiv:2310.02170).* Constructs
 a task-specific agent team **and inference graph** per query. Graph-based
-(not tree-based). Shares DNA with GPTSwarm (Zhuge et al., ICML 2024).
+(not tree-based). Close sibling of GPTSwarm.
+
+### GPTSwarm
+*Zhuge et al., ICML 2024.* Agents are nodes in a compositional
+**swarm graph**; edges carry messages. A node-selection policy is
+parameterised and optimised by **gradient descent** using
+reward-weighted likelihood (REINFORCE-style). First meta-framework to
+bring backprop-style optimisation to agent topology — the prompts stay
+fixed, the wiring is learned.
 
 ---
 
@@ -279,6 +376,49 @@ systematic debugging (root cause before fix), Socratic brainstorming
 pre-code, a meta-skill for authoring new skills. Accepted into the official
 Claude plugin marketplace. More a **methodology registry** than an agent
 design.
+
+### DSPy
+*Khattab et al., Stanford, 2023–.* Programs declare **signatures** (typed
+input→output specs) and **modules** (Predict, ChainOfThought, ReAct, …);
+**compilers** (BootstrapFewShot, MIPROv2) auto-optimise prompts and
+few-shot examples against a metric on a training set. Treats prompting
+as programming. Arguably also a Group 8 entry — it does optimise a
+workflow — but the "programming framework with a compiler" framing is
+what makes it distinctive.
+
+### LangGraph
+*LangChain Inc., 2024.* Graph-based orchestration library: explicit
+state machine with typed nodes, conditional edges, checkpointing, and
+human-in-the-loop pauses. The dominant production harness for Groups
+2–7; effectively the "Airflow of agentic workflows".
+
+### CrewAI
+*Moura, 2024.* Multi-agent orchestration library built around **crews**
+of agents with roles, goals, and tasks. A simpler take on AutoGen's
+conversable-agents model, with more opinionated defaults.
+
+---
+
+## Addenda — patterns that straddle the taxonomy
+
+Two entries that do not fit the nine groups cleanly. They are included
+because any honest survey has to name them.
+
+### MemGPT
+*Packer et al., 2023 (arXiv:2310.08560).* **Virtual context management**
+modelled on OS virtual memory. The LLM issues explicit operations —
+`recall`, `save`, `page-in`, `page-out` — against a tiered memory (main
+context, recall buffer, archival store). Memory becomes **architectural**
+rather than a concatenated prompt prefix. Orthogonal to every other
+group: any planner or team can sit on top of a MemGPT-style memory.
+
+### Computer Use / Operator
+*Anthropic, 2024; OpenAI, 2025.* Agents that operate a real computer via
+screenshots + mouse/keyboard actions. A **modality**, not a pattern: any
+planning scheme (ReAct, Plan-and-Execute, Reflexion, …) can drive it.
+Worth naming because the tool surface imposes its own constraints
+(screen parsing, latency, partial observability, non-determinism) that
+deserve separate treatment in any full review.
 
 ---
 
@@ -327,3 +467,21 @@ Several design moves recur across groups and deserve names of their own:
 - **Superpowers** — `github.com/obra/superpowers`.
 - **nWave** — `nwave.ai`, `github.com/nWave-ai/nWave`.
 - **AutoGen** — `github.com/microsoft/autogen`.
+- **ReAct** — Yao et al. arXiv:2210.03629.
+- **Self-Discover** — Zhou et al. arXiv:2402.03620.
+- **Voyager** — Wang et al. arXiv:2305.16291.
+- **AutoGPT** — `github.com/Significant-Gravitas/AutoGPT`.
+- **BabyAGI** — `github.com/yoheinakajima/babyagi`.
+- **SWE-agent** — Yang et al. arXiv:2405.15793. `github.com/SWE-agent/SWE-agent`.
+- **OpenHands** — `github.com/All-Hands-AI/OpenHands`.
+- **Graph of Thoughts** — Besta et al. arXiv:2308.09687.
+- **LATS** — Zhou et al. arXiv:2310.04406.
+- **Generative Agents** — Park et al. arXiv:2304.03442.
+- **Mixture of Agents** — Wang et al. arXiv:2406.04692.
+- **Solo Performance Prompting** — Wang et al. arXiv:2307.05300.
+- **MemGPT** — Packer et al. arXiv:2310.08560.
+- **DSPy** — Khattab et al. `github.com/stanfordnlp/dspy`.
+- **LangGraph** — `langchain-ai.github.io/langgraph/`.
+- **CrewAI** — `github.com/crewAIInc/crewAI`.
+- **Computer Use** — `anthropic.com/news/3-5-models-and-computer-use`.
+- **Operator** — `openai.com/index/introducing-operator/`.
