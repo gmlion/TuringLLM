@@ -25,6 +25,21 @@ reuse by later groups.
    via `./new-instance.sh foo interpreters/<name>`.
 5. **No speculative dynamics.** If something would only be used by one
    interpreter, inline it. Promote to `dynamics/` only on second use.
+6. **Every interpreter ships with a `README.md`** at its leaf directory
+   summarising the pattern (with the `patterns.md` group + citation), the
+   state machine, the dynamics it pushes, the demo program, how to run it,
+   and known behaviour. Each conceptual group directory (e.g.
+   `interpreters/2-iterative-refinement/`) **also ships a group-level
+   `README.md`** framing the family, listing variants with a short
+   comparison table, and pointing at shared dynamics. `interpreters/game-team/`
+   is exempt because it is scheduled for deletion in Phase 4.
+7. **Directory layout convention** (introduced in Phase 1): every new
+   interpreter lives at
+   `interpreters/<group-number>-<group-slug>/<phase-label>-<interpreter-slug>/`,
+   where `<group-number>`/`<group-slug>` reference `patterns.md` and
+   `<phase-label>` is the `1a`/`1b`/`1c`/`2`/`3a`/… label used in this
+   document. Implementation order sorts lexically and the taxonomy is
+   visible in the filesystem. `interpreters/game-team/` is again exempt.
 
 ## Cross-cutting building blocks
 
