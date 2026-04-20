@@ -15,7 +15,7 @@ import { ALLOWED_GIT_COMMANDS } from "./tools.js";
 import { TelegramSession } from "./telegram.js";
 import {
   BASE_DIR, MEMORY_PATH, INSTRUCTIONS_PATH, HISTORY_DIR, SYSCALLS_PATH,
-  CALL_STACK_PATH, MAX_CYCLES, PROVIDER, STATEFUL, INSTANCE_NAME,
+  CALL_STACK_PATH, PROVIDER, STATEFUL, INSTANCE_NAME,
   TELEGRAM_TOKEN, TELEGRAM_CHAT_ID, USE_TELEGRAM,
 } from "./config.js";
 import {
@@ -398,7 +398,7 @@ async function main() {
   if (callStack.length > 0) log(`  Call stack depth: ${callStack.length}`);
   log("");
 
-  for (let cycle = startCycle; cycle < startCycle + MAX_CYCLES; cycle++) {
+  for (let cycle = startCycle; ; cycle++) {
     await collectReplies();
 
     // Deterministic stack management (before LLM invocation)
@@ -476,8 +476,6 @@ async function main() {
 
     log("");
   }
-
-  log(`\nMax cycles (${MAX_CYCLES}) reached \u2014 halting.`);
 }
 
 main().catch((err) => {
