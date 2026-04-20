@@ -10,11 +10,11 @@ const QUOTA_PATTERNS = [
   /rate.?limit/i,
   /too many requests/i,
   /overloaded/i,
-  /529/,
+  /\b529\b/,
   /resource.?exhausted/i,
 ];
 
-function isQuotaError(text: string): boolean {
+export function isQuotaError(text: string): boolean {
   return QUOTA_PATTERNS.some((p) => p.test(text));
 }
 
