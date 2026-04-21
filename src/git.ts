@@ -1,5 +1,5 @@
 import { execSync } from "child_process";
-import { existsSync } from "fs";
+import { existsSync, mkdirSync } from "fs";
 import { resolve } from "path";
 import { log } from "./logger.js";
 
@@ -44,7 +44,7 @@ export function commitCycle(instanceDir: string, cycle: number, state: string): 
 export function ensureProjectRepo(instanceDir: string): void {
   const workspaceDir = resolve(instanceDir, "workspace");
   if (!existsSync(workspaceDir)) {
-    execSync(`mkdir -p "${workspaceDir}"`, { encoding: "utf-8" });
+    mkdirSync(workspaceDir, { recursive: true });
   }
   const isRepo = run("git rev-parse --is-inside-work-tree", workspaceDir);
   if (isRepo !== "true") {
