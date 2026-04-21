@@ -3,7 +3,7 @@
 Captured at the end of the agent-workflows-phase-1 spec. Findings that
 Phase 2 (CoVe) and later phases can use to avoid the same pain.
 
-## 1a self-refine
+## a self-refine
 
 The live demo ran 17 cycles, **four** full critique/refine loops, and
 halted at `done` on cycle 17. The `parseState` docstring PROGRAM asked for
@@ -17,7 +17,7 @@ size constraints, the strategy prose should explicitly remind the
 "Evaluate refinement" step to privilege brevity over completeness, or the
 loop wastes cycles hill-climbing toward elaboration.
 
-## 1b evaluator-optimizer
+## b evaluator-optimizer
 
 The live demo ran just 4 cycles and halted at `done` — the evaluator
 returned `pass` on the first attempt. This is the happy path: the LLM's
@@ -30,7 +30,7 @@ requires either a harder task or adversarial constraints (e.g. "no
 sentence longer than 8 words" on top of the existing three bullets).
 Worth considering if a future phase wants a visibly iterative demo.
 
-## 1c reflexion
+## c reflexion
 
 The live demo ran 13 cycles and halted at `done` with **one** lesson
 accumulated (L1: "Remove all non-alphanumeric characters (not just
@@ -94,7 +94,7 @@ evaluate passed. Only the quantitative gate differs.
    Cosmetic; Node reads identical bytes. Left unaddressed to avoid
    `.gitattributes` churn.
 6. **`evaluate.md` byte-equality test (R19)** is passing. The canonical
-   copy lives in `1b-evaluator-optimizer/dynamics/` and 1c's copy is
+   copy lives in `b-evaluator-optimizer/dynamics/` and `c-reflexion`'s copy is
    enforced identical via `src/test/phase-1-dynamics-identity.test.ts`.
    Phase 2's CoVe will reuse `evaluate.md` a third time — consider
    promoting to a shared-dynamics convention in `new-instance.sh` at

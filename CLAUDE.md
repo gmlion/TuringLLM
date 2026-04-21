@@ -145,9 +145,9 @@ Interpreters live in `interpreters/<name>/`. Each has an `INSTRUCTIONS.md` and o
 
 - **default** (no argument to new-instance.sh) — Step-by-step executor. Reads PROGRAM.md steps, decomposes each into sub-instructions with verification.
 - **`interpreters/game-team`** — Game dev team simulation with fuzzy natural-language conditions. Six roles (team lead, architect, game designer, developer, 2D artist, UI/UX). Scheduled for deletion in Phase 4 of the agent-workflows plan; exempt from the Phase-1 directory layout convention.
-- **`interpreters/2-iterative-refinement/1a-self-refine`** — Self-Refine (patterns.md Group 2). Single role drafts, critiques its own output via `self-critique.md`, iterates until accepted.
-- **`interpreters/2-iterative-refinement/1b-evaluator-optimizer`** — Evaluator–Optimizer (patterns.md Group 2). Generator produces attempts; external evaluator (`evaluate.md`) judges against an explicit `## Criterion` and returns pass/fail with feedback.
-- **`interpreters/2-iterative-refinement/1c-reflexion`** — Reflexion (patterns.md Group 2). Evaluator–Optimizer plus a `reflect.md` step that distils each failed attempt into a verbal lesson accumulated in `## Lessons` and read back into every subsequent attempt.
+- **`interpreters/1-iterative-refinement/a-self-refine`** — Self-Refine (patterns.md Group 1). Single role drafts, critiques its own output via `self-critique.md`, iterates until accepted.
+- **`interpreters/1-iterative-refinement/b-evaluator-optimizer`** — Evaluator–Optimizer (patterns.md Group 1). Generator produces attempts; external evaluator (`evaluate.md`) judges against an explicit `## Criterion` and returns pass/fail with feedback.
+- **`interpreters/1-iterative-refinement/c-reflexion`** — Reflexion (patterns.md Group 1). Evaluator–Optimizer plus a `reflect.md` step that distils each failed attempt into a verbal lesson accumulated in `## Lessons` and read back into every subsequent attempt.
 
 ### Creating a new interpreter
 

@@ -35,24 +35,25 @@ The groups below are defined primarily by Axis A. Axis B is noted per entry.
 
 | Group | Core idea | Representative patterns |
 |---|---|---|
-| 1. Prompting techniques | Squeeze more out of a single LLM call | CoT, Self-Consistency, ReAct, Self-Discover |
-| 2. Iterative refinement | Rework the same answer until it is good | Self-Refine, Evaluator–Optimizer, Reflexion, Chain-of-Verification |
-| 3. Planning & decomposition | Break the task, execute the parts | Plan-and-Execute, ReWOO, Deep Research, Orchestrator–Workers, XAgent, Voyager, AutoGPT/BabyAGI, SWE-agent/OpenHands |
-| 4. Search | Explore alternative solutions, prune | Tree of Thoughts, Graph of Thoughts, LATS |
-| 5. Peer collaboration | Multiple roles work the same task from different angles | CAMEL, Multi-Agent Debate, Generative Agents, Mixture of Agents, SPP |
-| 6. Fixed-SOP teams | Hard-coded pipeline of specialists | MetaGPT, ChatDev, nWave |
-| 7. Dynamic teams | Roles assembled or generated per task | AgentVerse, AutoAgents, XAgents |
-| 8. Meta-frameworks | The workflow itself is the output | AFlow, ADAS, EvoAgentX, DyLAN, GPTSwarm |
-| 9. Libraries (not patterns) | Infrastructure that hosts the above | AutoGen, Superpowers, DSPy, LangGraph, CrewAI |
+| Building blocks — Prompting techniques | Squeeze more out of a single LLM call | CoT, Self-Consistency, ReAct, Self-Discover |
+| 1. Iterative refinement | Rework the same answer until it is good | Self-Refine, Evaluator–Optimizer, Reflexion, Chain-of-Verification |
+| 2. Planning & decomposition | Break the task, execute the parts | Plan-and-Execute, ReWOO, Deep Research, Orchestrator–Workers, XAgent, Voyager, AutoGPT/BabyAGI, SWE-agent/OpenHands |
+| 3. Search | Explore alternative solutions, prune | Tree of Thoughts, Graph of Thoughts, LATS |
+| 4. Peer collaboration | Multiple roles work the same task from different angles | CAMEL, Multi-Agent Debate, Generative Agents, Mixture of Agents, SPP |
+| 5. Fixed-SOP teams | Hard-coded pipeline of specialists | MetaGPT, ChatDev, nWave |
+| 6. Dynamic teams | Roles assembled or generated per task | AgentVerse, AutoAgents, XAgents |
+| 7. Meta-frameworks | The workflow itself is the output | AFlow, ADAS, EvoAgentX, DyLAN, GPTSwarm |
+| 8. Libraries (not patterns) | Infrastructure that hosts the above | AutoGen, Superpowers, DSPy, LangGraph, CrewAI |
 | Addenda | Patterns that straddle the taxonomy | MemGPT, Computer Use / Operator |
 
 ---
 
-## Group 1 — Prompting techniques
+## Building blocks — Prompting techniques
 
 Not agents. A single LLM call dressed up. Included because more complex
 patterns cite them as baselines and because many higher-level patterns use
-them as building blocks inside each call.
+them as building blocks inside each call. Unnumbered because the rest of
+the taxonomy is about agents — these are infrastructure for what follows.
 
 ### Chain-of-Thought (CoT)
 Wei et al., 2022. Ask the model to reason step by step before answering.
@@ -76,7 +77,7 @@ prompting: the scaffold is the output of the first stage.
 
 ---
 
-## Group 2 — Iterative refinement
+## Group 1 — Iterative refinement
 
 All four patterns in this group share a single shape:
 
@@ -119,7 +120,7 @@ contagion between the main answer and its checks.
 
 ---
 
-## Group 3 — Planning & decomposition
+## Group 2 — Planning & decomposition
 
 The task is split into subtasks. Execution is sequential, recursive, or
 delegated. Workers are typically generic (not distinct personas).
@@ -165,7 +166,7 @@ Minecraft. Three components: an **automatic curriculum** that picks the
 next skill to learn, a **skill library** of callable code (each skill is
 saved as a JavaScript function), and an iterative prompting loop that
 refines a skill by running it in the environment and incorporating the
-error traceback. Canonical "skill library" pattern — the only Group 3
+error traceback. Canonical "skill library" pattern — the only Group 2
 member in which successful subtasks are **permanently installed** and
 reused on later tasks.
 
@@ -189,10 +190,10 @@ design matters as much as the planner**.
 
 ---
 
-## Group 4 — Search
+## Group 3 — Search
 
 Explicit exploration of alternative solutions. Distinct from iteration
-(Group 2, which improves one solution) and from decomposition (Group 3,
+(Group 1, which improves one solution) and from decomposition (Group 2,
 which splits the task without branching).
 
 ### Tree of Thoughts (ToT)
@@ -211,14 +212,14 @@ as "solve two sub-problems in parallel, then combine".
 ### LATS — Language Agent Tree Search
 *Zhou et al., 2023 (arXiv:2310.04406).* **MCTS** over ToT-style thoughts,
 with Reflexion-style self-reflection at evaluation time and environment
-feedback as the reward signal. A three-way crossover of Group 4 (ToT),
-Group 2 (Reflexion), and Group 8 (tree search as meta-loop). Typically
+feedback as the reward signal. A three-way crossover of Group 3 (ToT),
+Group 1 (Reflexion), and Group 7 (tree search as meta-loop). Typically
 stronger than plain ToT when the environment returns executable
 feedback.
 
 ---
 
-## Group 5 — Peer collaboration
+## Group 4 — Peer collaboration
 
 Multiple agents work **the same task** from different angles. The task is
 not decomposed; perspectives are multiplied.
@@ -254,16 +255,16 @@ AlpacaEval using open models.
 ### Solo Performance Prompting (SPP)
 *Wang et al., 2023 (arXiv:2307.05300).* A single LLM dynamically
 identifies useful personas for the task and stages a "conversation"
-among them inside one context window. The single-agent limit of Group 5
+among them inside one context window. The single-agent limit of Group 4
 — peer collaboration without actually spawning peers. Useful when
 multi-agent infrastructure is unavailable.
 
 ---
 
-## Group 6 — Fixed-SOP teams
+## Group 5 — Fixed-SOP teams
 
 Roles and phases are hard-coded by the framework author. The task walks a
-predetermined pipeline. Distinct from Group 7 (dynamic teams) in that the
+predetermined pipeline. Distinct from Group 6 (dynamic teams) in that the
 cast is known before the task begins.
 
 ### MetaGPT
@@ -288,11 +289,11 @@ between waves.
 
 ---
 
-## Group 7 — Dynamic teams
+## Group 6 — Dynamic teams
 
 Roles are assembled, recruited, or generated **per task** at runtime.
-Shares "split the work" with Group 3 but adds "the participants are distinct
-personas", and shares "multiple personas" with Group 5 but adds "the task is
+Shares "split the work" with Group 2 but adds "the participants are distinct
+personas", and shares "multiple personas" with Group 4 but adds "the task is
 decomposed".
 
 ### AgentVerse
@@ -315,7 +316,7 @@ interaction.
 
 ---
 
-## Group 8 — Meta-frameworks
+## Group 7 — Meta-frameworks
 
 The framework does not solve the task. It **produces or optimises a
 workflow** that then solves the task. The workflow is the output.
@@ -359,14 +360,14 @@ fixed, the wiring is learned.
 
 ---
 
-## Group 9 — Libraries / harnesses (infrastructure)
+## Group 8 — Libraries / harnesses (infrastructure)
 
 Not patterns. They host patterns.
 
 ### AutoGen
 *Microsoft, 2023.* Library of "conversable agents" with arbitrary roles
 (UserProxy, Assistant, GroupChatManager). Graph of messages, not a specific
-protocol. Hosts Group 5 (peer collaboration) and Group 7 (dynamic teams)
+protocol. Hosts Group 4 (peer collaboration) and Group 6 (dynamic teams)
 cleanly.
 
 ### Superpowers
@@ -382,7 +383,7 @@ design.
 input→output specs) and **modules** (Predict, ChainOfThought, ReAct, …);
 **compilers** (BootstrapFewShot, MIPROv2) auto-optimise prompts and
 few-shot examples against a metric on a training set. Treats prompting
-as programming. Arguably also a Group 8 entry — it does optimise a
+as programming. Arguably also a Group 7 entry — it does optimise a
 workflow — but the "programming framework with a compiler" framing is
 what makes it distinctive.
 
@@ -390,7 +391,7 @@ what makes it distinctive.
 *LangChain Inc., 2024.* Graph-based orchestration library: explicit
 state machine with typed nodes, conditional edges, checkpointing, and
 human-in-the-loop pauses. The dominant production harness for Groups
-2–7; effectively the "Airflow of agentic workflows".
+1–6; effectively the "Airflow of agentic workflows".
 
 ### CrewAI
 *Moura, 2024.* Multi-agent orchestration library built around **crews**
@@ -401,7 +402,7 @@ conversable-agents model, with more opinionated defaults.
 
 ## Addenda — patterns that straddle the taxonomy
 
-Two entries that do not fit the nine groups cleanly. They are included
+Two entries that do not fit the eight groups cleanly. They are included
 because any honest survey has to name them.
 
 ### MemGPT
@@ -432,8 +433,8 @@ Several design moves recur across groups and deserve names of their own:
 - **Planner / executor split.** Plan-and-Execute, XAgent, and (implicitly)
   Orchestrator–Workers all separate "decide what to do" from "do it". The
   split is what makes replanning possible.
-- **Memory of prior attempts.** Reflexion adds it to Group 2. ADAS adds it
-  to Group 8 (the agent archive). Most other patterns operate stateless.
+- **Memory of prior attempts.** Reflexion adds it to Group 1. ADAS adds it
+  to Group 7 (the agent archive). Most other patterns operate stateless.
 - **Workflow as data.** AFlow, ADAS, EvoAgentX, DyLAN all treat the workflow
   as a first-class object — code, graph, or prompt — that can be searched
   over or evolved. This is the single biggest conceptual jump in the

@@ -2,7 +2,7 @@
 
 IMPORTANT: Everything between "# Strategy" and "# Sub-instructions" is the strategy. It must be copied VERBATIM into every update_instructions call. Never modify, summarize, or omit any strategy instruction. Only the "# Sub-instructions" section below changes.
 
-This interpreter implements the Evaluator–Optimizer pattern (patterns.md Group 2). A generator role produces attempts; a separate evaluator role (the `evaluate.md` dynamic) judges each attempt against an explicit `## Criterion` and returns pass/fail with feedback.
+This interpreter implements the Evaluator–Optimizer pattern (patterns.md Group 1). A generator role produces attempts; a separate evaluator role (the `evaluate.md` dynamic) judges each attempt against an explicit `## Criterion` and returns pass/fail with feedback.
 
 ## Instruction: Initialize
 **Condition:** MEMORY state is "empty"

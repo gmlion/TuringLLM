@@ -1,7 +1,7 @@
-# 1a — Self-Refine
+# a — Self-Refine
 
 *Madaan et al., NeurIPS 2023 — "Self-Refine: Iterative Refinement with
-Self-Feedback". See `docs/agent-workflows/patterns.md` §Group 2.*
+Self-Feedback". See `docs/agent-workflows/patterns.md` §Group 1.*
 
 The minimal case of the `generate → critique → revise` family. A single
 role drafts, critiques its own draft via the `self-critique.md`
@@ -36,8 +36,8 @@ Write a concise JSDoc docstring (≤ 3 sentences) for `parseState` in
 ## Run it
 
 ```bash
-./new-instance.sh my-1a interpreters/2-iterative-refinement/1a-self-refine
-instances/my-1a/run.sh
+./new-instance.sh my-a interpreters/1-iterative-refinement/a-self-refine
+instances/my-a/run.sh
 ```
 
 ## Known behaviour
@@ -47,7 +47,7 @@ instances/my-1a/run.sh
   Strategies whose acceptance criterion includes size constraints will
   typically loop 3–5 times before converging. This is working as
   designed, not a bug — see the Phase-1 demo note at
-  `docs/agent-workflows/phase-1-notes.md` §1a.
+  `docs/agent-workflows/phase-1-notes.md` §a.
 - No iteration cap (R10). Ctrl-C is safe; state persists in
   `instances/<name>/MEMORY.md` and re-running resumes from the next
   cycle.

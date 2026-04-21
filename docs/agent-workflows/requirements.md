@@ -29,17 +29,20 @@ reuse by later groups.
    summarising the pattern (with the `patterns.md` group + citation), the
    state machine, the dynamics it pushes, the demo program, how to run it,
    and known behaviour. Each conceptual group directory (e.g.
-   `interpreters/2-iterative-refinement/`) **also ships a group-level
+   `interpreters/1-iterative-refinement/`) **also ships a group-level
    `README.md`** framing the family, listing variants with a short
    comparison table, and pointing at shared dynamics. `interpreters/game-team/`
    is exempt because it is scheduled for deletion in Phase 4.
 7. **Directory layout convention** (introduced in Phase 1): every new
    interpreter lives at
-   `interpreters/<group-number>-<group-slug>/<phase-label>-<interpreter-slug>/`,
-   where `<group-number>`/`<group-slug>` reference `patterns.md` and
-   `<phase-label>` is the `1a`/`1b`/`1c`/`2`/`3a`/… label used in this
-   document. Implementation order sorts lexically and the taxonomy is
-   visible in the filesystem. `interpreters/game-team/` is again exempt.
+   `interpreters/<group-number>-<group-slug>/<exploration-letter>-<interpreter-slug>/`,
+   where `<group-number>`/`<group-slug>` reference the numbered groups in
+   `patterns.md` (the unnumbered "Building blocks — Prompting techniques"
+   preface is intentionally not represented in the filesystem) and
+   `<exploration-letter>` is the recommended exploration order within the
+   group (`a`, `b`, `c`, …). Implementation order sorts lexically and the
+   taxonomy is visible in the filesystem. `interpreters/game-team/` is
+   again exempt.
 
 ## Cross-cutting building blocks
 
@@ -50,7 +53,7 @@ phase can build on them.
 
 A persistent archive of successful sub-computations that any interpreter can
 draw from. Directly inspired by Voyager's skill library (see `patterns.md`
-Group 3). Orthogonal to the stack — it is *data* the dynamics consume, not
+Group 2). Orthogonal to the stack — it is *data* the dynamics consume, not
 a new control-flow primitive.
 
 - **Convention:** `workspace/skills/<name>.md` files, each a standalone
@@ -73,7 +76,7 @@ a new control-flow primitive.
 ### ReAct tool-calling convention
 
 Every phase that invokes shell tools (bash, write_file, git) follows the
-**ReAct** convention (`patterns.md` Group 1): the LLM reasons in a
+**ReAct** convention (`patterns.md` Building blocks — Prompting techniques): the LLM reasons in a
 `Thought:` preamble, names the tool call as an `Action:`, and reads the
 result as an `Observation:` before the next thought. The current shell
 prompt already encourages this; the note here is to **not regress it**.
@@ -84,16 +87,16 @@ system prompt.
 
 | Group from patterns.md | Covered in | Needs |
 |---|---|---|
-| 2 — Iterative refinement | Phase 1, Phase 2 | — |
-| 3 — Planning & decomposition | Phase 3 (+ optional ReWOO variant) | `evaluate.md` from Phase 1 |
-| 6 — Fixed-SOP teams | Phase 4 (game-team retirement) | `evaluate.md` |
-| 5 — Peer collaboration | Phase 5 (Debate), Phase 5b (MoA) | `reflect.md` from Phase 1 |
-| 4 — Search | Phase 6 (ToT, optional GoT variant) | `evaluate.md` |
-| 4 + 2 + 8 crossover | Phase 6b (LATS) | Phases 1c, 6, MCTS harness from Phase 7 |
-| 8 — Meta-frameworks | Phase 7 (+ optional Phase 8) | everything |
+| 1 — Iterative refinement | Phase 1, Phase 2 | — |
+| 2 — Planning & decomposition | Phase 3 (+ optional ReWOO variant) | `evaluate.md` from Phase 1 |
+| 5 — Fixed-SOP teams | Phase 4 (game-team retirement) | `evaluate.md` |
+| 4 — Peer collaboration | Phase 5 (Debate), Phase 5b (MoA) | `reflect.md` from Phase 1 |
+| 3 — Search | Phase 6 (ToT, optional GoT variant) | `evaluate.md` |
+| 3 + 1 + 7 crossover | Phase 6b (LATS) | Phases 1c, 6, MCTS harness from Phase 7 |
+| 7 — Meta-frameworks | Phase 7 (+ optional Phase 8) | everything |
 
-Groups 1 (prompting techniques), 7 (dynamic teams), and 9 (libraries) are
-**not built as interpreters** — see "Out of scope" at the bottom.
+Building blocks (prompting techniques), Group 6 (dynamic teams), and Group 8
+(libraries) are **not built as interpreters** — see "Out of scope" at the bottom.
 
 ## Reusable dynamics library
 
@@ -124,7 +127,7 @@ is copied wholesale by `new-instance.sh`. Names and contracts are normative.
 
 ---
 
-## Phase 1 — Iterative refinement (patterns.md Group 2)
+## Phase 1 — Iterative refinement (patterns.md Group 1)
 
 Three interpreters that are **variants of the same architectural pattern**:
 `generate → critique → revise`. Built together because they share dynamics
@@ -177,7 +180,7 @@ validates push/pop at depth 1 before anything else is attempted.
 
 ---
 
-## Phase 2 — Chain-of-Verification (patterns.md Group 2, nested variant)
+## Phase 2 — Chain-of-Verification (patterns.md Group 1, nested variant)
 
 Still iterative refinement, but the critique step is *decomposed* into
 independent verification Q&A. First interpreter that requires **stack depth
@@ -197,7 +200,7 @@ independent verification Q&A. First interpreter that requires **stack depth
 
 ---
 
-## Phase 3 — Planning & decomposition (patterns.md Group 3)
+## Phase 3 — Planning & decomposition (patterns.md Group 2)
 
 Three interpreters. Built together because Plan-and-Execute's dynamics
 (`plan.md`, `execute-step.md`) are consumed by Orchestrator–Workers and
@@ -215,7 +218,7 @@ Linear plan, sequential execution, replanning on failure.
 - **Reuse:** `evaluate.md` from 1b.
 - Demo `PROGRAM.md`: set up a Python project with tests and CI config.
 - **Validation:** log shows at least one replan triggered by a step failure.
-- **Optional second demo — ReWOO variant** (`patterns.md` Group 3). Same
+- **Optional second demo — ReWOO variant** (`patterns.md` Group 2). Same
   `plan.md` but different executor: `plan.md` emits a full plan with
   `#E1, #E2, …` placeholders for tool outputs; a new dynamic
   `execute-batch.md` runs all tools in one pass and substitutes results
@@ -252,7 +255,7 @@ Recursive decomposition producing a report.
 
 ---
 
-## Phase 4 — Fixed-SOP teams (patterns.md Group 6) — **replaces game-team**
+## Phase 4 — Fixed-SOP teams (patterns.md Group 5) — **replaces game-team**
 
 Two interpreters, one task. The same demo `PROGRAM.md` should run on both so
 outputs are comparable. This phase exists specifically to retire
@@ -295,7 +298,7 @@ Phase-dialogue between role pairs.
 
 ---
 
-## Phase 5 — Peer collaboration: Debate (patterns.md Group 5)
+## Phase 5 — Peer collaboration: Debate (patterns.md Group 4)
 
 First of two Group-5 interpreters. CAMEL is skipped (two-role conversation
 adds little over 4b's dialogue dynamic).
@@ -309,7 +312,7 @@ adds little over 4b's dialogue dynamic).
   nudge agents off stuck points.
 - Demo `PROGRAM.md`: an ambiguous-answer question ("Postgres or SQLite for
   use case U?").
-- **Cheap fallback — SPP** (`patterns.md` Group 5). For cost-constrained
+- **Cheap fallback — SPP** (`patterns.md` Group 4). For cost-constrained
   runs, a single LLM cycles through personas in one context window. No new
   dynamic: strategy pushes `opine.md` N times against the same worker with
   different persona headers. Same interpreter can expose both modes via a
@@ -317,7 +320,7 @@ adds little over 4b's dialogue dynamic).
 
 ---
 
-## Phase 5b — Peer collaboration: Mixture of Agents (patterns.md Group 5)
+## Phase 5b — Peer collaboration: Mixture of Agents (patterns.md Group 4)
 
 Layered ensembling, genuinely distinct from Debate. N proposers answer
 **independently** (no cross-visibility), an aggregator synthesises; layers
@@ -341,7 +344,7 @@ can stack.
 
 ---
 
-## Phase 6 — Search: Tree of Thoughts (patterns.md Group 4)
+## Phase 6 — Search: Tree of Thoughts (patterns.md Group 3)
 
 Deepest stack in the codebase before the meta-framework. First meaningful
 use of the per-instance project git for parallel-branch snapshots.
@@ -356,7 +359,7 @@ use of the per-instance project git for parallel-branch snapshots.
   don't share state.
 - **Reuse:** `evaluate.md` from 1b.
 - Demo `PROGRAM.md`: Game of 24 or a small code-search problem.
-- **Optional variant — GoT** (`patterns.md` Group 4). Swap the tree-shaped
+- **Optional variant — GoT** (`patterns.md` Group 3). Swap the tree-shaped
   frontier for a DAG: `expand-node.md` can additionally emit `aggregate`
   edges merging two existing thoughts into a new one. Same dynamic,
   different strategy bookkeeping. Worth building only if a demo requires
@@ -364,7 +367,7 @@ use of the per-instance project git for parallel-branch snapshots.
 
 ---
 
-## Phase 6b — Search + refinement + meta: LATS (patterns.md Group 4 × 2 × 8)
+## Phase 6b — Search + refinement + meta: LATS (patterns.md Group 3 × 1 × 7)
 
 Language Agent Tree Search: MCTS over ToT-style thoughts, Reflexion-style
 lessons at evaluation time, environment feedback as reward. This phase
@@ -392,7 +395,7 @@ Phase 7 also needs.
 
 ---
 
-## Phase 7 — Meta-framework (patterns.md Group 8)
+## Phase 7 — Meta-framework (patterns.md Group 7)
 
 The framework composes earlier interpreters as candidate workflows. Requires
 everything below to already work.
@@ -414,7 +417,7 @@ everything below to already work.
 
 ---
 
-## Phase 8 (optional) — Meta-agent (patterns.md Group 8, ADAS flavour)
+## Phase 8 (optional) — Meta-agent (patterns.md Group 7, ADAS flavour)
 
 A meta-interpreter that **writes new interpreter `INSTRUCTIONS.md` files** in
 code, tests them, archives the strong ones. Philosophically the closest match
@@ -438,13 +441,13 @@ interpreters. Each is a **shell-level change**, not a phase.
   Biggest win: Phase 3c (Deep Research's `## Findings` grows unboundedly)
   and Phase 7 (AFlow's MCTS tree spills out of context). Flagged as
   the single most impactful shell change.
-- **Curated tool surface (SWE-agent ACI)** (`patterns.md` Group 3). For
+- **Curated tool surface (SWE-agent ACI)** (`patterns.md` Group 2). For
   coding-heavy programs, the current generic `bash` + `write_file` pair
   underperforms an LLM-ergonomic set: file viewer with scroll,
   edit-at-line, directory search. Worth prototyping as an opt-in tool
   layer selected per instance via `.env`. Scope: shell change, not a new
   interpreter.
-- **DSPy-style prompt compilation** (`patterns.md` Group 9). Auto-
+- **DSPy-style prompt compilation** (`patterns.md` Group 8). Auto-
   optimising prompts against a metric on a training set. Would multiply
   Phase 7's value — AFlow searches the workflow space, but each node's
   prompt is hand-written; a compiler would search prompt space inside
@@ -456,16 +459,16 @@ interpreters. Each is a **shell-level change**, not a phase.
 
 ## Out of scope for this plan
 
-- **Group 1 (Prompting techniques)** — CoT, Self-Consistency, ReAct,
+- **Building blocks — Prompting techniques** — CoT, Self-Consistency, ReAct,
   Self-Discover. Prompting affordances available to any interpreter.
   ReAct specifically is a **shell-level convention** (see "Cross-cutting
   building blocks" above), not a phase.
-- **Group 7 (Dynamic teams)** — AgentVerse, AutoAgents, XAgents (plural).
+- **Group 6 (Dynamic teams)** — AgentVerse, AutoAgents, XAgents (plural).
   AgentVerse and AutoAgents are covered **in spirit** by Phase 3b + Phase 7
   (dynamic decomposition + operator library). XAgents (plural, rule-based
   IF-THEN) clashes with the shell's fuzzy-NL-condition design and is not
   pursued.
-- **Group 9 (Libraries)** — AutoGen, Superpowers, DSPy, LangGraph, CrewAI.
+- **Group 8 (Libraries)** — AutoGen, Superpowers, DSPy, LangGraph, CrewAI.
   Infrastructure, not interpreters. Superpowers' skill *content* (4-phase
   systematic debugging, TDD methodology) is a good source to mine when
   building dynamics for Phase 4b. DSPy's compiler concept is listed under
@@ -475,9 +478,9 @@ interpreters. Each is a **shell-level change**, not a phase.
   worth adopting; its Minecraft curriculum loop is too domain-specific.
 - **AutoGPT / BabyAGI** — historical ancestors of Phase 3a. Nothing to
   build separately.
-- **Generative Agents** (`patterns.md` Group 5) — simulation, not task
+- **Generative Agents** (`patterns.md` Group 4) — simulation, not task
   solving. Out of scope.
-- **GPTSwarm** (`patterns.md` Group 8) — gradient-based workflow
+- **GPTSwarm** (`patterns.md` Group 7) — gradient-based workflow
   optimisation. Different paradigm from AFlow's MCTS. Out of scope
   unless a training-loop harness is added.
 - **EvoAgentX, DyLAN** — supersets of Phase 7/8 in scope; revisit only if a

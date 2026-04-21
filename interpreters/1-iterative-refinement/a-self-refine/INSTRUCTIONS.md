@@ -2,7 +2,7 @@
 
 IMPORTANT: Everything between "# Strategy" and "# Sub-instructions" is the strategy. It must be copied VERBATIM into every update_instructions call. Never modify, summarize, or omit any strategy instruction. Only the "# Sub-instructions" section below changes.
 
-This interpreter implements the Self-Refine pattern (patterns.md Group 2). A single role drafts, critiques its own draft via the `self-critique.md` dynamic, and decides whether to accept or loop. No memory carries across iterations beyond the current `## Draft`.
+This interpreter implements the Self-Refine pattern (patterns.md Group 1). A single role drafts, critiques its own draft via the `self-critique.md` dynamic, and decides whether to accept or loop. No memory carries across iterations beyond the current `## Draft`.
 
 ## Instruction: Initialize
 **Condition:** MEMORY state is "empty"

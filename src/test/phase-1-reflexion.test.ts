@@ -8,7 +8,7 @@ import { parseState, setState } from "../memory.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const INTERP = resolve(__dirname, "../../interpreters/2-iterative-refinement/1c-reflexion");
+const INTERP = resolve(__dirname, "../../interpreters/1-iterative-refinement/c-reflexion");
 
 function readTarget(p: string): string | null {
   const full = resolve(INTERP, p);

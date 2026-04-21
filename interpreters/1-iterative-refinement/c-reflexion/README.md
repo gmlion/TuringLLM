@@ -1,9 +1,9 @@
-# 1c — Reflexion
+# c — Reflexion
 
 *Shinn et al., NeurIPS 2023 — "Reflexion: Language Agents with Verbal
-Reinforcement Learning". See `docs/agent-workflows/patterns.md` §Group 2.*
+Reinforcement Learning". See `docs/agent-workflows/patterns.md` §Group 1.*
 
-Evaluator–Optimizer (1b) **plus** an explicit reflection step after
+Evaluator–Optimizer (variant b) **plus** an explicit reflection step after
 every failed attempt. The reflect dynamic distils each failure into a
 short verbal rule; rules accumulate in `## Lessons` and are read back
 into every subsequent attempt. Each retry thus starts from the
@@ -32,7 +32,7 @@ evaluation`, `Route on verdict`, `Reflect`, `Accumulate lesson`,
 
 | File | Consumes | Produces | Notes |
 | --- | --- | --- | --- |
-| `dynamics/evaluate.md` | `## Attempt`, `## Criterion` | `## Verdict`, `## Feedback` | **Byte-equal copy** of `1b-evaluator-optimizer/dynamics/evaluate.md` — do not hand-edit |
+| `dynamics/evaluate.md` | `## Attempt`, `## Criterion` | `## Verdict`, `## Feedback` | **Byte-equal copy** of `b-evaluator-optimizer/dynamics/evaluate.md` — do not hand-edit |
 | `dynamics/reflect.md` | `## Attempt`, `## Verdict` (+ `## Feedback` if present) | `## Lesson` | Single instruction `Distil lesson`; output is a directive ("always X", "avoid Y") |
 
 ## Demo `PROGRAM.md`
@@ -47,8 +47,8 @@ interpreter; the `Initialize` instruction extracts it and writes it to
 ## Run it
 
 ```bash
-./new-instance.sh my-1c interpreters/2-iterative-refinement/1c-reflexion
-instances/my-1c/run.sh
+./new-instance.sh my-c interpreters/1-iterative-refinement/c-reflexion
+instances/my-c/run.sh
 ```
 
 ## Known behaviour
@@ -60,7 +60,7 @@ instances/my-1c/run.sh
   only 1 lesson** because the palindrome task is too canonical — the
   first naive attempt fails once (strips spaces only), the second
   applies the lesson and passes. See
-  `docs/agent-workflows/phase-1-notes.md` §1c reflexion for three
+  `docs/agent-workflows/phase-1-notes.md` §c reflexion for three
   proposed mitigations (harder hidden tests, different demo, relaxed
   R11 wording). The Reflexion *pattern* runs correctly; only the
   quantitative gate can fall short.

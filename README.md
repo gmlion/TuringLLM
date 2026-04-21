@@ -1,6 +1,14 @@
 # Turing
 
-An LLM-powered universal Turing machine.
+An LLM-powered universal Turing machine. A cycle loop invokes an LLM
+once per cycle. The LLM reads its state (`MEMORY.md`) and program
+(`INSTRUCTIONS.md`), matches the first instruction whose condition
+fits, acts, and is destroyed. The cycle repeats until halt.
+
+The shell is generic. **Interpreters** plug in to define how an
+arbitrary user goal in `PROGRAM.md` is executed. They live under
+`interpreters/<group>/<variant>/` and are copied into each new
+instance.
 
 ## Architecture
 
@@ -31,10 +39,10 @@ An LLM-powered universal Turing machine.
               ▼               ▼               ▼
         ┌──────────┐   ┌──────────┐   ┌──────────────┐
         │ Machine  │   │  Shell   │   │   Provider   │
-        │ Git      │   │ main.ts  │   │ claude-code  │
-        │ (auto-   │   │ (cycle   │   │ or api       │
-        │  commit  │   │  loop,   │   │ (LLM invoc.) │
-        │  per     │   │  retry,  │   │              │
+        │ Git      │   │ main.ts  │   │ claude-code, │
+        │ (auto-   │   │ (cycle   │   │ api, openai, │
+        │  commit  │   │  loop,   │   │ ollama,      │
+        │  per     │   │  retry,  │   │ local        │
         │  cycle)  │   │  halt)   │   │              │
         └──────────┘   └──────────┘   └──────────────┘
 ```
@@ -64,132 +72,76 @@ An LLM-powered universal Turing machine.
 └──────────────────────────────────────────────────┘
 ```
 
-## Cycle Flow (default interpreter)
-
-```
-    ┌──────────┐
-    │  empty   │
-    └────┬─────┘
-         │ Initialize
-         ▼
-    ┌──────────────┐
-    │strategy_ready│◄─────────────────────────────┐
-    └────┬─────────┘                               │
-         │ Load next step from PROGRAM.md          │
-         ▼                                         │
-    ┌──────────┐                                   │
-    │ sub-step │                                   │
-    │ execute  │                                   │
-    └────┬─────┘                                   │
-         │ verify                                  │
-         ▼                                         │
-    ┌───────────────────┐                          │
-    │ Return to strategy│──────────────────────────┘
-    └───────────────────┘
-         │ (all steps done)
-         ▼
-    ┌──────────┐
-    │  HALTED  │
-    └──────────┘
-```
-
-## Retry Mechanism
-
-```
-    LLM emits tool calls
-         │
-         ▼
-    Execute tools
-         │
-         ├─── tool error? ──► feed error back, retry (unbounded)
-         │
-         ├─── no state change? ──► feed results + nudge, retry (unbounded)
-         │
-         ├─── orphan state? ──► "no matching instruction", retry (unbounded)
-         │
-         └─── all good ──► git commit ──► snapshot ──► next cycle
-```
-
 ## Usage
 
 ```bash
 # Build
 npm run build
 
-# Create instances
-./new-instance.sh my-project                          # default interpreter
-./new-instance.sh my-game interpreters/game-team      # game dev team
-./new-instance.sh my-proto interpreters/karpathy-loop # tight code-test-fix loop
+# Create an instance with the default interpreter
+./new-instance.sh my-project
+
+# Or with a specific interpreter
+./new-instance.sh my-a interpreters/1-iterative-refinement/a-self-refine
+./new-instance.sh my-game interpreters/game-team
 
 # Edit the program
 vim instances/my-project/PROGRAM.md
 
-# Run (default: claude-code provider with Haiku)
-instances/my-project/run.sh
+# Optional: configure provider/model in instances/my-project/.env
+# (defaults to claude-code with Haiku)
 
-# Run with Anthropic SDK provider
-TURING_PROVIDER=api instances/my-project/run.sh
+# Run
+instances/my-project/run.sh
 
 # Visualize a running or completed instance
 ./visualize.sh my-project
 ```
 
-Instances are resumable. Stop anytime (Ctrl+C or quota exceeded) and restart with `run.sh` — the cycle counter picks up where it left off.
-
-## Dynamics (Call Stack)
-
-A **dynamic** is a reusable instruction file invoked like a subroutine. The running instruction set delegates by writing `## Push` in MEMORY:
-
-```
-## Push
-dynamics/consult-team.md
-```
-
-The shell saves the current `{state, instructions}` onto a call stack, loads the dynamic as the new `INSTRUCTIONS.md`, and sets state to `empty`. When the dynamic sets state to `done`, the shell pops the stack, restores the caller's instructions, and sets state to `{caller_state}_completed`.
-
-```
-    ┌─── caller ───┐
-    │ state: needs_opinion                 ┌─ dynamic ──┐
-    │ ## Push: dynamics/consult.md ──────► │ state: empty
-    └──────────────┘                       │ ...
-                                           │ state: done ───┐
-    ┌─── caller ───┐                       └────────────────┘
-    │ state: needs_opinion_completed ◄────────── pop
-    └──────────────┘
-```
-
-- Dynamics can nest (a dynamic can push another).
-- Stack is persisted to `.call-stack.json` and snapshotted into each `history/` entry.
-- Missing push targets are logged and ignored — no frame is pushed.
-- Author dynamics in `interpreters/<name>/dynamics/*.md`; they are copied into each new instance.
-
-Implementation: `src/call-stack.ts` (pure `applyPush` / `applyPop` transforms), called from the cycle loop in `src/main.ts`. Unit-tested under `src/test/`.
+Instances are resumable. Stop anytime (Ctrl+C or quota exceeded) and
+restart with `run.sh` — the cycle counter picks up where it left off.
 
 ## Interpreters
 
-An interpreter defines how PROGRAM.md gets executed. It's a reusable strategy that lives in `interpreters/<name>/`.
+Interpreters live under `interpreters/<group-number>-<group-slug>/`,
+mirroring the taxonomy in
+[`docs/agent-workflows/patterns.md`](docs/agent-workflows/patterns.md).
+Within a group, variants are prefixed with `a-`, `b-`, `c-`, …
+indicating a recommended exploration order, not strict prerequisites.
 
-### Built-in interpreters
+### Currently available
 
-**default** (no argument) — Step-by-step executor. Reads steps from PROGRAM.md, decomposes each into sub-instructions with verification, hands back to strategy after each step.
+- **default** (no argument to `new-instance.sh`) — Step-by-step
+  executor. Reads steps from `PROGRAM.md`, decomposes each into
+  sub-instructions with verification, hands back to the strategy after
+  each step.
+- **`interpreters/1-iterative-refinement/`** — `generate → critique →
+  revise` family ([patterns.md Group 1](docs/agent-workflows/patterns.md)).
+  - `a-self-refine` — single role drafts, self-critiques, iterates.
+  - `b-evaluator-optimizer` — generator + separate evaluator with
+    explicit `## Criterion`.
+  - `c-reflexion` — `b` plus distilled lessons accumulated in
+    `## Lessons` across retries.
+- **`interpreters/game-team`** — Game-dev team simulation with six
+  roles (lead, architect, designer, developer, 2D artist, UI/UX).
+  Scheduled for deletion in Phase 4 of the agent-workflows roadmap;
+  exempt from the directory layout convention above.
 
-**`interpreters/game-team`** — Game development team simulation. Six roles with separate role description files:
-- Team lead (coordinates, asks user when unclear)
-- Architect (technical structure)
-- Game designer (gameplay, balance)
-- Developer (implementation)
-- 2D artist (visual assets, programmatic art)
-- UI/UX expert (interface, interaction)
-
-For each feature: plans features → gathers opinions from all roles → synthesizes → decomposes → executes → verifies → loops back to plan next feature. Asks the user interactively when specs are ambiguous.
-
-**`interpreters/karpathy-loop`** — Tight feedback loop. No upfront planning. Code the smallest thing → run it → look at actual output → fix errors → evaluate → repeat. Supports breadth-first branching via git: when multiple approaches are viable, creates branches and explores them round-robin before comparing and picking a winner.
+The agent-workflows roadmap
+([`docs/agent-workflows/requirements.md`](docs/agent-workflows/requirements.md))
+plans further phases — planning & decomposition, fixed-SOP teams, peer
+collaboration, search, meta-frameworks — each pulling from a different
+group of `patterns.md`.
 
 ### Creating a new interpreter
 
-Create a directory `interpreters/<name>/` with at least `INSTRUCTIONS.md`. Add optional `*.md` files for role descriptions, templates, etc. — they're copied into instances.
+Create a directory `interpreters/<group-number>-<group-slug>/<letter>-<slug>/`
+with at least `INSTRUCTIONS.md`. Add optional `*.md` files for role
+descriptions, templates, etc. — they're copied into instances.
+Optional `dynamics/` directory holds reusable instruction files (see
+below).
 
-**INSTRUCTIONS.md structure:**
+`INSTRUCTIONS.md` structure:
 
 ```markdown
 # Strategy: <Name>
@@ -198,7 +150,7 @@ IMPORTANT: Everything between "# Strategy" and "# Sub-instructions" is the strat
 It must be copied VERBATIM into every update_instructions call. Never modify, summarize,
 or omit any strategy instruction. Only the "# Sub-instructions" section below changes.
 
-<description of what this interpreter does>
+<one-paragraph description of what this interpreter does>
 
 ## Instruction: Initialize
 **Condition:** MEMORY state is "empty"
@@ -219,24 +171,110 @@ or omit any strategy instruction. Only the "# Sub-instructions" section below ch
 (none yet — the strategy will populate these)
 ```
 
-**Key patterns:**
+Key patterns:
 
-1. **Strategy preservation**: The `IMPORTANT` block at the top tells the LLM to copy the strategy section verbatim on every rewrite.
+1. **Strategy preservation** — the `IMPORTANT` block tells the LLM to
+   copy the strategy section verbatim on every rewrite.
+2. **State machine** — instructions match on MEMORY state strings via
+   natural-language conditions. Every state must have a matching
+   instruction. Unmatched states automatically transition to
+   `waiting_for_user` so the user can intervene.
+3. **Handback** — after a unit of work, state must loop back to a
+   "pick next" instruction that reads PROGRAM.md. Without handback,
+   the machine completes one thing and stalls.
+4. **Decompose → execute → verify** — when work needs to happen, write
+   sub-instructions in `# Sub-instructions`. Each action followed by
+   verification. The last sub-instruction returns to the strategy.
+5. **Project artifacts** go in `workspace/` (which has its own git
+   repo). MEMORY.md and INSTRUCTIONS.md stay in the instance root.
 
-2. **State machine**: Instructions match on MEMORY state strings. Every state must have a matching instruction, and every instruction must set a new state. Dead-end states stall the machine.
+## Dynamics (Call Stack)
 
-3. **Handback**: After completing a unit of work, the state must loop back to a "pick next" instruction that reads PROGRAM.md. Without this, the machine completes one thing and stalls.
+A **dynamic** is a reusable instruction file invoked like a
+subroutine. The running instruction set delegates by writing
+`## Push` in MEMORY:
 
-4. **Decompose → execute → verify**: When work needs to happen, write sub-instructions in the `# Sub-instructions` section. Each action followed by verification. The last sub-instruction returns to the strategy.
+```
+## Push
+dynamics/self-critique.md
+```
 
-5. **User interaction**: Set state to `waiting_for_user` with `## Question` in MEMORY. The shell prompts the user and sets state to `user_responded` with `## Answer`. You must have an instruction matching `user_responded`.
+The shell saves the current `{state, instructions}` onto a call stack,
+loads the dynamic as the new `INSTRUCTIONS.md`, and sets state to
+`empty`. When the dynamic sets state to `done`, the shell pops the
+stack, restores the caller's instructions, and sets state to
+`{caller_state}_completed` — preventing the caller's original
+instruction from immediately re-firing.
 
-6. **Project artifacts**: Code and files go in `workspace/`. The `git` tool operates there. MEMORY.md and INSTRUCTIONS.md stay in the instance root.
+```
+    ┌─── caller ───┐
+    │ state: drafted                       ┌─ dynamic ──┐
+    │ ## Push: dynamics/self-critique.md ─►│ state: empty
+    └──────────────┘                       │ ...
+                                           │ state: done ───┐
+    ┌─── caller ───┐                       └────────────────┘
+    │ state: drafted_completed ◄───────────────── pop
+    └──────────────┘
+```
 
-## Two Git Repos
+- Dynamics can nest (a dynamic can push another).
+- The stack is persisted to `.call-stack.json` and snapshotted into
+  every `history/` entry.
+- Missing push targets are logged and ignored — no frame is pushed.
 
-- **Machine git** (instance root) — Auto-commits per cycle. Tracks everything. History dirs: `history/0042-a3f1b2c/`.
-- **Project git** (`workspace/`) — LLM-controlled. Interpreters can branch, commit, diff, explore alternatives.
+Implementation: `src/call-stack.ts` (pure `applyPush` / `applyPop`
+transforms), called from the cycle loop in `src/main.ts`. Unit-tested
+under `src/test/`.
+
+## Well-Known States
+
+The shell intercepts these MEMORY states before each LLM invocation:
+
+- **`done`** — if the call stack is empty, the machine halts. If a
+  dynamic is active, the shell pops one frame and sets state to
+  `{caller_state}_completed`. Cascade-pops while state remains `done`.
+- **`waiting_for_user`** — the shell reads `## Pending Questions` from
+  MEMORY, prompts the user one at a time (via stdin or Telegram if
+  configured), writes answers to `## Answers`, and sets state to
+  `user_responded`. Only triggered when all remaining work is blocked
+  on unanswered questions.
+- **unmatched state** — if no instruction's condition matches, the
+  shell automatically enters `waiting_for_user` and asks for guidance.
+
+## Providers
+
+All providers except `claude-code` use the same custom tools (`bash`,
+`write_file`, `git`, `update_instructions`) with the shell managing
+the tool call loop. Configured via `TURING_PROVIDER` (set in `.env`
+or shell env). All providers cap retries at 20 for incomplete cycles.
+
+| Provider | Description | Required env |
+|---|---|---|
+| `claude-code` (default) | Invokes `claude -p` as a subprocess with native CC tools (Bash, Write, Edit). CC manages its own tool loop. | — (uses your installed Claude Code) |
+| `api` | Anthropic SDK with managed tool loop. | `ANTHROPIC_API_KEY`, optional `ANTHROPIC_MODEL` |
+| `openai` | OpenAI-compatible API with function calling. | `OPENAI_API_KEY`, optional `OPENAI_BASE_URL`, `OPENAI_MODEL` |
+| `ollama` | Native Ollama API with streaming output. | `OLLAMA_BASE_URL`, `OLLAMA_MODEL` |
+| `local` | Loads a GGUF model in-process via `node-llama-cpp`. No server. | `LOCAL_MODEL_PATH` (file) or `LOCAL_MODEL_URI` (HF) |
+
+Other shared knobs:
+
+- `BASH_TIMEOUT` — seconds for `bash` tool commands (default 300, set
+  to 0 to disable).
+- `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` — when both are set, user
+  questions are sent via Telegram instead of stdin.
+  `./setup-telegram.sh <TOKEN>` autodetects the chat ID.
+
+## Two Git Repos Per Instance
+
+- **Machine git** (instance root) — Hardwired. Each instance gets its
+  own `.git`. Auto-commits all files after each cycle with message
+  `cycle N: <state>`. History dirs include the short hash:
+  `history/0042-a3f1b2c/`.
+- **Project git** (`workspace/`) — LLM-controlled via the `git` tool.
+  The LLM can branch, commit, diff, checkout freely. Used for
+  exploring alternative approaches.
+
+The machine git ignores `workspace/.git/` so nested repos don't conflict.
 
 ## Instance Structure
 
@@ -246,18 +284,46 @@ instances/foo/
 ├── INSTRUCTIONS.md    # Strategy + generated sub-instructions (swapped when a dynamic is active)
 ├── MEMORY.md          # Current state; may carry ## Push to delegate
 ├── .call-stack.json   # Saved call stack (empty at depth 0)
+├── .env               # Provider/model config (gitignored)
 ├── workspace/         # Project artifacts (own git repo)
 ├── dynamics/          # Reusable instruction files (optional, provided by the interpreter)
 ├── run.sh             # Launch script
-├── *.md               # Interpreter support files (role descriptions, etc.)
+├── *.md               # Interpreter support files (role descriptions, templates)
 ├── .api_key           # Cached API key (gitignored)
 ├── .gitignore
-├── history/           # Snapshots per cycle
+├── history/           # Snapshots per cycle (each includes a copy of .call-stack.json)
 │   ├── 0001-a3f1b2c/
 │   │   ├── MEMORY.md
 │   │   ├── INSTRUCTIONS.md
 │   │   └── .call-stack.json
 │   └── ...
-└── logs/              # Full run logs
+└── logs/              # Full untruncated run logs
     └── run-2026-04-06T*.log
 ```
+
+## Source Layout
+
+- `src/main.ts` — cycle loop, git auto-commit, history snapshots, user
+  interaction, provider dispatch, stack management
+- `src/call-stack.ts` — pure push/pop transforms + persistence to
+  `.call-stack.json`
+- `src/memory.ts` — pure parsers/transforms over MEMORY.md sections
+- `src/prompt.ts` — system + user prompt construction
+- `src/tools.ts` — tool definitions (bash, write_file, git,
+  update_instructions) and execution
+- `src/providers/` — one file per provider plus `shared.ts`
+- `src/telegram.ts` — non-blocking user questions via Telegram
+- `src/test/` — `node:test` suite (`npm test` builds + runs)
+
+## Further reading
+
+- [`docs/agent-workflows/patterns.md`](docs/agent-workflows/patterns.md)
+  — taxonomy of agentic patterns, with citations. Source of truth for
+  group numbering.
+- [`docs/agent-workflows/requirements.md`](docs/agent-workflows/requirements.md)
+  — phased rollout plan: which patterns become interpreters in which
+  order, and which dynamics they share.
+- [`docs/agent-workflows/phase-1-notes.md`](docs/agent-workflows/phase-1-notes.md)
+  — implementation notes from Phase 1 (iterative refinement).
+- [`CLAUDE.md`](CLAUDE.md) — project-specific guidance for Claude Code
+  agents working on this repo.

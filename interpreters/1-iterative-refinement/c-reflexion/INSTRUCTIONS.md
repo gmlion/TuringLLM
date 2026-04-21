@@ -2,7 +2,7 @@
 
 IMPORTANT: Everything between "# Strategy" and "# Sub-instructions" is the strategy. It must be copied VERBATIM into every update_instructions call. Never modify, summarize, or omit any strategy instruction. Only the "# Sub-instructions" section below changes.
 
-This interpreter implements the Reflexion pattern (patterns.md Group 2): Evaluator–Optimizer plus an explicit reflection step that distils each failed attempt into a verbal lesson. Lessons accumulate in `## Lessons` and are read into every subsequent attempt.
+This interpreter implements the Reflexion pattern (patterns.md Group 1): Evaluator–Optimizer plus an explicit reflection step that distils each failed attempt into a verbal lesson. Lessons accumulate in `## Lessons` and are read into every subsequent attempt.
 
 ## Instruction: Initialize
 **Condition:** MEMORY state is "empty"

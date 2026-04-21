@@ -1,7 +1,7 @@
-# 1b — Evaluator–Optimizer
+# b — Evaluator–Optimizer
 
 *Anthropic, "Building Effective Agents", 2024. See
-`docs/agent-workflows/patterns.md` §Group 2.*
+`docs/agent-workflows/patterns.md` §Group 1.*
 
 Two distinct roles: a generator produces attempts, a separate evaluator
 judges each attempt against an explicit `## Criterion` and returns a
@@ -28,7 +28,7 @@ Four strategy instructions: `Initialize`, `Request evaluation`,
 | Produces | `## Verdict` (literal `pass` or `fail`), `## Feedback` |
 | Internal states | `empty` → `done` (single instruction: `Judge`) |
 
-This `evaluate.md` is the **canonical** copy. `1c-reflexion/dynamics/
+This `evaluate.md` is the **canonical** copy. `c-reflexion/dynamics/
 evaluate.md` is kept byte-equal via `src/test/phase-1-dynamics-identity.test.ts`.
 
 ## Demo `PROGRAM.md`
@@ -40,8 +40,8 @@ sentences, no listed jargon terms, preserves three factual claims.
 ## Run it
 
 ```bash
-./new-instance.sh my-1b interpreters/2-iterative-refinement/1b-evaluator-optimizer
-instances/my-1b/run.sh
+./new-instance.sh my-b interpreters/1-iterative-refinement/b-evaluator-optimizer
+instances/my-b/run.sh
 ```
 
 ## Known behaviour
