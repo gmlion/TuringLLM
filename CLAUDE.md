@@ -123,6 +123,25 @@ Before the next LLM invocation, the shell:
 
 The dynamic then runs its own state machine over the MEMORY the caller left behind. The caller is expected to write any context the dynamic needs into dedicated MEMORY sections before pushing.
 
+**Push-Args (arguments).** A dynamic can declare `{{placeholders}}` in its instruction text. The caller passes values by writing `## Push-Args` immediately after `## Push`:
+
+```
+## Push
+dynamics/answer-independently.md
+## Push-Args
+question: When was X founded?
+draft: |
+  Multi-line values use a YAML-style block scalar with two-space
+  indentation. Lines are joined with newlines; trailing empty
+  lines are trimmed.
+```
+
+Before installing the loaded INSTRUCTIONS, the shell substitutes every `{{key}}` with the corresponding value from `## Push-Args`. If any `{{placeholder}}` remains unresolved after substitution, the push fails with reason `unresolved-placeholder` (same lifecycle as `missing-target`: both `## Push` and `## Push-Args` are stripped from MEMORY, the error is logged, the stack stays unchanged).
+
+When `## Push-Args` is absent, no substitution is attempted; a target file with no `{{...}}` syntax loads verbatim. A target file that *does* contain `{{...}}` but receives no args fails with `unresolved-placeholder` — this catches programmer errors where a caller forgets to pass required args.
+
+Implementation: `parsePushArgs` and `removePushArgs` in `src/memory.ts`; `substitutePlaceholders` and the extended `applyPush` in `src/call-stack.ts`.
+
 **Pop.** When the dynamic sets state to `done`, the shell pops the top frame, restores the caller's instructions, and sets state to `{caller_state}_completed` — where `caller_state` is the state the caller was in at push time. The caller must have an instruction that matches `{caller_state}_completed` to consume the returned result.
 
 The `_completed` suffix prevents an infinite loop: the caller's original `{caller_state}` instruction (which did the push) does not immediately re-fire.

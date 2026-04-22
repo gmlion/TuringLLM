@@ -182,21 +182,21 @@ validates push/pop at depth 1 before anything else is attempted.
 
 ## Phase 2 — Chain-of-Verification (patterns.md Group 1, nested variant)
 
-Still iterative refinement, but the critique step is *decomposed* into
-independent verification Q&A. First interpreter that requires **stack depth
-2**, so it doubles as a snapshot/restore stress test for the shell.
+Still iterative refinement, but the critique step is *decomposed* into independent verification Q&A. First interpreter that requires **stack depth 2**, so it doubles as a snapshot/restore stress test for the shell.
 
-**Deliverable:** `interpreters/cove/`.
+Phase 2 also introduces the **arguments-via-INSTRUCTIONS** shell convention (`## Push-Args` + `{{var}}` substitution) and retrofits the existing `a`/`b`/`c` dynamics onto it. The convention retires "prompt trust" as the isolation mechanism for `answer-independently.md` and cleanly separates per-frame arguments (INSTRUCTIONS) from the shared heap (MEMORY).
 
-- Strategy: drafter emits a factual claim, pushes `verify.md`.
-- New dynamic: `verify.md` — generates N verification questions, for each
-  pushes `answer-independently.md`, collects answers, emits `## Revised`.
-- New dynamic: `answer-independently.md` — answers one question with no
-  access to the draft.
-- Demo `PROGRAM.md`: a question where hallucination is likely ("list the
-  authors of paper X and their affiliations").
-- **Reuse:** none. Both dynamics are new.
-- **Validation:** mid-verify, `.call-stack.json` contains two frames.
+**Deliverables:**
+- `interpreters/1-iterative-refinement/d-cove/`
+- Shell extension to `applyPush` in `src/call-stack.ts`
+- Refactored `a`/`b`/`c` dynamics
+
+- Strategy: drafter emits a candidate answer, pushes `verify.md` with `{{draft}}` as a push-arg.
+- New dynamic: `verify.md` — generates N >= 2 verification questions from the draft, for each pushes `answer-independently.md` with `{{question}}`, collects answers from MEMORY, emits `## Revised`.
+- New dynamic: `answer-independently.md` — answers one question using PROGRAM.md and general knowledge; references no caller MEMORY section.
+- Demo `PROGRAM.md`: a four-person knights-and-knaves puzzle where first-pass reasoning commonly drifts.
+- **Reuse:** the arguments-via-INSTRUCTIONS convention introduced by this phase is used by all four dynamics in Group 1 from this phase onward.
+- **Validation:** mid-verify, `.call-stack.json` contains two frames (asserted by `src/test/phase-2-cove.test.ts`).
 
 ---
 

@@ -13,6 +13,7 @@ They differ in three axes:
 | [`a-self-refine/`](./a-self-refine/) | same role (self) | none | free-form |
 | [`b-evaluator-optimizer/`](./b-evaluator-optimizer/) | separate role (external) | none | `## Verdict` (pass/fail) + `## Feedback` |
 | [`c-reflexion/`](./c-reflexion/) | separate role (external) | verbal lessons in `## Lessons` | verdict + feedback + distilled lesson |
+| [`d-cove/`](./d-cove/) | self (decomposed at depth 2) | none | per-claim Q&A from `answer-independently.md` |
 
 The leaf-letter prefix (`a`, `b`, `c`) encodes a recommended **exploration
 order** within the group, not strict prerequisites. Each interpreter is
@@ -44,11 +45,15 @@ Phase 2 (CoVe) is expected to be the third consumer; at that point a
 shared-dynamics convention in `new-instance.sh` may be worth the churn
 (see `docs/specs/2026-04-19-agent-workflows-phase-1/design.md` OQ4).
 
+## Arguments via INSTRUCTIONS (push-args)
+
+All four dynamics in this group receive their per-call inputs via `## Push-Args` + `{{var}}` substitution at push time, rather than by reading caller-controlled MEMORY sections. The convention separates per-frame arguments (in INSTRUCTIONS, scoped to the frame) from the shared heap (MEMORY, persistent across pops). See `CLAUDE.md` "Dynamics (Call Stack) → Push-Args" for the contract.
+
+Outputs (`## Critique`, `## Refined`, `## Verdict`, `## Feedback`, `## Lesson`, `## Revised`, `## Answer`) are still written to MEMORY — they're the call's return value to the caller.
+
 ## Coming next in this group
 
-- **Phase 2 — `d-cove/`** (Chain-of-Verification). Decomposes the
-  critique step into independent verification Q&A at stack depth 2.
-  Will reuse `evaluate.md`.
+Phase 2 (CoVe / `d-cove`) shipped together with the arguments-via-INSTRUCTIONS shell convention. Future variants in this group, if any, would compose CoVe with iteration (e.g. CoVe + Evaluator–Optimizer hybrid).
 
 See `docs/agent-workflows/requirements.md` for the full phase plan and
 `docs/agent-workflows/patterns.md` §Group 1 for literature references
