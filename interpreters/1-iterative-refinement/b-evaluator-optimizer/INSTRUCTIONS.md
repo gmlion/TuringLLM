@@ -10,7 +10,15 @@ This interpreter implements the Evaluator–Optimizer pattern (patterns.md Group
 
 ## Instruction: Request evaluation
 **Condition:** MEMORY state is "attempted" and both `## Attempt` and `## Criterion` are present
-**Action:** Write `## Push` with exactly the value `dynamics/evaluate.md` on its own line. Do not change state.
+**Action:** Append the following to MEMORY (do not change state):
+
+    ## Push
+    dynamics/evaluate.md
+    ## Push-Args
+    attempt: |
+      <verbatim contents of ## Attempt, every line indented two spaces>
+    criterion: |
+      <verbatim contents of ## Criterion, every line indented two spaces>
 
 ## Instruction: Handle verdict
 **Condition:** MEMORY state is "attempted_completed" and `## Verdict` is present

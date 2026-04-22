@@ -61,8 +61,8 @@ describe("1b evaluator-optimizer", () => {
 
   test("evaluate dynamic consumes ## Attempt and ## Criterion, produces ## Verdict and ## Feedback", () => {
     const dyn = readFileSync(resolve(INTERP, "dynamics/evaluate.md"), "utf-8");
-    assert.match(dyn, /## Attempt/);
-    assert.match(dyn, /## Criterion/);
+    assert.match(dyn, /\{\{attempt\}\}/);
+    assert.match(dyn, /\{\{criterion\}\}/);
     assert.match(dyn, /## Verdict/);
     assert.match(dyn, /## Feedback/);
     assert.match(dyn, /state to "done"/);
@@ -73,11 +73,13 @@ describe("1b evaluator-optimizer", () => {
 
     let r = runStackBlock(
       [],
-      '## State\nattempted\n## Criterion\nc1\n## Attempt\nv1\n## Push\ndynamics/evaluate.md',
+      '## State\nattempted\n## Criterion\nc1\n## Attempt\nv1\n## Push\ndynamics/evaluate.md\n## Push-Args\nattempt: |\n  v1\ncriterion: |\n  c1',
       strategy,
     );
     assert.equal(r.stack.length, 1);
     assert.match(r.instructions, /Instruction:/);
+    assert.match(r.instructions, /Attempt:/);
+    assert.doesNotMatch(r.instructions, /\{\{attempt\}\}|\{\{criterion\}\}/);
 
     let memAfter = setState(
       r.memory + "\n## Verdict\nfail\n## Feedback\nmissed edge case",
@@ -88,7 +90,7 @@ describe("1b evaluator-optimizer", () => {
     assert.match(r.memory, /^## State\nattempted_completed/m);
 
     const memLoop =
-      '## State\nattempted\n## Criterion\nc1\n## Attempt\nv2\n## Push\ndynamics/evaluate.md';
+      '## State\nattempted\n## Criterion\nc1\n## Attempt\nv2\n## Push\ndynamics/evaluate.md\n## Push-Args\nattempt: |\n  v2\ncriterion: |\n  c1';
     r = runStackBlock([], memLoop, strategy);
     assert.equal(r.stack.length, 1);
 
