@@ -109,3 +109,26 @@ export function applyPush(
 
   return { ok: true, stack: newStack, memory: newMemory, instructions: targetContent, target };
 }
+
+const PLACEHOLDER_RE = /\{\{([a-zA-Z_][a-zA-Z0-9_]*)\}\}/g;
+
+/**
+ * Replace every {{key}} occurrence in template with args[key].
+ * Unmatched keys are left in place and reported in `unresolved`
+ * (deduplicated, in source order).
+ *
+ * Placeholder identifier rule: [a-zA-Z_][a-zA-Z0-9_]*. Anything else
+ * inside {{ }} is left as literal text (no match attempted).
+ */
+export function substitutePlaceholders(
+  template: string,
+  args: Record<string, string>,
+): { result: string; unresolved: string[] } {
+  const unresolvedSet = new Set<string>();
+  const result = template.replace(PLACEHOLDER_RE, (match, key) => {
+    if (key in args) return args[key];
+    unresolvedSet.add(key);
+    return match;
+  });
+  return { result, unresolved: [...unresolvedSet] };
+}
