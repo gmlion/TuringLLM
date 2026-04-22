@@ -74,3 +74,62 @@ export function parsePush(memory: string): string | null {
 export function removePush(memory: string): string {
   return memory.replace(/\n?## Push\n[^\n]*(\n(?!## )[^\n]*)*/m, "");
 }
+
+/**
+ * Parse the ## Push-Args section into a key→value map.
+ *
+ * Format:
+ *   - `key: value` (single-line; rest of line after `: ` is the value)
+ *   - `key: |` followed by lines indented by 2 spaces (block scalar;
+ *     leading 2 spaces stripped, lines joined with \n, trailing empty
+ *     lines trimmed)
+ *
+ * Returns {} if the section is absent. Skips malformed lines silently —
+ * missing args surface later as unresolved placeholders in applyPush.
+ */
+export function parsePushArgs(memory: string): Record<string, string> {
+  const headerRe = /(^|\n)## Push-Args\n/;
+  const headerMatch = memory.match(headerRe);
+  if (!headerMatch) return {};
+  const start = (headerMatch.index ?? 0) + headerMatch[0].length;
+
+  const remainder = memory.slice(start);
+  const nextHeading = remainder.match(/\n## [A-Z]/);
+  const sectionEnd = nextHeading
+    ? start + (nextHeading.index ?? 0)
+    : memory.length;
+  const section = memory.slice(start, sectionEnd);
+
+  const result: Record<string, string> = {};
+  const lines = section.split("\n");
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+    const blockMatch = line.match(/^([a-zA-Z_][a-zA-Z0-9_]*): \|$/);
+    if (blockMatch) {
+      const key = blockMatch[1];
+      const valueLines: string[] = [];
+      i++;
+      while (i < lines.length && (lines[i].startsWith("  ") || lines[i] === "")) {
+        valueLines.push(lines[i].startsWith("  ") ? lines[i].slice(2) : "");
+        i++;
+      }
+      while (valueLines.length > 0 && valueLines[valueLines.length - 1] === "") {
+        valueLines.pop();
+      }
+      result[key] = valueLines.join("\n");
+      continue;
+    }
+    const singleMatch = line.match(/^([a-zA-Z_][a-zA-Z0-9_]*): (.+)$/);
+    if (singleMatch) {
+      result[singleMatch[1]] = singleMatch[2];
+    }
+    i++;
+  }
+  return result;
+}
+
+/** Remove the ## Push-Args section from MEMORY. Mirror of removePush. */
+export function removePushArgs(memory: string): string {
+  return memory.replace(/\n?## Push-Args\n[^\n]*(\n(?!## )[^\n]*)*/m, "");
+}

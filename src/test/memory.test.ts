@@ -3,6 +3,7 @@ import { strict as assert } from "node:assert";
 import {
   parseState, setState, getAnswersSection, writeAnswer,
   parsePendingQuestions, parsePush, removePush,
+  parsePushArgs, removePushArgs,
 } from "../memory.js";
 
 describe("parseState", () => {
@@ -157,5 +158,61 @@ describe("removePush", () => {
   test("no-op when no ## Push section present", () => {
     const mem = "## State\nfoo\n## Other\nx";
     assert.equal(removePush(mem), mem);
+  });
+});
+
+describe("parsePushArgs", () => {
+  test("returns empty object when section absent", () => {
+    const memory = "## State\nfoo\n## Push\ndynamics/x.md";
+    assert.deepEqual(parsePushArgs(memory), {});
+  });
+
+  test("parses single-line key: value pairs", () => {
+    const memory = "## State\nfoo\n## Push\nx.md\n## Push-Args\nq: hi\nr: bye";
+    assert.deepEqual(parsePushArgs(memory), { q: "hi", r: "bye" });
+  });
+
+  test("parses block scalar with | indicator (2-space indent)", () => {
+    const memory = "## State\nfoo\n## Push\nx.md\n## Push-Args\ndraft: |\n  line one\n  line two\nq: short";
+    assert.deepEqual(parsePushArgs(memory), { draft: "line one\nline two", q: "short" });
+  });
+
+  test("stops at next ## heading", () => {
+    const memory = "## State\nfoo\n## Push\nx.md\n## Push-Args\nq: hi\n## Other\nignored: yes";
+    assert.deepEqual(parsePushArgs(memory), { q: "hi" });
+  });
+
+  test("handles section at end of MEMORY without trailing newline", () => {
+    const memory = "## State\nfoo\n## Push\nx.md\n## Push-Args\nq: hi";
+    assert.deepEqual(parsePushArgs(memory), { q: "hi" });
+  });
+
+  test("skips malformed lines, parses valid ones", () => {
+    const memory = "## State\nfoo\n## Push\nx.md\n## Push-Args\nq: hi\nbroken-no-colon\nr: bye";
+    assert.deepEqual(parsePushArgs(memory), { q: "hi", r: "bye" });
+  });
+
+  test("trims trailing empty lines from block-scalar value", () => {
+    const memory = "## State\nfoo\n## Push\nx.md\n## Push-Args\ndraft: |\n  one\n  two\n\n## Other\nx";
+    assert.deepEqual(parsePushArgs(memory), { draft: "one\ntwo" });
+  });
+});
+
+describe("removePushArgs", () => {
+  test("strips section between ## Push-Args and next ## heading", () => {
+    const memory = "## State\nfoo\n## Push\nx.md\n## Push-Args\nq: hi\nr: bye\n## Other\nkeep: this";
+    const result = removePushArgs(memory);
+    assert.equal(result, "## State\nfoo\n## Push\nx.md\n## Other\nkeep: this");
+  });
+
+  test("strips section to end of MEMORY when no following ##", () => {
+    const memory = "## State\nfoo\n## Push\nx.md\n## Push-Args\nq: hi";
+    const result = removePushArgs(memory);
+    assert.equal(result, "## State\nfoo\n## Push\nx.md");
+  });
+
+  test("returns memory unchanged when section absent", () => {
+    const memory = "## State\nfoo\n## Push\nx.md";
+    assert.equal(removePushArgs(memory), memory);
   });
 });
