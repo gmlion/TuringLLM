@@ -371,6 +371,9 @@ function runStackBlock(callStack: import("./call-stack.js").StackEntry[]): boole
   } else if (pushed.reason === "missing-target") {
     writeFileSync(MEMORY_PATH, pushed.memory, "utf-8");
     log(`  [push] ERROR: ${pushed.target} not found or empty, skipping`);
+  } else if (pushed.reason === "unresolved-placeholder") {
+    writeFileSync(MEMORY_PATH, pushed.memory, "utf-8");
+    log(`  [push] ${pushed.target}: unresolved placeholder(s) ${pushed.placeholders.join(", ")}`);
   }
   return false;
 }

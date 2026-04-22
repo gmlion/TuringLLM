@@ -10,7 +10,14 @@
  * be tested in isolation. The shell writes the results to disk.
  */
 import { readFileSync, writeFileSync } from "fs";
-import { parseState, parsePush, removePush, setState } from "./memory.js";
+import {
+  parseState,
+  parsePush,
+  removePush,
+  setState,
+  parsePushArgs,
+  removePushArgs,
+} from "./memory.js";
 
 export type StackEntry = { returnState: string; instructions: string };
 
@@ -74,7 +81,14 @@ export type PushResult =
       target: string;
     }
   | { ok: false; memory: string; reason: "no-push" }
-  | { ok: false; memory: string; reason: "missing-target"; target: string };
+  | { ok: false; memory: string; reason: "missing-target"; target: string }
+  | {
+      ok: false;
+      memory: string;
+      reason: "unresolved-placeholder";
+      target: string;
+      placeholders: string[];
+    };
 
 /**
  * Handle a ## Push in MEMORY if present.
@@ -98,16 +112,40 @@ export function applyPush(
   const target = parsePush(memory);
   if (!target) return { ok: false, memory, reason: "no-push" };
 
+  const args = parsePushArgs(memory);
+
   const targetContent = readTarget(target);
   if (!targetContent) {
-    return { ok: false, memory: removePush(memory), reason: "missing-target", target };
+    return {
+      ok: false,
+      memory: removePushArgs(removePush(memory)),
+      reason: "missing-target",
+      target,
+    };
+  }
+
+  const { result: substituted, unresolved } = substitutePlaceholders(
+    targetContent,
+    args,
+  );
+  if (unresolved.length > 0) {
+    return {
+      ok: false,
+      memory: removePushArgs(removePush(memory)),
+      reason: "unresolved-placeholder",
+      target,
+      placeholders: unresolved,
+    };
   }
 
   const returnState = parseState(memory);
   const newStack = [...stack, { returnState, instructions }];
-  const newMemory = setState(removePush(memory), "empty");
+  const newMemory = setState(
+    removePushArgs(removePush(memory)),
+    "empty",
+  );
 
-  return { ok: true, stack: newStack, memory: newMemory, instructions: targetContent, target };
+  return { ok: true, stack: newStack, memory: newMemory, instructions: substituted, target };
 }
 
 const PLACEHOLDER_RE = /\{\{([a-zA-Z_][a-zA-Z0-9_]*)\}\}/g;
