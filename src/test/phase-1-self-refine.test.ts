@@ -68,13 +68,15 @@ describe("1a self-refine", () => {
 
   test("push on drafted -> dynamic runs -> pop to drafted_completed", () => {
     const strategy = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
-    const memory = '## State\ndrafted\n## Draft\nfirst attempt\n## Push\ndynamics/self-critique.md';
+    const memory = '## State\ndrafted\n## Draft\nfirst attempt\n## Push\ndynamics/self-critique.md\n## Push-Args\ndraft: |\n  first attempt';
 
     let r = runStackBlock([], memory, strategy);
     assert.equal(r.halt, false);
     assert.equal(r.stack.length, 1, "push should save one caller frame");
     assert.match(r.memory, /^## State\nempty/m);
     assert.match(r.instructions, /Instruction:/, "dynamic should be loaded");
+    assert.match(r.instructions, /first attempt/, "draft arg should be substituted into dynamic");
+    assert.doesNotMatch(r.instructions, /\{\{draft\}\}/, "no unresolved placeholder");
 
     const memAfterDynamic = setState(
       r.memory + "\n## Critique\nconcrete feedback\n## Refined\nbetter attempt",
@@ -89,7 +91,7 @@ describe("1a self-refine", () => {
 
   test("second loop -> accepted -> halts at done at depth 0", () => {
     const strategy = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
-    let memory = '## State\ndrafted\n## Draft\nsecond attempt\n## Push\ndynamics/self-critique.md';
+    let memory = '## State\ndrafted\n## Draft\nsecond attempt\n## Push\ndynamics/self-critique.md\n## Push-Args\ndraft: |\n  second attempt';
     let r = runStackBlock([], memory, strategy);
     const memAfterDynamic = setState(
       r.memory + "\n## Critique\nfinal feedback\n## Refined\nfinal text",

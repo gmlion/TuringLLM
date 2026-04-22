@@ -10,7 +10,13 @@ This interpreter implements the Self-Refine pattern (patterns.md Group 1). A sin
 
 ## Instruction: Request critique
 **Condition:** MEMORY state is "drafted" and `## Draft` is present
-**Action:** Write `## Push` with exactly the value `dynamics/self-critique.md` on its own line. Do not change state — the shell will set it to "empty" when it pushes the dynamic.
+**Action:** Append the following to MEMORY (do not change state — the shell will set it to "empty" when it pushes the dynamic):
+
+    ## Push
+    dynamics/self-critique.md
+    ## Push-Args
+    draft: |
+      <verbatim contents of ## Draft, every line indented two spaces>
 
 ## Instruction: Evaluate refinement
 **Condition:** MEMORY state is "drafted_completed" and both `## Critique` and `## Refined` are present
