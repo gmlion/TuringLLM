@@ -14,7 +14,15 @@ This interpreter implements the Reflexion pattern (patterns.md Group 1): Evaluat
 
 ## Instruction: Request evaluation
 **Condition:** MEMORY state is "attempted" and both `## Attempt` and `## Criterion` are present
-**Action:** Write `## Push` with exactly the value `dynamics/evaluate.md` on its own line. Do not change state.
+**Action:** Append the following to MEMORY (do not change state):
+
+    ## Push
+    dynamics/evaluate.md
+    ## Push-Args
+    attempt: |
+      <verbatim contents of ## Attempt, every line indented two spaces>
+    criterion: |
+      <verbatim contents of ## Criterion, every line indented two spaces>
 
 ## Instruction: Route on verdict
 **Condition:** MEMORY state is "attempted_completed" and `## Verdict` is present
@@ -22,7 +30,17 @@ This interpreter implements the Reflexion pattern (patterns.md Group 1): Evaluat
 
 ## Instruction: Reflect
 **Condition:** MEMORY state is "failed_attempt" and `## Attempt` and `## Verdict` are present
-**Action:** Write `## Push` with exactly the value `dynamics/reflect.md` on its own line. Do not change state.
+**Action:** Append the following to MEMORY (do not change state):
+
+    ## Push
+    dynamics/reflect.md
+    ## Push-Args
+    attempt: |
+      <verbatim contents of ## Attempt, every line indented two spaces>
+    verdict: |
+      <verbatim contents of ## Verdict, every line indented two spaces>
+    feedback: |
+      <verbatim contents of ## Feedback, every line indented two spaces; if absent, use the literal value `(no feedback)`>
 
 ## Instruction: Accumulate lesson
 **Condition:** MEMORY state is "failed_attempt_completed" and `## Lesson` is present

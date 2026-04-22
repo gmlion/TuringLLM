@@ -48,10 +48,12 @@ function simulateEvaluate(
   feedback: string,
 ): { memory: string; stack: StackEntry[]; instructions: string } {
   const initial =
-    `## State\nattempted\n## Criterion\nc1\n## Lessons\n${lessons}\n## Attempt\n${attempt}\n## Push\ndynamics/evaluate.md`;
+    `## State\nattempted\n## Criterion\nc1\n## Lessons\n${lessons}\n## Attempt\n${attempt}\n## Push\ndynamics/evaluate.md\n## Push-Args\nattempt: |\n  ${attempt}\ncriterion: |\n  c1`;
   let r = runStackBlock([], initial, strategy);
   assert.equal(r.stack.length, 1, "evaluate push should save caller frame");
   assert.match(r.instructions, /Instruction: Judge/);
+  assert.match(r.instructions, /Attempt:/);
+  assert.doesNotMatch(r.instructions, /\{\{attempt\}\}|\{\{criterion\}\}/);
   const memAfter = setState(
     r.memory + `\n## Verdict\n${verdict}\n## Feedback\n${feedback}`,
     "done",
@@ -62,15 +64,34 @@ function simulateEvaluate(
   return r;
 }
 
+/** Extract the content of a named MEMORY section (without the header line). */
+function extractSection(memory: string, name: string): string {
+  const re = new RegExp(`^## ${name}\\n([\\s\\S]*?)(?=\\n## [A-Z]|$)`, "m");
+  const m = memory.match(re);
+  return m ? m[1].replace(/\n+$/, "") : "";
+}
+
 function simulateReflect(
   strategy: string,
   memoryAtFailedAttempt: string,
   lessonText: string,
 ): { memory: string; stack: StackEntry[]; instructions: string } {
-  const withPush = memoryAtFailedAttempt + "\n## Push\ndynamics/reflect.md";
+  const attempt = extractSection(memoryAtFailedAttempt, "Attempt");
+  const verdict = extractSection(memoryAtFailedAttempt, "Verdict");
+  const feedback = extractSection(memoryAtFailedAttempt, "Feedback") || "(no feedback)";
+  const attemptLines = attempt.split("\n").map((l) => `  ${l}`).join("\n");
+  const verdictLines = verdict.split("\n").map((l) => `  ${l}`).join("\n");
+  const feedbackLines = feedback.split("\n").map((l) => `  ${l}`).join("\n");
+  const withPush =
+    memoryAtFailedAttempt +
+    `\n## Push\ndynamics/reflect.md\n## Push-Args\nattempt: |\n${attemptLines}\nverdict: |\n${verdictLines}\nfeedback: |\n${feedbackLines}`;
   let r = runStackBlock([], withPush, strategy);
   assert.equal(r.stack.length, 1, "reflect push should save caller frame");
   assert.match(r.instructions, /Instruction: Distil lesson/);
+  assert.match(r.instructions, /Attempt:/);
+  assert.match(r.instructions, /Verdict:/);
+  assert.match(r.instructions, /Feedback:/);
+  assert.doesNotMatch(r.instructions, /\{\{attempt\}\}|\{\{verdict\}\}|\{\{feedback\}\}/);
   const memAfter = setState(r.memory + `\n## Lesson\n${lessonText}`, "done");
   r = runStackBlock(r.stack, memAfter, r.instructions);
   assert.equal(r.stack.length, 0);
@@ -108,10 +129,11 @@ describe("1c reflexion", () => {
     assert.match(section, /## Lessons/, "Attempt instruction must read ## Lessons before attempting");
   });
 
-  test("reflect dynamic consumes Attempt+Verdict, produces Lesson", () => {
+  test("reflect dynamic receives push-args and produces Lesson", () => {
     const dyn = readFileSync(resolve(INTERP, "dynamics/reflect.md"), "utf-8");
-    assert.match(dyn, /## Attempt/);
-    assert.match(dyn, /## Verdict/);
+    assert.match(dyn, /\{\{attempt\}\}/);
+    assert.match(dyn, /\{\{verdict\}\}/);
+    assert.match(dyn, /\{\{feedback\}\}/);
     assert.match(dyn, /## Lesson/);
     assert.match(dyn, /state to "done"/);
   });
