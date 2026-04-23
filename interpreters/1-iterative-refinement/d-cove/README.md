@@ -43,11 +43,22 @@ Four strategy instructions: `Initialize`, `Request verification`,
 
 ## Demo `PROGRAM.md`
 
-A four-person knights-and-knaves puzzle (Alice, Bob, Carol, Dan).
-Unique solution: Alice=knave, Bob=knave, Carol=knight, Dan=knight.
-Frontier models commonly commit to the false Case 1 branch
-(Alice=knight) before backtracking; CoVe surfaces the inconsistency
-via per-statement verification.
+A twenty-person knights-and-knaves puzzle (P1 through P20), built
+bottom-up with a unique solution: `V V V K K K K K K K V V V V V V
+V K K K` (10 knaves, 10 knights). The puzzle composes a three-person
+anchor (P1–P3, forced by a "different types" + cross-assertion
+triple) with a 17-person chain of single-person assertions that
+alternates type in deterministic blocks. N = 20 claims for `verify.md`
+to decompose, giving the depth-2 verification fan-out a realistic
+workout.
+
+The earlier Phase-2 four-person puzzle (Alice/Bob/Carol/Dan) was too
+easy for Haiku — the first draft was already correct and the live
+run's revise step had nothing to fix (see
+`docs/agent-workflows/phase-2-notes.md` §d-cove live demo). The
+twenty-person version increases the chance that at least one claim
+in the first draft is wrong, so CoVe can demonstrate *value*
+(correction), not just *mechanics* (depth-2 stack reach).
 
 ## Run it
 
