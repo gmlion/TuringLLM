@@ -4,11 +4,29 @@ import { mkdtempSync, rmSync, mkdirSync, writeFileSync, readFileSync, existsSync
 import { resolve, dirname } from "path";
 import { tmpdir } from "os";
 import { fileURLToPath } from "url";
+import { execSync } from "child_process";
 import { applyPop, applyPush, type CallStack } from "../call-stack.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const INTERP = resolve(__dirname, "../../interpreters/1-iterative-refinement/c-reflexion");
+
+// Module-level helper: creates the root frame directory structure and returns a
+// pre-populated call stack pointing at frames/f000-strategy. `tmp` is passed
+// explicitly so the helper can be used from any describe block.
+function setupRootFrame(
+  tmp: string,
+  initialMemory: string
+): { cs: CallStack; rootMemPath: string } {
+  mkdirSync(resolve(tmp, "frames/f000-strategy/scoped"), { recursive: true });
+  const rootMemPath = resolve(tmp, "frames/f000-strategy/MEMORY.md");
+  writeFileSync(rootMemPath, initialMemory, "utf-8");
+  const cs: CallStack = {
+    nextCounter: 1,
+    stack: [{ returnState: "<root>", frameDir: "frames/f000-strategy" }],
+  };
+  return { cs, rootMemPath };
+}
 
 describe("1c reflexion", () => {
   test("interpreter files exist", () => {
@@ -94,19 +112,9 @@ describe("1c reflexion", () => {
       rmSync(tmp, { recursive: true, force: true });
     });
 
-    function setupRootFrame(initialMemory: string): { cs: CallStack; rootMemPath: string } {
-      mkdirSync(resolve(tmp, "frames/f000-strategy/scoped"), { recursive: true });
-      const rootMemPath = resolve(tmp, "frames/f000-strategy/MEMORY.md");
-      writeFileSync(rootMemPath, initialMemory, "utf-8");
-      const cs: CallStack = {
-        nextCounter: 1,
-        stack: [{ returnState: "<root>", frameDir: "frames/f000-strategy" }],
-      };
-      return { cs, rootMemPath };
-    }
-
     test("push on attempted state -> dynamic gets attempt and criterion args substituted", () => {
       const { cs, rootMemPath } = setupRootFrame(
+        tmp,
         "## State\nattempted\n## Push\ndynamics/evaluate.md\n## Push-Args\nattempt: |\n  first attempt\n  line two\ncriterion: |\n  must do X\n  must do Y"
       );
 
@@ -140,6 +148,7 @@ describe("1c reflexion", () => {
 
     test("child writes ## Return with verdict/feedback -> pop splices ## Verdict and ## Feedback into caller", () => {
       const { cs, rootMemPath } = setupRootFrame(
+        tmp,
         "## State\nattempted\n## Push\ndynamics/evaluate.md\n## Push-Args\nattempt: |\n  original attempt\ncriterion: |\n  must do X"
       );
 
@@ -193,22 +202,12 @@ describe("1c reflexion", () => {
       rmSync(tmp, { recursive: true, force: true });
     });
 
-    function setupRootFrame(initialMemory: string): { cs: CallStack; rootMemPath: string } {
-      mkdirSync(resolve(tmp, "frames/f000-strategy/scoped"), { recursive: true });
-      const rootMemPath = resolve(tmp, "frames/f000-strategy/MEMORY.md");
-      writeFileSync(rootMemPath, initialMemory, "utf-8");
-      const cs: CallStack = {
-        nextCounter: 1,
-        stack: [{ returnState: "<root>", frameDir: "frames/f000-strategy" }],
-      };
-      return { cs, rootMemPath };
-    }
-
     test("evaluate fail -> splice verdict+feedback -> state=failed_attempt -> push reflect -> reflect returns lesson: -> ## Lesson spliced in caller", () => {
       // Start with failed_attempt state (after evaluate returned fail verdict + feedback)
       const memAtFailedAttempt =
         "## State\nfailed_attempt\n## Verdict\nfail\n## Feedback\nmissed edge case X\n";
       const { cs, rootMemPath } = setupRootFrame(
+        tmp,
         memAtFailedAttempt +
         "## Push\ndynamics/reflect.md\n## Push-Args\nattempt: |\n  my attempt text\nverdict: |\n  fail\nfeedback: |\n  missed edge case X"
       );
@@ -317,18 +316,47 @@ describe("1c reflexion", () => {
       assert.match(finalLessons, /always handle case B/, "L2 text should be present");
     });
 
+    // I2: end-to-end verification that the surgical echo >> mechanic works at
+    // the shell level (R23). This exercises an actual bash invocation rather
+    // than TypeScript writeFileSync, confirming the strategy's prescribed shell
+    // command accumulates lines correctly.
+    test("surgical append via real bash echo >> yields >=2 lessons", () => {
+      const lessonsPath = resolve(tmp, "frames/f000-strategy/scoped/lessons.md");
+      mkdirSync(resolve(tmp, "frames/f000-strategy/scoped"), { recursive: true });
+      writeFileSync(lessonsPath, "", "utf-8");
+      // Use { shell: "bash" } so that echo behaves like POSIX bash (not Windows cmd.exe).
+      execSync(`echo "- L1: always handle case A" >> "${lessonsPath}"`, { shell: "bash" });
+      execSync(`echo "- L2: always handle case B" >> "${lessonsPath}"`, { shell: "bash" });
+      const lines = readFileSync(lessonsPath, "utf-8").split("\n").filter(l => l.startsWith("- L"));
+      assert.ok(lines.length >= 2, `expected >=2 lessons, got ${lines.length}`);
+      assert.match(lines[0], /^- L1:/);
+      assert.match(lines[1], /^- L2:/);
+    });
+
     test("reflect push/pop two iterations: lesson spliced each time, state advances to attempting", () => {
       const reflectContent = readFileSync(resolve(INTERP, "dynamics/reflect.md"), "utf-8");
+      const lessonsPath = resolve(tmp, "frames/f000-strategy/scoped/lessons.md");
 
-      function doOneReflectCycle(
+      // Ensure scoped directory and empty lessons.md exist before any iteration.
+      mkdirSync(resolve(tmp, "frames/f000-strategy/scoped"), { recursive: true });
+      writeFileSync(lessonsPath, "", "utf-8");
+
+      // I3: helper that simulates one full reflect cycle AND the subsequent
+      // Accumulate-lesson transition (echo >> via real execSync).
+      //
+      // Returns the caller MEMORY after the pop with ## Lesson still present
+      // (before the Accumulate step strips it), so that the caller can inspect it.
+      // After the accumulate step the returned `memoryAfterAccumulate` has
+      // ## Lesson / ## Verdict / ## Feedback removed and state is ready to
+      // transition to "attempting".
+      function doOneReflectAndAccumulateCycle(
         cs: CallStack,
         memAtFailedAttempt: string,
         attemptText: string,
         verdictText: string,
         feedbackText: string,
         lessonText: string,
-      ): { cs: CallStack; memory: string } {
-        mkdirSync(resolve(tmp, "frames/f000-strategy/scoped"), { recursive: true });
+      ): { cs: CallStack; memoryAfterPop: string; memoryAfterAccumulate: string } {
         const rootMemPath = resolve(tmp, "frames/f000-strategy/MEMORY.md");
         const memWithPush =
           memAtFailedAttempt +
@@ -357,7 +385,42 @@ describe("1c reflexion", () => {
         assert.match(popped.callerMemoryAfter, /## Lesson\n/);
         assert.match(popped.callerMemoryAfter, new RegExp(lessonText));
 
-        return { cs: popped.callStack, memory: popped.callerMemoryAfter };
+        const memoryAfterPop = popped.callerMemoryAfter;
+
+        // --- Simulate Accumulate-lesson transition (I3) ---
+        // 1. Read the spliced ## Lesson from caller MEMORY.
+        const lessonMatch = memoryAfterPop.match(/^## Lesson\n([\s\S]*?)(?=^##|\z)/m);
+        const splicedLesson = lessonMatch ? lessonMatch[1].trim() : lessonText;
+
+        // 2. Count existing lines in lessons.md to determine index N.
+        const existingLessons = readFileSync(lessonsPath, "utf-8");
+        const n = (existingLessons.match(/^- L\d+:/gm) ?? []).length + 1;
+
+        // 3. Append via real bash echo >> (the actual mechanic the strategy prescribes).
+        // { shell: "bash" } ensures POSIX echo semantics (not Windows cmd.exe).
+        execSync(`echo "- L${n}: ${splicedLesson}" >> "${lessonsPath}"`, { shell: "bash" });
+
+        // 4. Remove ## Lesson / ## Verdict / ## Feedback from caller MEMORY and
+        //    transition state to "attempting" (simulating strategy's Accumulate instruction).
+        // Split on ## section boundaries so trailing content is captured correctly
+        // regardless of whether the section is last or has a successor.
+        const memoryAfterAccumulate = memoryAfterPop
+          .split(/^(?=## )/m)
+          .filter((p) => !["## Lesson\n", "## Verdict\n", "## Feedback\n"].some((h) => p.startsWith(h)))
+          .join("")
+          .replace(/^## State\nfailed_attempt_completed/m, "## State\nattempting");
+
+        // 5. Assert spliced sections were removed and state transitioned.
+        assert.doesNotMatch(memoryAfterAccumulate, /^## Lesson\b/m,
+          "## Lesson should be removed after Accumulate step");
+        assert.doesNotMatch(memoryAfterAccumulate, /^## Verdict\b/m,
+          "## Verdict should be removed after Accumulate step");
+        assert.doesNotMatch(memoryAfterAccumulate, /^## Feedback\b/m,
+          "## Feedback should be removed after Accumulate step");
+        assert.match(memoryAfterAccumulate, /^## State\nattempting/m,
+          "state should be 'attempting' after Accumulate step");
+
+        return { cs: popped.callStack, memoryAfterPop, memoryAfterAccumulate };
       }
 
       const cs0: CallStack = {
@@ -365,23 +428,36 @@ describe("1c reflexion", () => {
         stack: [{ returnState: "<root>", frameDir: "frames/f000-strategy" }],
       };
 
-      // First iteration
-      const r1 = doOneReflectCycle(
+      // First iteration: reflect + accumulate
+      const r1 = doOneReflectAndAccumulateCycle(
         cs0,
         "## State\nfailed_attempt\n## Verdict\nfail\n## Feedback\nmissed A\n",
         "attempt v1", "fail", "missed A", "always handle A"
       );
 
-      // Second iteration (fresh push counter)
-      const r2 = doOneReflectCycle(
+      // Second iteration: reflect + accumulate (fresh push counter)
+      const r2 = doOneReflectAndAccumulateCycle(
         r1.cs,
         "## State\nfailed_attempt\n## Verdict\nfail\n## Feedback\nmissed B\n",
         "attempt v2", "fail", "missed B", "always handle B"
       );
 
-      // After two iterations, both ## Lesson splices occurred.
-      assert.match(r1.memory, /always handle A/, "first lesson should appear after first reflect pop");
-      assert.match(r2.memory, /always handle B/, "second lesson should appear after second reflect pop");
+      // After two reflect cycles + accumulate steps, lessons.md should have 2 entries.
+      const finalLessons = readFileSync(lessonsPath, "utf-8");
+      const lessonLines = finalLessons.split("\n").filter(l => l.startsWith("- L"));
+      assert.ok(lessonLines.length >= 2, `expected >=2 lessons after two cycles, got ${lessonLines.length}`);
+      assert.match(lessonLines[0], /^- L1:/, "first lesson should be L1");
+      assert.match(lessonLines[1], /^- L2:/, "second lesson should be L2");
+
+      // Both lessons' content should be present.
+      assert.match(r1.memoryAfterPop, /always handle A/, "first lesson should appear after first reflect pop");
+      assert.match(r2.memoryAfterPop, /always handle B/, "second lesson should appear after second reflect pop");
+
+      // Both memories after accumulate should be in state=attempting with lesson sections removed.
+      assert.match(r1.memoryAfterAccumulate, /^## State\nattempting/m,
+        "first cycle memory should transition to attempting after accumulate");
+      assert.match(r2.memoryAfterAccumulate, /^## State\nattempting/m,
+        "second cycle memory should transition to attempting after accumulate");
     });
   });
 });
