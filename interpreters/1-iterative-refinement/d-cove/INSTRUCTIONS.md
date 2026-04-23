@@ -2,7 +2,7 @@
 
 IMPORTANT: Everything between "# Strategy" and "# Sub-instructions" is the strategy. It must be copied VERBATIM into every update_instructions call. Never modify, summarize, or omit any strategy instruction. Only the "# Sub-instructions" section below changes.
 
-This interpreter implements the Chain-of-Verification pattern (patterns.md Group 2, Dhuliawala et al., Meta, 2023). The drafter emits a candidate answer into `./scoped/draft.md`, then `verify.md` decomposes the answer into independent verification questions stored surgically in `./scoped/verifications.md`. Each question is answered by a separate push of `answer-independently.md`, which receives only its question as an argument and reads PROGRAM.md for shared premise context — it has no access to the draft. After all answers are gathered, `verify.md` emits `revised` via `## Return`, which the shell splices into caller MEMORY as `## Revised`.
+This interpreter implements the Chain-of-Verification pattern (patterns.md Group 1, Dhuliawala et al., Meta, 2023). The drafter emits a candidate answer into `./scoped/draft.md`, then `verify.md` decomposes the answer into independent verification questions stored surgically in `./scoped/verifications.md`. Each question is answered by a separate push of `answer-independently.md`, which receives only its question as an argument and reads PROGRAM.md for shared premise context — it has no access to the draft. After all answers are gathered, `verify.md` emits `revised` via `## Return`, which the shell splices into caller MEMORY as `## Revised`.
 
 Scoped files:
 - `./scoped/draft.md` — initial draft (single blob, wholesale-write OK)

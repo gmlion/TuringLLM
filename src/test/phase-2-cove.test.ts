@@ -4,12 +4,29 @@ import { mkdtempSync, rmSync, mkdirSync, writeFileSync, readFileSync, existsSync
 import { resolve, dirname } from "path";
 import { tmpdir } from "os";
 import { fileURLToPath } from "url";
+import { execSync } from "child_process";
 import { applyPop, applyPush, type CallStack } from "../call-stack.js";
-import { parseState } from "../memory.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const INTERP = resolve(__dirname, "../../interpreters/1-iterative-refinement/d-cove");
+
+// Module-level helper: creates the root frame directory structure and returns a
+// pre-populated call stack pointing at frames/f000-strategy. `tmp` is passed
+// explicitly so the helper can be used from any describe block.
+function setupRootFrame(
+  tmp: string,
+  initialMemory: string,
+): { cs: CallStack; rootMemPath: string } {
+  mkdirSync(resolve(tmp, "frames/f000-strategy/scoped"), { recursive: true });
+  const rootMemPath = resolve(tmp, "frames/f000-strategy/MEMORY.md");
+  writeFileSync(rootMemPath, initialMemory, "utf-8");
+  const cs: CallStack = {
+    nextCounter: 1,
+    stack: [{ returnState: "<root>", frameDir: "frames/f000-strategy" }],
+  };
+  return { cs, rootMemPath };
+}
 
 describe("d-cove", () => {
   test("interpreter files exist", () => {
@@ -77,6 +94,7 @@ describe("d-cove", () => {
       /WHOLESALE REWRITES.*FORBIDDEN|wholesale rewrites.*forbidden/i,
       "verify.md header must explicitly forbid wholesale rewrites of verifications.md",
     );
+    assert.doesNotMatch(dyn, /cat > \.\/scoped\/verifications\.md/, "verify.md must not use cat > on verifications.md (surgical sed only)");
   });
 
   test("verify.md returns `revised:` via ## Return (not ## Revised directly)", () => {
@@ -116,19 +134,8 @@ describe("d-cove", () => {
       rmSync(tmp, { recursive: true, force: true });
     });
 
-    function setupRootFrame(initialMemory: string): { cs: CallStack; rootMemPath: string } {
-      mkdirSync(resolve(tmp, "frames/f000-strategy/scoped"), { recursive: true });
-      const rootMemPath = resolve(tmp, "frames/f000-strategy/MEMORY.md");
-      writeFileSync(rootMemPath, initialMemory, "utf-8");
-      const cs: CallStack = {
-        nextCounter: 1,
-        stack: [{ returnState: "<root>", frameDir: "frames/f000-strategy" }],
-      };
-      return { cs, rootMemPath };
-    }
-
     test("strategy push of verify.md -> draft arg substituted, depth=2", () => {
-      const { cs, rootMemPath } = setupRootFrame(
+      const { cs, rootMemPath } = setupRootFrame(tmp,
         "## State\ndrafted\n## Push\ndynamics/verify.md\n## Push-Args\ndraft: |\n  A draft with claims"
       );
       writeFileSync(resolve(tmp, "frames/f000-strategy/scoped/draft.md"), "A draft with claims\n", "utf-8");
@@ -169,7 +176,7 @@ describe("d-cove", () => {
 
     test("R27 depth-3 invariant: verify pushes answer-independently.md -> stack.length === 3", () => {
       // Step 1: strategy (depth 1) pushes verify.md (depth 2)
-      const { cs: cs0, rootMemPath } = setupRootFrame(
+      const { cs: cs0, rootMemPath } = setupRootFrame(tmp,
         "## State\ndrafted\n## Push\ndynamics/verify.md\n## Push-Args\ndraft: |\n  claim text"
       );
       const rootMem = readFileSync(rootMemPath, "utf-8");
@@ -214,7 +221,7 @@ describe("d-cove", () => {
 
     test("answer-independently pops back to verify with asking_completed and ## Answer spliced", () => {
       // Build stack: strategy (0) -> verify (1) -> answer-indep (2)
-      const { cs: cs0, rootMemPath } = setupRootFrame(
+      const { cs: cs0, rootMemPath } = setupRootFrame(tmp,
         "## State\ndrafted\n## Push\ndynamics/verify.md\n## Push-Args\ndraft: |\n  claim"
       );
       const rootMem = readFileSync(rootMemPath, "utf-8");
@@ -264,7 +271,7 @@ describe("d-cove", () => {
     });
 
     test("verify pops back to strategy with drafted_completed and ## Revised spliced", () => {
-      const { cs: cs0, rootMemPath } = setupRootFrame(
+      const { cs: cs0, rootMemPath } = setupRootFrame(tmp,
         "## State\ndrafted\n## Push\ndynamics/verify.md\n## Push-Args\ndraft: |\n  my draft"
       );
       const rootMem = readFileSync(rootMemPath, "utf-8");
@@ -299,6 +306,30 @@ describe("d-cove", () => {
       assert.match(popped.callerMemoryAfter, /^## State\ndrafted_completed/m);
       assert.match(popped.callerMemoryAfter, /## Revised\n/);
       assert.match(popped.callerMemoryAfter, /the corrected answer/);
+    });
+
+    test("surgical sed -i on verifications.md correctly updates one bullet", () => {
+      // Mimic verify.md's sed-i mechanic: replace the first 'pending' bullet's status with 'answered: <text>'.
+      const verifsPath = resolve(tmp, "verifications.md");
+      writeFileSync(
+        verifsPath,
+        "- V1: q1; pending\n- V2: q2; pending\n- V3: q3; pending\n",
+        "utf-8",
+      );
+
+      // Replace the first pending bullet using a sed pattern that matches the literal "; pending" suffix.
+      // Use the "0,/regex/" address range so only the FIRST match is replaced.
+      execSync(
+        `sed -i '0,/; pending$/{s/; pending$/; answered: yes, q1 is true/}' "${verifsPath}"`,
+        { shell: "bash" },
+      );
+
+      const after = readFileSync(verifsPath, "utf-8");
+      const lines = after.split("\n").filter(l => l.startsWith("- V"));
+      assert.equal(lines.length, 3, "expected 3 bullet lines");
+      assert.match(lines[0], /^- V1: q1; answered: yes, q1 is true$/, "V1 should be updated");
+      assert.match(lines[1], /^- V2: q2; pending$/, "V2 should still be pending");
+      assert.match(lines[2], /^- V3: q3; pending$/, "V3 should still be pending");
     });
   });
 });
