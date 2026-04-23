@@ -3,7 +3,7 @@ import { strict as assert } from "node:assert";
 import { mkdtempSync, rmSync, writeFileSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { tmpdir } from "node:os";
-import { loadCallStackLegacy, saveCallStackLegacy, applyPopLegacy, applyPush, type StackEntryLegacy, type CallStack } from "../call-stack.js";
+import { loadCallStack, saveCallStack, applyPop, applyPush, type StackEntry, type CallStack } from "../call-stack.js";
 
 let dir: string;
 let path: string;
@@ -18,95 +18,182 @@ afterEach(() => {
 });
 
 describe("loadCallStack", () => {
-  test("returns [] when file does not exist", () => {
-    assert.deepEqual(loadCallStackLegacy(path), []);
+  test("returns fresh stack when file does not exist", () => {
+    const cs = loadCallStack(path);
+    assert.equal(cs.stack.length, 1);
+    assert.equal(cs.stack[0].returnState, "<root>");
+    assert.equal(cs.nextCounter, 1);
   });
 
-  test("returns [] when file is empty", () => {
+  test("returns fresh stack when file is empty", () => {
     writeFileSync(path, "", "utf-8");
-    assert.deepEqual(loadCallStackLegacy(path), []);
+    const cs = loadCallStack(path);
+    assert.equal(cs.stack.length, 1);
+    assert.equal(cs.stack[0].returnState, "<root>");
   });
 
-  test("returns [] when file has malformed JSON", () => {
+  test("returns fresh stack when file has malformed JSON", () => {
     writeFileSync(path, "{not json", "utf-8");
-    assert.deepEqual(loadCallStackLegacy(path), []);
+    const cs = loadCallStack(path);
+    assert.equal(cs.stack.length, 1);
   });
 
-  test("returns [] when JSON is not an array", () => {
+  test("returns fresh stack when JSON is not a CallStack shape", () => {
     writeFileSync(path, '{"x":1}', "utf-8");
-    assert.deepEqual(loadCallStackLegacy(path), []);
+    const cs = loadCallStack(path);
+    assert.equal(cs.stack.length, 1);
   });
 
-  test("loads a previously-saved stack", () => {
-    const stack: StackEntryLegacy[] = [
-      { returnState: "planning", instructions: "# Strategy\n..." },
-      { returnState: "needs_x", instructions: "# Dynamic\n..." },
-    ];
-    writeFileSync(path, JSON.stringify(stack), "utf-8");
-    assert.deepEqual(loadCallStackLegacy(path), stack);
+  test("loads a previously-saved CallStack", () => {
+    const original: CallStack = {
+      nextCounter: 3,
+      stack: [
+        { returnState: "<root>", frameDir: "frames/f000-strategy" },
+        { returnState: "planning", frameDir: "frames/f001-consult" },
+        { returnState: "needs_x", frameDir: "frames/f002-dynamic" },
+      ],
+    };
+    writeFileSync(path, JSON.stringify(original), "utf-8");
+    const loaded = loadCallStack(path);
+    assert.deepEqual(loaded, original);
   });
 });
 
 describe("saveCallStack", () => {
   test("writes JSON round-trippable via loadCallStack", () => {
-    const stack: StackEntryLegacy[] = [
-      { returnState: "a", instructions: "one" },
-      { returnState: "b", instructions: "two" },
-    ];
-    saveCallStackLegacy(path, stack);
-    assert.deepEqual(loadCallStackLegacy(path), stack);
+    const cs: CallStack = {
+      nextCounter: 2,
+      stack: [
+        { returnState: "<root>", frameDir: "frames/f000-strategy" },
+        { returnState: "a", frameDir: "frames/f001-dyn" },
+      ],
+    };
+    saveCallStack(path, cs);
+    assert.deepEqual(loadCallStack(path), cs);
   });
 
-  test("writes empty array as []", () => {
-    saveCallStackLegacy(path, []);
-    assert.equal(readFileSync(path, "utf-8").trim(), "[]");
+  test("writes minimal stack correctly", () => {
+    const cs: CallStack = {
+      nextCounter: 1,
+      stack: [{ returnState: "<root>", frameDir: "frames/f000-strategy" }],
+    };
+    saveCallStack(path, cs);
+    const raw = JSON.parse(readFileSync(path, "utf-8"));
+    assert.equal(raw.nextCounter, 1);
+    assert.equal(raw.stack.length, 1);
   });
 });
 
 describe("applyPop", () => {
   test("no-op when state is not done", () => {
-    const stack: StackEntryLegacy[] = [{ returnState: "x", instructions: "old" }];
-    const r = applyPopLegacy(stack, "## State\nrunning", "current");
-    assert.deepEqual(r.stack, stack);
-    assert.equal(r.memory, "## State\nrunning");
-    assert.equal(r.instructions, "current");
+    const cs: CallStack = {
+      nextCounter: 2,
+      stack: [
+        { returnState: "<root>", frameDir: "frames/f000-strategy" },
+        { returnState: "x", frameDir: "frames/f001-dyn" },
+      ],
+    };
+    const r = applyPop(cs, "## State\nrunning", () => "## State\nx");
     assert.deepEqual(r.events, []);
+    assert.equal(r.callStack.stack.length, 2);
+    assert.equal(r.callerMemoryAfter, "## State\nrunning");
   });
 
-  test("no-op when state is done but stack is empty", () => {
-    const r = applyPopLegacy([], "## State\ndone", "current");
-    assert.deepEqual(r.stack, []);
-    assert.equal(r.memory, "## State\ndone");
-    assert.equal(r.instructions, "current");
+  test("no-op when state is done but stack.length === 1 (root only)", () => {
+    const cs: CallStack = {
+      nextCounter: 1,
+      stack: [{ returnState: "<root>", frameDir: "frames/f000-strategy" }],
+    };
+    const r = applyPop(cs, "## State\ndone", () => "should not be called");
     assert.deepEqual(r.events, []);
+    assert.equal(r.callStack.stack.length, 1);
+    // callerMemoryAfter is set to childMemory when no pops occur
+    assert.equal(r.callerMemoryAfter, "## State\ndone");
   });
 
-  test("single pop restores caller instructions and sets state to {returnState}_completed", () => {
-    const stack: StackEntryLegacy[] = [{ returnState: "planning", instructions: "# Strategy" }];
-    const r = applyPopLegacy(stack, "## State\ndone\n## Last Action\nx", "# Dynamic");
-    assert.deepEqual(r.stack, []);
-    assert.match(r.memory, /^## State\nplanning_completed/);
-    assert.match(r.memory, /## Last Action\nx/);
-    assert.equal(r.instructions, "# Strategy");
-    assert.deepEqual(r.events, [{ returnState: "planning", depthAfter: 0 }]);
+  test("single pop restores caller memory and sets state to {returnState}_completed", () => {
+    const cs: CallStack = {
+      nextCounter: 2,
+      stack: [
+        { returnState: "<root>", frameDir: "frames/f000-strategy" },
+        { returnState: "planning", frameDir: "frames/f001-dyn" },
+      ],
+    };
+    const callerMemory = "## State\nplanning\n## Last Action\nx";
+    const r = applyPop(cs, "## State\ndone", () => callerMemory);
+    assert.equal(r.callStack.stack.length, 1);
+    assert.match(r.callerMemoryAfter, /^## State\nplanning_completed/);
+    assert.match(r.callerMemoryAfter, /## Last Action\nx/);
+    assert.equal(r.events.length, 1);
+    assert.equal(r.events[0].returnState, "planning");
+    assert.equal(r.events[0].depthAfter, 1);
+    assert.equal(r.events[0].frameDir, "frames/f001-dyn");
+    assert.equal(r.events[0].missingReturn, true);
   });
 
-  test("does not mutate input stack", () => {
-    const stack: StackEntryLegacy[] = [{ returnState: "x", instructions: "a" }];
-    applyPopLegacy(stack, "## State\ndone", "b");
-    assert.equal(stack.length, 1);
+  test("does not mutate input callStack", () => {
+    const cs: CallStack = {
+      nextCounter: 2,
+      stack: [
+        { returnState: "<root>", frameDir: "frames/f000-strategy" },
+        { returnState: "x", frameDir: "frames/f001-dyn" },
+      ],
+    };
+    const original = JSON.stringify(cs);
+    applyPop(cs, "## State\ndone", () => "## State\nx");
+    assert.equal(JSON.stringify(cs), original);
   });
 
-  test("single pop only — state becomes {returnState}_completed, not 'done', so loop exits", () => {
-    const stack: StackEntryLegacy[] = [
-      { returnState: "outer", instructions: "# Outer" },
-      { returnState: "inner", instructions: "# Inner" },
-    ];
-    const r = applyPopLegacy(stack, "## State\ndone", "# Current");
-    assert.equal(r.stack.length, 1);
-    assert.equal(r.instructions, "# Inner");
-    assert.match(r.memory, /^## State\ninner_completed/);
-    assert.deepEqual(r.events, [{ returnState: "inner", depthAfter: 1 }]);
+  test("single pop only — state becomes {returnState}_completed, not done, so loop exits", () => {
+    const cs: CallStack = {
+      nextCounter: 3,
+      stack: [
+        { returnState: "<root>", frameDir: "frames/f000-strategy" },
+        { returnState: "outer", frameDir: "frames/f001-outer" },
+        { returnState: "inner", frameDir: "frames/f002-inner" },
+      ],
+    };
+    const innerCallerMemory = "## State\nouter";
+    const r = applyPop(cs, "## State\ndone", (fd) => {
+      if (fd === "frames/f001-outer") return innerCallerMemory;
+      throw new Error(`unexpected: ${fd}`);
+    });
+    assert.equal(r.callStack.stack.length, 2);
+    assert.match(r.callerMemoryAfter, /^## State\ninner_completed/);
+    assert.equal(r.events.length, 1);
+    assert.equal(r.events[0].returnState, "inner");
+    assert.equal(r.events[0].depthAfter, 2);
+  });
+
+  test("## Return entries are spliced into caller memory", () => {
+    const cs: CallStack = {
+      nextCounter: 2,
+      stack: [
+        { returnState: "<root>", frameDir: "frames/f000-strategy" },
+        { returnState: "waiting", frameDir: "frames/f001-dyn" },
+      ],
+    };
+    const childMemory = "## State\ndone\n## Return\nresult: success\nscore: 42";
+    const r = applyPop(cs, childMemory, () => "## State\nwaiting");
+    assert.match(r.callerMemoryAfter, /## Result\nsuccess/);
+    assert.match(r.callerMemoryAfter, /## Score\n42/);
+    assert.deepEqual(r.events[0].splicedKeys, ["result", "score"]);
+    assert.equal(r.events[0].missingReturn, false);
+  });
+
+  test("malformed ## Return lines are logged but valid entries still splice", () => {
+    const cs: CallStack = {
+      nextCounter: 2,
+      stack: [
+        { returnState: "<root>", frameDir: "frames/f000-strategy" },
+        { returnState: "foo", frameDir: "frames/f001-x" },
+      ],
+    };
+    const childMemory = "## State\ndone\n## Return\nok: yes\nbroken-no-colon";
+    const r = applyPop(cs, childMemory, () => "## State\nfoo\n");
+    assert.match(r.callerMemoryAfter, /## Ok\nyes/);
+    assert.deepEqual(r.events[0].splicedKeys, ["ok"]);
+    assert.deepEqual(r.events[0].malformedLines, ["broken-no-colon"]);
   });
 });
 

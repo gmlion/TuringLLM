@@ -3,7 +3,7 @@ import { strict as assert } from "node:assert";
 import { readFileSync, existsSync } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
-import { applyPopLegacy as applyPop, applyPush, type StackEntryLegacy as StackEntry, type CallStack } from "../call-stack.js";
+import { applyPop, applyPush, type CallStack } from "../call-stack.js";
 import { parseState, setState } from "../memory.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -17,59 +17,64 @@ function readTarget(p: string): string | null {
   return content || null;
 }
 
+/** Per-test frame store: maps frameDir → { instructions } */
+type FrameStore = Map<string, { instructions: string }>;
+
+/**
+ * Simulate the pre-LLM stack block.
+ *
+ * Uses the new Phase-2b applyPop with a legacy-compatible readFrame:
+ * since interpreters don't use ## Return yet, we pass the active child
+ * memory as the "caller memory" so all accumulated sections survive the
+ * pop (same observable result as the legacy applyPopLegacy).
+ */
 function runStackBlock(
-  stack: StackEntry[],
+  callStack: CallStack,
+  frameStore: FrameStore,
   memory: string,
   instructions: string,
-): { stack: StackEntry[]; memory: string; instructions: string; halt: boolean } {
-  const popped = applyPop(stack, memory, instructions);
-  let curStack = popped.stack;
-  let curMemory = popped.memory;
-  let curInstructions = popped.instructions;
-  if (parseState(curMemory) === "done" && curStack.length === 0) {
-    return { stack: curStack, memory: curMemory, instructions: curInstructions, halt: true };
+): { callStack: CallStack; frameStore: FrameStore; memory: string; instructions: string; halt: boolean } {
+  const popped = applyPop(callStack, memory, (_fd, _file) => memory);
+  let curCallStack = popped.callStack;
+  let curMemory = popped.callerMemoryAfter;
+  let curInstructions = instructions;
+
+  if (popped.events.length > 0) {
+    const callerFrameDir = popped.callerFrameDir;
+    curInstructions = frameStore.get(callerFrameDir)?.instructions ?? instructions;
+    frameStore.set(callerFrameDir, { instructions: curInstructions });
+    for (const ev of popped.events) {
+      frameStore.delete(ev.frameDir);
+    }
   }
-  const cs: CallStack = {
-    nextCounter: curStack.length + 1,
-    stack: [
-      { returnState: "<root>", frameDir: "frames/f000-strategy" },
-      ...curStack.map((e, i) => ({ returnState: e.returnState, frameDir: `frames/f${String(i + 1).padStart(3, "0")}-dyn` })),
-    ],
-  };
-  const pushed = applyPush(cs, curMemory, readTarget);
+
+  if (parseState(curMemory) === "done" && curCallStack.stack.length === 1) {
+    return { callStack: curCallStack, frameStore, memory: curMemory, instructions: curInstructions, halt: true };
+  }
+
+  const pushed = applyPush(curCallStack, curMemory, readTarget);
   if (pushed.ok) {
-    const newEntry: StackEntry = { returnState: pushed.callStack.stack[pushed.callStack.stack.length - 1].returnState, instructions: curInstructions };
-    curStack = [...curStack, newEntry];
+    const callerFrameDir = curCallStack.stack[curCallStack.stack.length - 1].frameDir;
+    frameStore.set(callerFrameDir, { instructions: curInstructions });
+    frameStore.set(pushed.frameDir, { instructions: pushed.childInstructions });
+    curCallStack = pushed.callStack;
     curMemory = pushed.childMemory;
     curInstructions = pushed.childInstructions;
   } else if (pushed.reason === "missing-target") {
     curMemory = pushed.memory;
   }
-  return { stack: curStack, memory: curMemory, instructions: curInstructions, halt: false };
+
+  return { callStack: curCallStack, frameStore, memory: curMemory, instructions: curInstructions, halt: false };
 }
 
-function simulateEvaluate(
-  strategy: string,
-  lessons: string,
-  attempt: string,
-  verdict: "pass" | "fail",
-  feedback: string,
-): { memory: string; stack: StackEntry[]; instructions: string } {
-  const initial =
-    `## State\nattempted\n## Criterion\nc1\n## Lessons\n${lessons}\n## Attempt\n${attempt}\n## Push\ndynamics/evaluate.md\n## Push-Args\nattempt: |\n  ${attempt}\ncriterion: |\n  c1`;
-  let r = runStackBlock([], initial, strategy);
-  assert.equal(r.stack.length, 1, "evaluate push should save caller frame");
-  assert.match(r.instructions, /Instruction: Judge/);
-  assert.match(r.instructions, /Attempt:/);
-  assert.doesNotMatch(r.instructions, /\{\{attempt\}\}|\{\{criterion\}\}/);
-  const memAfter = setState(
-    r.memory + `\n## Verdict\n${verdict}\n## Feedback\n${feedback}`,
-    "done",
-  );
-  r = runStackBlock(r.stack, memAfter, r.instructions);
-  assert.equal(r.stack.length, 0);
-  assert.match(r.memory, /^## State\nattempted_completed/m);
-  return r;
+function makeSession(rootInstructions: string): { callStack: CallStack; frameStore: FrameStore } {
+  const callStack: CallStack = {
+    nextCounter: 1,
+    stack: [{ returnState: "<root>", frameDir: "frames/f000-strategy" }],
+  };
+  const frameStore: FrameStore = new Map();
+  frameStore.set("frames/f000-strategy", { instructions: rootInstructions });
+  return { callStack, frameStore };
 }
 
 /** Extract the content of a named MEMORY section (without the header line). */
@@ -79,11 +84,38 @@ function extractSection(memory: string, name: string): string {
   return m ? m[1].replace(/\n+$/, "") : "";
 }
 
+function simulateEvaluate(
+  strategy: string,
+  lessons: string,
+  attempt: string,
+  verdict: "pass" | "fail",
+  feedback: string,
+): { callStack: CallStack; frameStore: FrameStore; memory: string; instructions: string } {
+  const initial =
+    `## State\nattempted\n## Criterion\nc1\n## Lessons\n${lessons}\n## Attempt\n${attempt}\n## Push\ndynamics/evaluate.md\n## Push-Args\nattempt: |\n  ${attempt}\ncriterion: |\n  c1`;
+  const { callStack, frameStore } = makeSession(strategy);
+  let r = runStackBlock(callStack, frameStore, initial, strategy);
+  assert.equal(r.callStack.stack.length, 2, "evaluate push should save caller frame");
+  assert.match(r.instructions, /Instruction: Judge/);
+  assert.match(r.instructions, /Attempt:/);
+  assert.doesNotMatch(r.instructions, /\{\{attempt\}\}|\{\{criterion\}\}/);
+  const memAfter = setState(
+    r.memory + `\n## Verdict\n${verdict}\n## Feedback\n${feedback}`,
+    "done",
+  );
+  r = runStackBlock(r.callStack, r.frameStore, memAfter, r.instructions);
+  assert.equal(r.callStack.stack.length, 1);
+  assert.match(r.memory, /^## State\nattempted_completed/m);
+  return { callStack: r.callStack, frameStore: r.frameStore, memory: r.memory, instructions: r.instructions };
+}
+
 function simulateReflect(
   strategy: string,
+  callStack: CallStack,
+  frameStore: FrameStore,
   memoryAtFailedAttempt: string,
   lessonText: string,
-): { memory: string; stack: StackEntry[]; instructions: string } {
+): { callStack: CallStack; frameStore: FrameStore; memory: string; instructions: string } {
   const attempt = extractSection(memoryAtFailedAttempt, "Attempt");
   const verdict = extractSection(memoryAtFailedAttempt, "Verdict");
   const feedback = extractSection(memoryAtFailedAttempt, "Feedback") || "(no feedback)";
@@ -93,18 +125,18 @@ function simulateReflect(
   const withPush =
     memoryAtFailedAttempt +
     `\n## Push\ndynamics/reflect.md\n## Push-Args\nattempt: |\n${attemptLines}\nverdict: |\n${verdictLines}\nfeedback: |\n${feedbackLines}`;
-  let r = runStackBlock([], withPush, strategy);
-  assert.equal(r.stack.length, 1, "reflect push should save caller frame");
+  let r = runStackBlock(callStack, frameStore, withPush, strategy);
+  assert.equal(r.callStack.stack.length, 2, "reflect push should save caller frame");
   assert.match(r.instructions, /Instruction: Distil lesson/);
   assert.match(r.instructions, /Attempt:/);
   assert.match(r.instructions, /Verdict:/);
   assert.match(r.instructions, /Feedback:/);
   assert.doesNotMatch(r.instructions, /\{\{attempt\}\}|\{\{verdict\}\}|\{\{feedback\}\}/);
   const memAfter = setState(r.memory + `\n## Lesson\n${lessonText}`, "done");
-  r = runStackBlock(r.stack, memAfter, r.instructions);
-  assert.equal(r.stack.length, 0);
+  r = runStackBlock(r.callStack, r.frameStore, memAfter, r.instructions);
+  assert.equal(r.callStack.stack.length, 1);
   assert.match(r.memory, /^## State\nfailed_attempt_completed/m);
-  return r;
+  return { callStack: r.callStack, frameStore: r.frameStore, memory: r.memory, instructions: r.instructions };
 }
 
 describe("1c reflexion", () => {
@@ -149,21 +181,21 @@ describe("1c reflexion", () => {
   test("full loop: two failures accumulate two lessons, third attempt passes (R10, R11)", () => {
     const strategy = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
 
-    let r: { memory: string; stack: StackEntry[]; instructions: string; halt?: boolean } = simulateEvaluate(strategy, "", "v1", "fail", "missed edge case A");
-    let mem = setState(r.memory, "failed_attempt");
-    r = simulateReflect(strategy, mem, "always handle case A");
+    let result = simulateEvaluate(strategy, "", "v1", "fail", "missed edge case A");
+    let mem = setState(result.memory, "failed_attempt");
+    result = simulateReflect(strategy, result.callStack, result.frameStore, mem, "always handle case A");
 
     let lessons = "- L1: always handle case A";
 
-    r = simulateEvaluate(strategy, lessons, "v2", "fail", "missed edge case B");
-    mem = setState(r.memory, "failed_attempt");
-    r = simulateReflect(strategy, mem, "always handle case B");
+    result = simulateEvaluate(strategy, lessons, "v2", "fail", "missed edge case B");
+    mem = setState(result.memory, "failed_attempt");
+    result = simulateReflect(strategy, result.callStack, result.frameStore, mem, "always handle case B");
     lessons = "- L1: always handle case A\n- L2: always handle case B";
 
-    r = simulateEvaluate(strategy, lessons, "v3", "pass", "all good");
-    const memDone = setState(r.memory, "done");
-    r = runStackBlock(r.stack, memDone, r.instructions);
-    assert.equal(r.halt, true);
+    result = simulateEvaluate(strategy, lessons, "v3", "pass", "all good");
+    const memDone = setState(result.memory, "done");
+    const finalR = runStackBlock(result.callStack, result.frameStore, memDone, result.instructions);
+    assert.equal(finalR.halt, true);
 
     const lessonLines = lessons.split("\n").filter((l) => l.startsWith("- L"));
     assert.ok(lessonLines.length >= 2, `expected ≥2 lessons accumulated, got ${lessonLines.length}`);

@@ -3,7 +3,7 @@ import { strict as assert } from "node:assert";
 import { readFileSync, existsSync } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
-import { applyPopLegacy as applyPop, applyPush, type StackEntryLegacy as StackEntry, type CallStack } from "../call-stack.js";
+import { applyPop, applyPush, type CallStack } from "../call-stack.js";
 import { parseState, setState } from "../memory.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -17,37 +17,72 @@ function readTarget(p: string): string | null {
   return content || null;
 }
 
+/** Per-test frame store: maps frameDir → { instructions } */
+type FrameStore = Map<string, { instructions: string }>;
+
+/**
+ * Simulate the pre-LLM stack block.
+ *
+ * Uses the new Phase-2b applyPop with a legacy-compatible readFrame:
+ * since interpreters don't use ## Return yet, we pass the active child
+ * memory as the "caller memory" so all accumulated sections survive the
+ * pop (same observable result as the legacy applyPopLegacy).
+ */
 function runStackBlock(
-  stack: StackEntry[],
+  callStack: CallStack,
+  frameStore: FrameStore,
   memory: string,
   instructions: string,
-): { stack: StackEntry[]; memory: string; instructions: string; halt: boolean } {
-  const popped = applyPop(stack, memory, instructions);
-  let curStack = popped.stack;
-  let curMemory = popped.memory;
-  let curInstructions = popped.instructions;
-  if (parseState(curMemory) === "done" && curStack.length === 0) {
-    return { stack: curStack, memory: curMemory, instructions: curInstructions, halt: true };
+): { callStack: CallStack; frameStore: FrameStore; memory: string; instructions: string; halt: boolean } {
+  // Pop: readFrame returns the active child memory (legacy-compatible behavior).
+  const popped = applyPop(callStack, memory, (_fd, _file) => memory);
+  let curCallStack = popped.callStack;
+  let curMemory = popped.callerMemoryAfter;
+  let curInstructions = instructions;
+
+  if (popped.events.length > 0) {
+    // Restore instructions for the caller frame.
+    const callerFrameDir = popped.callerFrameDir;
+    curInstructions = frameStore.get(callerFrameDir)?.instructions ?? instructions;
+    // Update caller frame with popped memory.
+    frameStore.set(callerFrameDir, { instructions: curInstructions });
+    // Remove popped frame.
+    for (const ev of popped.events) {
+      frameStore.delete(ev.frameDir);
+    }
   }
-  // Wrap legacy stack in CallStack for new applyPush signature.
-  const cs: CallStack = {
-    nextCounter: curStack.length + 1,
-    stack: [
-      { returnState: "<root>", frameDir: "frames/f000-strategy" },
-      ...curStack.map((e, i) => ({ returnState: e.returnState, frameDir: `frames/f${String(i + 1).padStart(3, "0")}-dyn` })),
-    ],
-  };
-  const pushed = applyPush(cs, curMemory, readTarget);
+
+  if (parseState(curMemory) === "done" && curCallStack.stack.length === 1) {
+    return { callStack: curCallStack, frameStore, memory: curMemory, instructions: curInstructions, halt: true };
+  }
+
+  // Push.
+  const pushed = applyPush(curCallStack, curMemory, readTarget);
   if (pushed.ok) {
-    // Build legacy stack for pop compatibility: new entry carries caller instructions.
-    const newEntry: StackEntry = { returnState: pushed.callStack.stack[pushed.callStack.stack.length - 1].returnState, instructions: curInstructions };
-    curStack = [...curStack, newEntry];
+    // Save caller frame instructions in the store.
+    const callerFrameDir = curCallStack.stack[curCallStack.stack.length - 1].frameDir;
+    frameStore.set(callerFrameDir, { instructions: curInstructions });
+    // Set up child frame.
+    frameStore.set(pushed.frameDir, { instructions: pushed.childInstructions });
+    curCallStack = pushed.callStack;
     curMemory = pushed.childMemory;
     curInstructions = pushed.childInstructions;
   } else if (pushed.reason === "missing-target") {
     curMemory = pushed.memory;
   }
-  return { stack: curStack, memory: curMemory, instructions: curInstructions, halt: false };
+
+  return { callStack: curCallStack, frameStore, memory: curMemory, instructions: curInstructions, halt: false };
+}
+
+/** Build an initial session for a test with root instructions. */
+function makeSession(rootInstructions: string): { callStack: CallStack; frameStore: FrameStore } {
+  const callStack: CallStack = {
+    nextCounter: 1,
+    stack: [{ returnState: "<root>", frameDir: "frames/f000-strategy" }],
+  };
+  const frameStore: FrameStore = new Map();
+  frameStore.set("frames/f000-strategy", { instructions: rootInstructions });
+  return { callStack, frameStore };
 }
 
 describe("1a self-refine", () => {
@@ -80,9 +115,10 @@ describe("1a self-refine", () => {
     const strategy = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
     const memory = '## State\ndrafted\n## Draft\nfirst attempt\n## Push\ndynamics/self-critique.md\n## Push-Args\ndraft: |\n  first attempt';
 
-    let r = runStackBlock([], memory, strategy);
+    const { callStack: cs0, frameStore: fs } = makeSession(strategy);
+    let r = runStackBlock(cs0, fs, memory, strategy);
     assert.equal(r.halt, false);
-    assert.equal(r.stack.length, 1, "push should save one caller frame");
+    assert.equal(r.callStack.stack.length, 2, "push should save one caller frame");
     assert.match(r.memory, /^## State\nempty/m);
     assert.match(r.instructions, /Instruction:/, "dynamic should be loaded");
     assert.match(r.instructions, /first attempt/, "draft arg should be substituted into dynamic");
@@ -92,26 +128,27 @@ describe("1a self-refine", () => {
       r.memory + "\n## Critique\nconcrete feedback\n## Refined\nbetter attempt",
       "done",
     );
-    r = runStackBlock(r.stack, memAfterDynamic, r.instructions);
+    r = runStackBlock(r.callStack, r.frameStore, memAfterDynamic, r.instructions);
     assert.equal(r.halt, false);
-    assert.equal(r.stack.length, 0);
+    assert.equal(r.callStack.stack.length, 1);
     assert.match(r.memory, /^## State\ndrafted_completed/m);
     assert.equal(r.instructions, strategy);
   });
 
   test("second loop -> accepted -> halts at done at depth 0", () => {
     const strategy = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
-    let memory = '## State\ndrafted\n## Draft\nsecond attempt\n## Push\ndynamics/self-critique.md\n## Push-Args\ndraft: |\n  second attempt';
-    let r = runStackBlock([], memory, strategy);
+    const memory = '## State\ndrafted\n## Draft\nsecond attempt\n## Push\ndynamics/self-critique.md\n## Push-Args\ndraft: |\n  second attempt';
+    const { callStack: cs0, frameStore: fs } = makeSession(strategy);
+    let r = runStackBlock(cs0, fs, memory, strategy);
     const memAfterDynamic = setState(
       r.memory + "\n## Critique\nfinal feedback\n## Refined\nfinal text",
       "done",
     );
-    r = runStackBlock(r.stack, memAfterDynamic, r.instructions);
+    r = runStackBlock(r.callStack, r.frameStore, memAfterDynamic, r.instructions);
     assert.match(r.memory, /^## State\ndrafted_completed/m);
 
     const memAccepted = setState(r.memory, "done");
-    r = runStackBlock(r.stack, memAccepted, r.instructions);
+    r = runStackBlock(r.callStack, r.frameStore, memAccepted, r.instructions);
     assert.equal(r.halt, true);
   });
 });

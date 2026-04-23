@@ -13,10 +13,6 @@
  *   - StackEntry: { returnState, frameDir }  (frameDir replaces inline instructions)
  *   - CallStack:  { nextCounter, stack }     (was a bare StackEntry[])
  *   - Root frame is always stack[0]; never popped.  Halt = done + stack.length === 1.
- *
- * Legacy (pre-Phase-2b) shape is kept under the *Legacy suffix for backward
- * compatibility while T5 is pending.  applyPop is a stub that
- * throws until T5 is complete.  applyPush is fully implemented (T4).
  */
 import { readFileSync, writeFileSync } from "fs";
 import {
@@ -26,6 +22,8 @@ import {
   setState,
   parsePushArgs,
   removePushArgs,
+  parseReturn,
+  spliceReturns,
 } from "./memory.js";
 
 // ---------------------------------------------------------------------------
@@ -89,15 +87,22 @@ export function saveCallStack(path: string, callStack: CallStack): void {
 }
 
 // ---------------------------------------------------------------------------
-// Phase 2b types — applyPush result
+// Phase 2b types — applyPop and applyPush results
 // ---------------------------------------------------------------------------
 
-export type PopEvent = { returnState: string; depthAfter: number };
+export type PopEvent = {
+  returnState: string;
+  depthAfter: number;           // stack.length after this pop
+  frameDir: string;             // popped frame's dir — caller rmSync's this
+  splicedKeys: string[];        // keys from ## Return that were spliced into caller MEMORY
+  missingReturn: boolean;       // true if child had state=done but no ## Return section
+  malformedLines: string[];     // malformed ## Return entries (logged by caller)
+};
 
 export type PopResult = {
-  stack: StackEntry[];
-  memory: string;
-  instructions: string;
+  callStack: CallStack;
+  callerMemoryAfter: string;    // caller's MEMORY after state transition + splice
+  callerFrameDir: string;       // relative path, e.g. "frames/f000-strategy"
   events: PopEvent[];
 };
 
@@ -121,13 +126,66 @@ export type PushResult =
       placeholders: string[];
     };
 
-/** Stub — full implementation coming in T5. */
+/**
+ * Cascade-pop while state is "done" AND stack.length > 1 (root is never popped).
+ *
+ * Per iteration:
+ *  - Pop the top frame.
+ *  - Parse ## Return from child memory (may be absent → missingReturn=true).
+ *  - Read caller MEMORY via readFrame(callerFrameDir, "MEMORY.md").
+ *  - Transition caller state to {returnState}_completed via setState.
+ *  - Splice return entries into caller memory via spliceReturns.
+ *  - Record a PopEvent.
+ *  - Set currentChildMemory = callerMemory for next cascade check.
+ *
+ * Returns the updated CallStack, the final caller MEMORY, and the final
+ * top-of-stack frameDir. If no pops occurred (state != done OR stack.length === 1),
+ * returns child memory and current top-of-stack unchanged.
+ */
 export function applyPop(
-  _stack: StackEntry[],
-  _memory: string,
-  _instructions: string,
+  callStack: CallStack,
+  childMemory: string,
+  readFrame: (frameDir: string, file: "MEMORY.md") => string,
 ): PopResult {
-  throw new Error("applyPop: T5 not implemented yet");
+  let stack = [...callStack.stack];
+  const events: PopEvent[] = [];
+  let currentChildMemory = childMemory;
+  let lastCallerMemory = "";
+  let lastCallerFrameDir = stack[stack.length - 1]?.frameDir ?? "";
+
+  while (parseState(currentChildMemory) === "done" && stack.length > 1) {
+    const frame = stack.pop()!;
+    const { entries: returns, malformedLines } = parseReturn(currentChildMemory);
+    const callerFrameDir = stack[stack.length - 1].frameDir;
+    const rawCallerMemory = readFrame(callerFrameDir, "MEMORY.md");
+    let callerMemory = setState(rawCallerMemory, frame.returnState + "_completed");
+    callerMemory = spliceReturns(callerMemory, returns);
+
+    events.push({
+      returnState: frame.returnState,
+      depthAfter: stack.length,
+      frameDir: frame.frameDir,
+      splicedKeys: Object.keys(returns),
+      missingReturn: Object.keys(returns).length === 0,
+      malformedLines,
+    });
+
+    currentChildMemory = callerMemory;
+    lastCallerMemory = callerMemory;
+    lastCallerFrameDir = callerFrameDir;
+  }
+
+  if (events.length === 0) {
+    lastCallerFrameDir = stack[stack.length - 1]?.frameDir ?? "";
+    lastCallerMemory = childMemory;
+  }
+
+  return {
+    callStack: { nextCounter: callStack.nextCounter, stack },
+    callerMemoryAfter: lastCallerMemory,
+    callerFrameDir: lastCallerFrameDir,
+    events,
+  };
 }
 
 /**
@@ -202,59 +260,7 @@ export function applyPush(
 }
 
 // ---------------------------------------------------------------------------
-// Legacy types and functions (pre-Phase-2b; used by main.ts and existing tests
-// until T4/T5 rewrite the callers).
-// ---------------------------------------------------------------------------
-
-export type StackEntryLegacy = { returnState: string; instructions: string };
-
-export function loadCallStackLegacy(path: string): StackEntryLegacy[] {
-  try {
-    const parsed = JSON.parse(readFileSync(path, "utf-8"));
-    return Array.isArray(parsed) ? parsed : [];
-  } catch { return []; }
-}
-
-export function saveCallStackLegacy(path: string, stack: StackEntryLegacy[]): void {
-  writeFileSync(path, JSON.stringify(stack, null, 2), "utf-8");
-}
-
-export type PopResultLegacy = {
-  stack: StackEntryLegacy[];
-  memory: string;
-  instructions: string;
-  events: PopEvent[];
-};
-
-/**
- * Cascade-pop while state is "done" and the stack is non-empty.
- *
- * Each pop restores the caller's instructions and sets the caller's state
- * to "{returnState}_completed" (so the caller's entry condition for that
- * state does not immediately re-fire).
- */
-export function applyPopLegacy(
-  stack: StackEntryLegacy[],
-  memory: string,
-  instructions: string,
-): PopResultLegacy {
-  const newStack = [...stack];
-  const events: PopEvent[] = [];
-  let curMemory = memory;
-  let curInstructions = instructions;
-
-  while (parseState(curMemory) === "done" && newStack.length > 0) {
-    const entry = newStack.pop()!;
-    curInstructions = entry.instructions;
-    curMemory = setState(curMemory, entry.returnState + "_completed");
-    events.push({ returnState: entry.returnState, depthAfter: newStack.length });
-  }
-
-  return { stack: newStack, memory: curMemory, instructions: curInstructions, events };
-}
-
-// ---------------------------------------------------------------------------
-// Pure helpers (shared by legacy and future Phase-2b implementations)
+// Pure helpers
 // ---------------------------------------------------------------------------
 
 const PLACEHOLDER_RE = /\{\{([a-zA-Z_][a-zA-Z0-9_]*)\}\}/g;
