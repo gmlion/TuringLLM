@@ -3,7 +3,7 @@ import { strict as assert } from "node:assert";
 import { mkdtempSync, rmSync, writeFileSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { tmpdir } from "node:os";
-import { loadCallStackLegacy, saveCallStackLegacy, applyPopLegacy, applyPushLegacy, type StackEntryLegacy } from "../call-stack.js";
+import { loadCallStackLegacy, saveCallStackLegacy, applyPopLegacy, applyPush, type StackEntryLegacy, type CallStack } from "../call-stack.js";
 
 let dir: string;
 let path: string;
@@ -111,15 +111,28 @@ describe("applyPop", () => {
 });
 
 describe("applyPush", () => {
+  function makeCs(depth = 0): CallStack {
+    return {
+      nextCounter: depth + 1,
+      stack: [
+        { returnState: "<root>", frameDir: "frames/f000-strategy" },
+        ...Array.from({ length: depth }, (_, i) => ({
+          returnState: `frame${i}`,
+          frameDir: `frames/f${String(i + 1).padStart(3, "0")}-dyn`,
+        })),
+      ],
+    };
+  }
+
   test("reason 'no-push' when ## Push section is absent", () => {
-    const r = applyPushLegacy([], "## State\nfoo", "current", () => "target");
+    const r = applyPush(makeCs(), "## State\nfoo", () => "target");
     assert.equal(r.ok, false);
     if (!r.ok) assert.equal(r.reason, "no-push");
   });
 
   test("reason 'missing-target' and ## Push stripped when target reads as null", () => {
     const memory = "## State\nfoo\n## Push\nbad/path.md";
-    const r = applyPushLegacy([], memory, "current", () => null);
+    const r = applyPush(makeCs(), memory, () => null);
     assert.equal(r.ok, false);
     if (!r.ok && r.reason === "missing-target") {
       assert.equal(r.target, "bad/path.md");
@@ -128,9 +141,9 @@ describe("applyPush", () => {
     }
   });
 
-  test("successful push: saves caller, swaps instructions, sets state to empty, removes ## Push", () => {
+  test("successful push: saves returnState, returns childInstructions and childMemory", () => {
     const memory = "## State\nplanning\n## Push\ndynamics/consult.md";
-    const r = applyPushLegacy([], memory, "# Strategy", (p) => {
+    const r = applyPush(makeCs(), memory, (p) => {
       assert.equal(p, "dynamics/consult.md");
       return "# Dynamic";
     });
@@ -138,30 +151,32 @@ describe("applyPush", () => {
     assert.equal(r.ok, true);
     if (r.ok) {
       assert.equal(r.target, "dynamics/consult.md");
-      assert.equal(r.stack.length, 1);
-      assert.deepEqual(r.stack[0], { returnState: "planning", instructions: "# Strategy" });
-      assert.equal(r.instructions, "# Dynamic");
-      assert.match(r.memory, /^## State\nempty/);
-      assert.doesNotMatch(r.memory, /## Push/);
+      assert.equal(r.callStack.stack.length, 2);
+      assert.equal(r.callStack.stack[1].returnState, "planning");
+      assert.equal(r.childInstructions, "# Dynamic");
+      assert.equal(r.childMemory, "## State\nempty\n");
+      assert.doesNotMatch(r.callerMemoryAfter, /## Push/);
     }
   });
 
   test("nested push: frame appended, prior frames preserved", () => {
-    const existing: StackEntryLegacy[] = [{ returnState: "outer", instructions: "# Outer" }];
+    const cs = makeCs(1); // already 1 dynamic frame at depth 1
     const memory = "## State\ninner_task\n## Push\ndynamics/sub.md";
-    const r = applyPushLegacy(existing, memory, "# Inner", () => "# Sub");
+    const r = applyPush(cs, memory, () => "# Sub");
 
     assert.equal(r.ok, true);
     if (r.ok) {
-      assert.equal(r.stack.length, 2);
-      assert.deepEqual(r.stack[0], { returnState: "outer", instructions: "# Outer" });
-      assert.deepEqual(r.stack[1], { returnState: "inner_task", instructions: "# Inner" });
+      // root + 1 existing + 1 new = 3 total
+      assert.equal(r.callStack.stack.length, 3);
+      assert.equal(r.callStack.stack[1].returnState, "frame0");
+      assert.equal(r.callStack.stack[2].returnState, "inner_task");
     }
   });
 
-  test("does not mutate input stack on success", () => {
-    const stack: StackEntryLegacy[] = [{ returnState: "x", instructions: "a" }];
-    applyPushLegacy(stack, "## State\nfoo\n## Push\ntgt.md", "b", () => "c");
-    assert.equal(stack.length, 1);
+  test("does not mutate input callStack on success", () => {
+    const cs = makeCs();
+    const original = JSON.stringify(cs);
+    applyPush(cs, "## State\nfoo\n## Push\ntgt.md", () => "c");
+    assert.equal(JSON.stringify(cs), original);
   });
 });

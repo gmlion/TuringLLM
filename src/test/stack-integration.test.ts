@@ -1,11 +1,14 @@
 import { test, describe } from "node:test";
 import { strict as assert } from "node:assert";
-import { applyPopLegacy as applyPop, applyPushLegacy as applyPush, type StackEntryLegacy as StackEntry } from "../call-stack.js";
+import { applyPopLegacy as applyPop, applyPush, type StackEntryLegacy as StackEntry, type CallStack } from "../call-stack.js";
 import { parseState, setState } from "../memory.js";
 
 /**
  * Simulate the pre-LLM stack block from main.ts for a single cycle.
  * Returns the post-block state the LLM would see.
+ *
+ * Uses applyPopLegacy (legacy StackEntryLegacy[] with instructions field) for pop,
+ * and the new applyPush (CallStack shape) for push, bridging via a local shim.
  */
 function runStackBlock(
   stack: StackEntry[],
@@ -22,11 +25,19 @@ function runStackBlock(
     return { stack: curStack, memory: curMemory, instructions: curInstructions, halt: true };
   }
 
-  const pushed = applyPush(curStack, curMemory, curInstructions, (p) => files[p] ?? null);
+  const cs: CallStack = {
+    nextCounter: curStack.length + 1,
+    stack: [
+      { returnState: "<root>", frameDir: "frames/f000-strategy" },
+      ...curStack.map((e, i) => ({ returnState: e.returnState, frameDir: `frames/f${String(i + 1).padStart(3, "0")}-dyn` })),
+    ],
+  };
+  const pushed = applyPush(cs, curMemory, (p: string) => files[p] ?? null);
   if (pushed.ok) {
-    curStack = pushed.stack;
-    curMemory = pushed.memory;
-    curInstructions = pushed.instructions;
+    const newEntry: StackEntry = { returnState: pushed.callStack.stack[pushed.callStack.stack.length - 1].returnState, instructions: curInstructions };
+    curStack = [...curStack, newEntry];
+    curMemory = pushed.childMemory;
+    curInstructions = pushed.childInstructions;
   } else if (pushed.reason === "missing-target") {
     curMemory = pushed.memory;
   }

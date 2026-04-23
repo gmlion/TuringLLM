@@ -22,7 +22,11 @@ import {
   parseState, parsePendingQuestions, getAnswersSection,
   writeAnswer, setState, type PendingQuestion,
 } from "./memory.js";
-import { loadCallStackLegacy, saveCallStackLegacy, applyPopLegacy, applyPushLegacy } from "./call-stack.js";
+import {
+  loadCallStack, saveCallStack, applyPopLegacy,
+  loadCallStackLegacy, saveCallStackLegacy,
+  applyPush, type CallStack,
+} from "./call-stack.js";
 
 // --- Utilities ---
 
@@ -336,38 +340,69 @@ function handleNoMatch(state: string): void {
  * Run the pre-LLM stack block: cascade-pop on done, then push if ## Push is
  * present. Writes updated memory/instructions/stack to disk and returns
  * whether the machine should halt (state=done at depth 0).
+ *
+ * Uses the Phase-2b applyPush (new CallStack shape). Pop still uses
+ * applyPopLegacy via a shim until T5 rewrites it.
  */
-function runStackBlock(callStack: import("./call-stack.js").StackEntryLegacy[]): boolean {
-  const popped = applyPopLegacy(callStack, readFile(MEMORY_PATH), readFile(INSTRUCTIONS_PATH));
+function runStackBlock(callStack: CallStack): boolean {
+  // Pop shim: build legacy stack from current CallStack for applyPopLegacy.
+  // The root frame (stack[0]) is never on the legacy stack; legacy depth is stack.length-1.
+  const legacyStack = callStack.stack.slice(1).map(e => ({
+    returnState: e.returnState,
+    instructions: readFile(resolve(BASE_DIR, e.frameDir, "INSTRUCTIONS.md")),
+  }));
+
+  const popped = applyPopLegacy(legacyStack, readFile(MEMORY_PATH), readFile(INSTRUCTIONS_PATH));
   if (popped.events.length > 0) {
     writeFileSync(MEMORY_PATH, popped.memory, "utf-8");
     writeFileSync(INSTRUCTIONS_PATH, popped.instructions, "utf-8");
-    callStack.length = 0;
-    callStack.push(...popped.stack);
-    saveCallStackLegacy(CALL_STACK_PATH, callStack);
+    // Reflect pops back into the CallStack: trim the stack to root + remaining legacy frames.
+    callStack.stack.splice(1);
+    for (const e of popped.stack) {
+      callStack.stack.push({
+        returnState: e.returnState,
+        // frameDir not tracked by legacy; use placeholder so shape stays valid.
+        frameDir: "frames/f000-strategy",
+      });
+    }
+    saveCallStack(CALL_STACK_PATH, callStack);
     for (const ev of popped.events) {
       log(`  [pop] \u2192 ${ev.returnState}_completed (depth ${ev.depthAfter})`);
     }
   }
 
-  if (getMemoryState() === "done" && callStack.length === 0) return true;
+  // Halt: state=done and only the root frame remains (stack.length === 1).
+  if (getMemoryState() === "done" && callStack.stack.length === 1) return true;
 
-  const pushed = applyPushLegacy(
+  // Push: use the new Phase-2b applyPush.
+  const pushed = applyPush(
     callStack,
     readFile(MEMORY_PATH),
-    readFile(INSTRUCTIONS_PATH),
     (p) => {
       const content = readFile(resolve(BASE_DIR, p));
       return content || null;
     },
   );
   if (pushed.ok) {
-    writeFileSync(MEMORY_PATH, pushed.memory, "utf-8");
-    writeFileSync(INSTRUCTIONS_PATH, pushed.instructions, "utf-8");
-    callStack.length = 0;
-    callStack.push(...pushed.stack);
-    saveCallStackLegacy(CALL_STACK_PATH, callStack);
-    log(`  [push] ${pushed.target} (depth ${callStack.length})`);
+    // Write caller's updated MEMORY (Push/Push-Args stripped) back.
+    writeFileSync(MEMORY_PATH, pushed.callerMemoryAfter, "utf-8");
+
+    // Create the child frame directory and write its MEMORY + INSTRUCTIONS.
+    // For now (pre-T6/T7), we also keep the flat INSTRUCTIONS_PATH in sync
+    // so existing providers (which read INSTRUCTIONS_PATH directly) still work.
+    const childFrameDir = resolve(BASE_DIR, pushed.frameDir);
+    mkdirSync(resolve(childFrameDir, "scoped"), { recursive: true });
+    writeFileSync(resolve(childFrameDir, "MEMORY.md"), pushed.childMemory, "utf-8");
+    writeFileSync(resolve(childFrameDir, "INSTRUCTIONS.md"), pushed.childInstructions, "utf-8");
+
+    // Keep the flat files in sync for legacy provider compatibility (pre-T7).
+    writeFileSync(MEMORY_PATH, pushed.childMemory, "utf-8");
+    writeFileSync(INSTRUCTIONS_PATH, pushed.childInstructions, "utf-8");
+
+    // Persist the updated call stack.
+    Object.assign(callStack, pushed.callStack);
+    saveCallStack(CALL_STACK_PATH, callStack);
+    log(`  [push] ${pushed.target} → ${pushed.frameDir} (depth ${pushed.callStack.stack.length - 1})`);
   } else if (pushed.reason === "missing-target") {
     writeFileSync(MEMORY_PATH, pushed.memory, "utf-8");
     log(`  [push] ERROR: ${pushed.target} not found or empty, skipping`);
@@ -394,11 +429,12 @@ async function main() {
   ensureMachineRepo(BASE_DIR);
   ensureProjectRepo(BASE_DIR);
 
-  const callStack = loadCallStackLegacy(CALL_STACK_PATH);
+  const callStack = loadCallStack(CALL_STACK_PATH);
 
   const startCycle = getStartCycle();
   log(`  Resuming from cycle ${startCycle}`);
-  if (callStack.length > 0) log(`  Call stack depth: ${callStack.length}`);
+  const stackDepth = callStack.stack.length - 1; // root frame not counted
+  if (stackDepth > 0) log(`  Call stack depth: ${stackDepth}`);
   log("");
 
   for (let cycle = startCycle; ; cycle++) {

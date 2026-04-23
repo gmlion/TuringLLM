@@ -3,7 +3,7 @@ import { strict as assert } from "node:assert";
 import { readFileSync, existsSync } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
-import { applyPopLegacy as applyPop, applyPushLegacy as applyPush, type StackEntryLegacy as StackEntry } from "../call-stack.js";
+import { applyPopLegacy as applyPop, applyPush, type StackEntryLegacy as StackEntry, type CallStack } from "../call-stack.js";
 import { parseState, setState } from "../memory.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -29,11 +29,19 @@ function runStackBlock(
   if (parseState(curMemory) === "done" && curStack.length === 0) {
     return { stack: curStack, memory: curMemory, instructions: curInstructions, halt: true };
   }
-  const pushed = applyPush(curStack, curMemory, curInstructions, readTarget);
+  const cs: CallStack = {
+    nextCounter: curStack.length + 1,
+    stack: [
+      { returnState: "<root>", frameDir: "frames/f000-strategy" },
+      ...curStack.map((e, i) => ({ returnState: e.returnState, frameDir: `frames/f${String(i + 1).padStart(3, "0")}-dyn` })),
+    ],
+  };
+  const pushed = applyPush(cs, curMemory, readTarget);
   if (pushed.ok) {
-    curStack = pushed.stack;
-    curMemory = pushed.memory;
-    curInstructions = pushed.instructions;
+    const newEntry: StackEntry = { returnState: pushed.callStack.stack[pushed.callStack.stack.length - 1].returnState, instructions: curInstructions };
+    curStack = [...curStack, newEntry];
+    curMemory = pushed.childMemory;
+    curInstructions = pushed.childInstructions;
   } else if (pushed.reason === "missing-target" || pushed.reason === "unresolved-placeholder") {
     curMemory = pushed.memory;
   }

@@ -15,8 +15,8 @@
  *   - Root frame is always stack[0]; never popped.  Halt = done + stack.length === 1.
  *
  * Legacy (pre-Phase-2b) shape is kept under the *Legacy suffix for backward
- * compatibility while T4/T5 are pending.  applyPush/applyPop are stubs that
- * throw until T4/T5 are complete.
+ * compatibility while T5 is pending.  applyPop is a stub that
+ * throws until T5 is complete.  applyPush is fully implemented (T4).
  */
 import { readFileSync, writeFileSync } from "fs";
 import {
@@ -89,7 +89,7 @@ export function saveCallStack(path: string, callStack: CallStack): void {
 }
 
 // ---------------------------------------------------------------------------
-// Phase 2b stubs — applyPush / applyPop (to be implemented in T4 / T5)
+// Phase 2b types — applyPush result
 // ---------------------------------------------------------------------------
 
 export type PopEvent = { returnState: string; depthAfter: number };
@@ -104,9 +104,11 @@ export type PopResult = {
 export type PushResult =
   | {
       ok: true;
-      stack: StackEntry[];
-      memory: string;
-      instructions: string;
+      callStack: CallStack;
+      callerMemoryAfter: string;
+      childMemory: string;
+      childInstructions: string;
+      frameDir: string;
       target: string;
     }
   | { ok: false; memory: string; reason: "no-push" }
@@ -128,14 +130,75 @@ export function applyPop(
   throw new Error("applyPop: T5 not implemented yet");
 }
 
-/** Stub — full implementation coming in T4. */
+/**
+ * Handle a ## Push in callerMemory if present.
+ *
+ * On success: increments callStack.nextCounter, appends a new StackEntry,
+ * and returns the caller's MEMORY (with Push/Push-Args stripped) and the
+ * child's MEMORY ("## State\nempty\n") and substituted instructions separately
+ * so the shell can write them to different frame directories on disk.
+ *
+ * On failure: does NOT modify callStack or increment counter (R9).
+ * Returns callerMemory with ## Push / ## Push-Args stripped (so the LLM
+ * doesn't retry the same bad push).
+ *
+ * `readTarget` returns null for missing or empty files.
+ */
 export function applyPush(
-  _stack: StackEntry[],
-  _memory: string,
-  _instructions: string,
-  _readTarget: (path: string) => string | null,
+  callStack: CallStack,
+  callerMemory: string,
+  readTarget: (path: string) => string | null,
 ): PushResult {
-  throw new Error("applyPush: T4 not implemented yet");
+  const target = parsePush(callerMemory);
+  if (!target) return { ok: false, memory: callerMemory, reason: "no-push" };
+
+  const args = parsePushArgs(callerMemory);
+
+  const targetContent = readTarget(target);
+  if (!targetContent) {
+    return {
+      ok: false,
+      memory: removePushArgs(removePush(callerMemory)),
+      reason: "missing-target",
+      target,
+    };
+  }
+
+  const { result: substituted, unresolved } = substitutePlaceholders(
+    targetContent,
+    args,
+  );
+  if (unresolved.length > 0) {
+    return {
+      ok: false,
+      memory: removePushArgs(removePush(callerMemory)),
+      reason: "unresolved-placeholder",
+      target,
+      placeholders: unresolved,
+    };
+  }
+
+  const frameDir = formatFrameDir(callStack.nextCounter, slugFromTarget(target));
+  const returnState = parseState(callerMemory);
+  const newEntry: StackEntry = { returnState, frameDir };
+
+  const newCallStack: CallStack = {
+    nextCounter: callStack.nextCounter + 1,
+    stack: [...callStack.stack, newEntry],
+  };
+
+  const callerMemoryAfter = removePushArgs(removePush(callerMemory));
+  const childMemory = "## State\nempty\n";
+
+  return {
+    ok: true,
+    callStack: newCallStack,
+    callerMemoryAfter,
+    childMemory,
+    childInstructions: substituted,
+    frameDir,
+    target,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -188,82 +251,6 @@ export function applyPopLegacy(
   }
 
   return { stack: newStack, memory: curMemory, instructions: curInstructions, events };
-}
-
-export type PushResultLegacy =
-  | {
-      ok: true;
-      stack: StackEntryLegacy[];
-      memory: string;
-      instructions: string;
-      target: string;
-    }
-  | { ok: false; memory: string; reason: "no-push" }
-  | { ok: false; memory: string; reason: "missing-target"; target: string }
-  | {
-      ok: false;
-      memory: string;
-      reason: "unresolved-placeholder";
-      target: string;
-      placeholders: string[];
-    };
-
-/**
- * Handle a ## Push in MEMORY if present.
- *
- * On success: saves {returnState, instructions} onto the stack, replaces
- * instructions with the target file's contents, strips ## Push, and sets
- * state to "empty" so the dynamic starts fresh.
- *
- * On missing target: returns memory with ## Push stripped so the LLM
- * doesn't retry the same bad push every cycle; the caller logs the error.
- *
- * `readTarget` returns null for missing or empty files; otherwise the
- * target's content.
- */
-export function applyPushLegacy(
-  stack: StackEntryLegacy[],
-  memory: string,
-  instructions: string,
-  readTarget: (path: string) => string | null,
-): PushResultLegacy {
-  const target = parsePush(memory);
-  if (!target) return { ok: false, memory, reason: "no-push" };
-
-  const args = parsePushArgs(memory);
-
-  const targetContent = readTarget(target);
-  if (!targetContent) {
-    return {
-      ok: false,
-      memory: removePushArgs(removePush(memory)),
-      reason: "missing-target",
-      target,
-    };
-  }
-
-  const { result: substituted, unresolved } = substitutePlaceholders(
-    targetContent,
-    args,
-  );
-  if (unresolved.length > 0) {
-    return {
-      ok: false,
-      memory: removePushArgs(removePush(memory)),
-      reason: "unresolved-placeholder",
-      target,
-      placeholders: unresolved,
-    };
-  }
-
-  const returnState = parseState(memory);
-  const newStack = [...stack, { returnState, instructions }];
-  const newMemory = setState(
-    removePushArgs(removePush(memory)),
-    "empty",
-  );
-
-  return { ok: true, stack: newStack, memory: newMemory, instructions: substituted, target };
 }
 
 // ---------------------------------------------------------------------------
