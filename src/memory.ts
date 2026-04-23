@@ -72,79 +72,39 @@ export function parsePush(memory: string): string | null {
 
 /** Remove the ## Push section from MEMORY. */
 export function removePush(memory: string): string {
-  return memory.replace(/\n?## Push\n[^\n]*(\n(?!## )[^\n]*)*/m, "");
+  return removeSection(memory, "Push");
 }
 
 /**
- * Parse the ## Push-Args section into a key→value map.
+ * Internal helper: parse a `## <sectionName>` block into keyed entries.
  *
- * Format:
- *   - `key: value` (single-line; rest of line after `: ` is the value)
- *   - `key: |` followed by lines indented by 2 spaces (block scalar;
- *     leading 2 spaces stripped, lines joined with \n, trailing empty
- *     lines trimmed)
+ * Grammar (same as Push-Args / Return):
+ *   - `key: value`    — single-line
+ *   - `key: |`        — block scalar: continuation lines must be indented
+ *                       by exactly 2 spaces; trailing blank lines trimmed
  *
- * Returns {} if the section is absent. Skips malformed lines silently —
- * missing args surface later as unresolved placeholders in applyPush.
+ * Options:
+ *   allowHyphensInSingleLine — widens the single-line key regex from
+ *     `[a-zA-Z_][a-zA-Z0-9_]*` to `[a-zA-Z_][a-zA-Z0-9_-]*`.
+ *     Block-scalar keys never allow hyphens (matches both parsers).
+ *   skipBlankLines — skip blank lines instead of treating them as malformed.
+ *     When false (default) blank lines are silently skipped too — the
+ *     difference is that with skipBlankLines=false a blank line is not
+ *     added to malformedLines (parsePushArgs behaviour), while with
+ *     skipBlankLines=true it is explicitly continued (parseReturn behaviour).
+ *     Both produce the same observable result for blank lines; the flag
+ *     exists to faithfully document the original intent of each caller.
  */
-export function parsePushArgs(memory: string): Record<string, string> {
-  const headerRe = /(^|\n)## Push-Args\n/;
-  const headerMatch = memory.match(headerRe);
-  if (!headerMatch) return {};
-  const start = (headerMatch.index ?? 0) + headerMatch[0].length;
-
-  const remainder = memory.slice(start);
-  const nextHeading = remainder.match(/\n## [A-Z]/);
-  const sectionEnd = nextHeading
-    ? start + (nextHeading.index ?? 0)
-    : memory.length;
-  const section = memory.slice(start, sectionEnd);
-
-  const result: Record<string, string> = {};
-  const lines = section.split("\n");
-  let i = 0;
-  while (i < lines.length) {
-    const line = lines[i];
-    const blockMatch = line.match(/^([a-zA-Z_][a-zA-Z0-9_]*): \|$/);
-    if (blockMatch) {
-      const key = blockMatch[1];
-      const valueLines: string[] = [];
-      i++;
-      while (i < lines.length && (lines[i].startsWith("  ") || lines[i] === "")) {
-        valueLines.push(lines[i].startsWith("  ") ? lines[i].slice(2) : "");
-        i++;
-      }
-      while (valueLines.length > 0 && valueLines[valueLines.length - 1] === "") {
-        valueLines.pop();
-      }
-      result[key] = valueLines.join("\n");
-      continue;
-    }
-    const singleMatch = line.match(/^([a-zA-Z_][a-zA-Z0-9_]*): (.+)$/);
-    if (singleMatch) {
-      result[singleMatch[1]] = singleMatch[2];
-    }
-    i++;
-  }
-  return result;
-}
-
-/** Remove the ## Push-Args section from MEMORY. Mirror of removePush. */
-export function removePushArgs(memory: string): string {
-  return memory.replace(/\n?## Push-Args\n[^\n]*(\n(?!## )[^\n]*)*/m, "");
-}
-
-/**
- * Parse the ## Return section into (entries, malformedLines).
- * Grammar is identical to parsePushArgs: `key: value` or `key: |` block scalar
- * with 2-space indentation. Malformed lines (no `:`, or identifier rule
- * violation) are collected separately so the caller can log them.
- */
-export function parseReturn(memory: string): {
-  entries: Record<string, string>;
-  malformedLines: string[];
-} {
-  const headerRe = /(^|\n)## Return\n/;
+function parseKeyedSection(
+  memory: string,
+  sectionName: string,
+  options?: {
+    allowHyphensInSingleLine?: boolean;
+    skipBlankLines?: boolean;
+  },
+): { entries: Record<string, string>; malformedLines: string[] } {
+  const escapedName = sectionName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const headerRe = new RegExp(`(^|\\n)## ${escapedName}\\n`);
   const headerMatch = memory.match(headerRe);
   if (!headerMatch) return { entries: {}, malformedLines: [] };
   const start = (headerMatch.index ?? 0) + headerMatch[0].length;
@@ -156,13 +116,21 @@ export function parseReturn(memory: string): {
     : memory.length;
   const section = memory.slice(start, sectionEnd);
 
+  const singleLineKeyPat = options?.allowHyphensInSingleLine
+    ? /^([a-zA-Z_][a-zA-Z0-9_-]*): (.+)$/
+    : /^([a-zA-Z_][a-zA-Z0-9_]*): (.+)$/;
+
   const entries: Record<string, string> = {};
   const malformedLines: string[] = [];
   const lines = section.split("\n");
   let i = 0;
   while (i < lines.length) {
     const line = lines[i];
-    if (line === "") { i++; continue; }
+    if (line === "") {
+      i++;
+      continue;
+    }
+    // Block scalar: `key: |`  (keys never allow hyphens regardless of option)
     const blockMatch = line.match(/^([a-zA-Z_][a-zA-Z0-9_]*): \|$/);
     if (blockMatch) {
       const key = blockMatch[1];
@@ -178,7 +146,8 @@ export function parseReturn(memory: string): {
       entries[key] = valueLines.join("\n");
       continue;
     }
-    const singleMatch = line.match(/^([a-zA-Z_][a-zA-Z0-9_-]*): (.+)$/);
+    // Single-line: `key: value`
+    const singleMatch = line.match(singleLineKeyPat);
     if (singleMatch) {
       entries[singleMatch[1]] = singleMatch[2];
     } else {
@@ -189,9 +158,59 @@ export function parseReturn(memory: string): {
   return { entries, malformedLines };
 }
 
+/**
+ * Internal helper: remove a `## <sectionName>` block from MEMORY.
+ * Section name is escaped for use in a regex.
+ */
+function removeSection(memory: string, sectionName: string): string {
+  const escapedName = sectionName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return memory.replace(
+    new RegExp(`\\n?## ${escapedName}\\n[^\\n]*(\\n(?!## )[^\\n]*)*`, "m"),
+    "",
+  );
+}
+
+/**
+ * Parse the ## Push-Args section into a key→value map.
+ *
+ * Format:
+ *   - `key: value` (single-line; rest of line after `: ` is the value)
+ *   - `key: |` followed by lines indented by 2 spaces (block scalar;
+ *     leading 2 spaces stripped, lines joined with \n, trailing empty
+ *     lines trimmed)
+ *
+ * Returns {} if the section is absent. Skips malformed lines silently —
+ * missing args surface later as unresolved placeholders in applyPush.
+ */
+export function parsePushArgs(memory: string): Record<string, string> {
+  return parseKeyedSection(memory, "Push-Args").entries;
+}
+
+/** Remove the ## Push-Args section from MEMORY. Mirror of removePush. */
+export function removePushArgs(memory: string): string {
+  return removeSection(memory, "Push-Args");
+}
+
+/**
+ * Parse the ## Return section into (entries, malformedLines).
+ * Grammar is identical to parsePushArgs: `key: value` or `key: |` block scalar
+ * with 2-space indentation. Malformed lines (no `:`, or identifier rule
+ * violation) are collected separately so the caller can log them.
+ * Single-line keys allow hyphens; block-scalar keys do not.
+ */
+export function parseReturn(memory: string): {
+  entries: Record<string, string>;
+  malformedLines: string[];
+} {
+  return parseKeyedSection(memory, "Return", {
+    allowHyphensInSingleLine: true,
+    skipBlankLines: true,
+  });
+}
+
 /** Remove the ## Return section from MEMORY. Mirror of removePushArgs. */
 export function removeReturn(memory: string): string {
-  return memory.replace(/\n?## Return\n[^\n]*(\n(?!## )[^\n]*)*/m, "");
+  return removeSection(memory, "Return");
 }
 
 /**
