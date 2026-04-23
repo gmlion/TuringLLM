@@ -170,3 +170,22 @@ export function substitutePlaceholders(
   });
   return { result, unresolved: [...unresolvedSet] };
 }
+
+/**
+ * Derive a filesystem-safe slug from a push-target path.
+ * Example: "dynamics/answer-independently.md" → "answer-independently".
+ */
+export function slugFromTarget(target: string): string {
+  const base = target.split(/[\\/]/).pop() ?? target;
+  const noExt = base.replace(/\.md$/, "");
+  return noExt.replace(/[^a-zA-Z0-9_-]/g, "_");
+}
+
+/**
+ * Build the relative frame directory path for a push-counter + slug.
+ * Counter is zero-padded to 3 digits below 1000, widens lexically beyond.
+ */
+export function formatFrameDir(counter: number, slug: string): string {
+  const padded = counter < 1000 ? String(counter).padStart(3, "0") : String(counter);
+  return `frames/f${padded}-${slug}`;
+}
