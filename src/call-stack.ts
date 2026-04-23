@@ -141,6 +141,40 @@ export type PushResult =
  * Returns the updated CallStack, the final caller MEMORY, and the final
  * top-of-stack frameDir. If no pops occurred (state != done OR stack.length === 1),
  * returns child memory and current top-of-stack unchanged.
+ *
+ * ## Cascade-pop semantics and the intermediate-frame loss caveat
+ *
+ * **When does cascade fire?**
+ * Cascade (events.length > 1) fires while `state === "done" && stack.length > 1`.
+ * In normal operation this rarely produces more than one pop per call because
+ * `setState(callerMemory, frame.returnState + "_completed")` transitions the
+ * caller's state to `<x>_completed`, NOT `done`. The while-loop therefore exits
+ * after a single iteration.
+ *
+ * The only way cascade fires for real is if the caller's MEMORY still ends up
+ * with `state === "done"` AFTER the setState + spliceReturns pass. That can
+ * happen when the child's `## Return` section contains a `state: done` entry —
+ * because `spliceReturns` treats `state` as just another key and upserts a
+ * `## State\ndone` section into the caller's MEMORY, overwriting the
+ * `<x>_completed` value that `setState` just wrote. Short of that, cascade
+ * requires the caller's MEMORY file on disk to already contain `## State\ndone`
+ * (e.g. a stale file from a prior run), which is a degenerate scenario.
+ *
+ * **Intermediate-frame MEMORY loss.**
+ * When cascade DOES fire (events.length > 1), each iteration computes a
+ * transformed caller MEMORY (setState + spliceReturns) but only the FINAL
+ * caller's MEMORY is returned in `callerMemoryAfter`. The caller of applyPop
+ * (currently `runStackBlock` in main.ts) writes `callerMemoryAfter` to
+ * `callerFrameDir/MEMORY.md` exactly once. Intermediate frame MEMORIes —
+ * the computed strings for frames between the leaf and the final caller — are
+ * never written to disk. They exist only as ephemeral variables inside the
+ * while-loop and are then discarded.
+ *
+ * This is benign today because cascade is structurally rare (see above).
+ * If a future change makes cascade common, callers must iterate `events` and
+ * write each intermediate frame's MEMORY to its `frameDir/MEMORY.md` before
+ * issuing the rmSync that deletes it. A soft warning is emitted by
+ * `runStackBlock` whenever `events.length > 1` to surface this scenario.
  */
 export function applyPop(
   callStack: CallStack,

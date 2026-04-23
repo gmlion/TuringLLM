@@ -195,6 +195,72 @@ describe("applyPop", () => {
     assert.deepEqual(r.events[0].splicedKeys, ["ok"]);
     assert.deepEqual(r.events[0].malformedLines, ["broken-no-colon"]);
   });
+
+  test("cascade pop fires when child's ## Return overrides caller state to done", () => {
+    // This test documents the cascade-pop contract and the intermediate-frame
+    // MEMORY loss caveat described in the applyPop JSDoc.
+    //
+    // Setup: 3-deep stack (root + mid + leaf).
+    // The leaf's ## Return includes `state: done`.
+    // spliceReturns treats "state" as a regular key and upserts ## State in the
+    // mid-frame's MEMORY to "done" — overriding the "leaf_completed" that
+    // setState wrote — which causes the while-loop to fire a second time.
+    //
+    // After cascade: stack reduces to [root] only, events.length === 2.
+    // The FINAL caller (root) gets its MEMORY returned in callerMemoryAfter.
+    // The INTERMEDIATE caller (mid) had its MEMORY computed inside the loop
+    // but it is NOT returned — only the final caller's MEMORY is. This is the
+    // intermediate-frame loss that runStackBlock warns about when events.length > 1.
+    const cs: CallStack = {
+      nextCounter: 3,
+      stack: [
+        { returnState: "<root>", frameDir: "frames/f000-strategy" },
+        { returnState: "intermediate", frameDir: "frames/f001-mid" },
+        { returnState: "leaf", frameDir: "frames/f002-leaf" },
+      ],
+    };
+
+    // Child (leaf) signals done and passes back state: done in ## Return.
+    // spliceReturns will capitalize "state" → "## State" and upsert it,
+    // replacing the "leaf_completed" value that setState wrote into mid's MEMORY.
+    const childMemory = "## State\ndone\n## Return\nstate: done";
+
+    const r = applyPop(cs, childMemory, (frameDir) => {
+      if (frameDir === "frames/f001-mid") {
+        return "## State\nintermediate\n## Work\nsome work";
+      }
+      if (frameDir === "frames/f000-strategy") {
+        return "## State\nroot_state\n## Root\nroot data";
+      }
+      throw new Error(`unexpected readFrame call for: ${frameDir}`);
+    });
+
+    // Cascade fired: both leaf and mid were popped in a single applyPop call.
+    assert.equal(r.events.length, 2, "cascade should produce 2 pop events");
+
+    // Stack reduced to root frame only.
+    assert.equal(r.callStack.stack.length, 1);
+    assert.equal(r.callStack.stack[0].frameDir, "frames/f000-strategy");
+
+    // First event: leaf popped, mid becomes caller.
+    assert.equal(r.events[0].returnState, "leaf");
+    assert.equal(r.events[0].depthAfter, 2);
+    assert.equal(r.events[0].frameDir, "frames/f002-leaf");
+
+    // Second event: mid popped (because its spliced state became "done"), root becomes caller.
+    assert.equal(r.events[1].returnState, "intermediate");
+    assert.equal(r.events[1].depthAfter, 1);
+    assert.equal(r.events[1].frameDir, "frames/f001-mid");
+
+    // callerMemoryAfter is the FINAL caller's (root's) MEMORY after state transition.
+    // Root's state was set to "intermediate_completed" by setState.
+    assert.match(r.callerMemoryAfter, /^## State\nintermediate_completed/m);
+
+    // The intermediate mid-frame's MEMORY (which had state overridden to "done"
+    // by spliceReturns) was computed but is NOT present in any return value —
+    // it was only used as the loop's "currentChildMemory" for the next iteration.
+    // This is the intermediate-frame loss documented in the applyPop JSDoc.
+  });
 });
 
 describe("applyPush", () => {

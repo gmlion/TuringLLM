@@ -364,6 +364,13 @@ function runStackBlock(callStack: CallStack): boolean {
       "utf-8",
     );
 
+    // Warn when cascade pop fires: intermediate frame MEMORIes are computed
+    // in applyPop but only the final caller's MEMORY is written to disk above.
+    // See the JSDoc on applyPop in call-stack.ts for the full explanation.
+    if (popped.events.length > 1) {
+      log(`  [pop] WARN: cascade pop with ${popped.events.length} events; intermediate frame MEMORIes were not persisted (only the final caller).`);
+    }
+
     // rmSync each popped frame's directory and log events.
     for (const ev of popped.events) {
       rmSync(resolve(BASE_DIR, ev.frameDir), { recursive: true, force: true });
