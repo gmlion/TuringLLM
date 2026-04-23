@@ -64,15 +64,16 @@ Phase 2b introduced a per-frame directory layout (`frames/f<NNN>-<slug>/`) and a
 
 **b-evaluator-optimizer**
 
-- `./scoped/attempt.md` — the generator's current attempt. Wholesale rewrite is acceptable on each fail-retry cycle.
-- `./scoped/criterion.md` — the acceptance criterion. Written once at Initialize from PROGRAM.md; never rewritten.
+- `./scoped/attempt.md` — the generator's current attempt. Wholesale rewrite is acceptable on each fail-retry cycle. Lives in the **strategy frame's** scoped dir.
+- `./scoped/criterion.md` — the acceptance criterion. Written once at Initialize from PROGRAM.md; never rewritten. Lives in the **strategy frame's** scoped dir.
+- The dynamic `evaluate.md` is a one-shot evaluator with no scoped state of its own.
 - Dynamic `evaluate.md` returns `## Verdict` + `## Feedback` via `## Return`.
 
 **c-reflexion**
 
-- `./scoped/attempt.md` — same as b; wholesale rewrite per retry.
-- `./scoped/criterion.md` — set once at Initialize.
-- `./scoped/lessons.md` — accumulated verbal lessons. **Surgical append only** (`echo "- L<N>: ..." >> ./scoped/lessons.md`). Wholesale rewrites are forbidden; they silently discard prior lessons and break the pattern's episodic-memory guarantee.
+- `./scoped/attempt.md` — same as b; wholesale rewrite per retry. Lives in the **strategy frame's** scoped dir.
+- `./scoped/criterion.md` — set once at Initialize. Lives in the **strategy frame's** scoped dir.
+- `./scoped/lessons.md` — accumulated verbal lessons. Lives in the **strategy frame's** scoped dir. **Surgical append only** (`echo "- L<N>: ..." >> ./scoped/lessons.md`). Wholesale rewrites are forbidden; they silently discard prior lessons and break the pattern's episodic-memory guarantee.
 - Dynamic `reflect.md` returns `## Lesson` via `## Return`; the strategy then appends it to `lessons.md`.
 
 **d-cove**

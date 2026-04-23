@@ -99,7 +99,7 @@ When the LLM writes `## Matched Instruction: none`, the shell automatically ente
 
 The shell intercepts these MEMORY states before each LLM invocation:
 
-- `done` — If the call stack is empty, halts the machine. If the call stack has frames (a dynamic is active), the shell pops one frame: restores the caller's instructions and sets state to `{returnState}_completed` (where `returnState` is the state the caller was in when it pushed). Cascade-pops while state remains `done`.
+- `done` — If only the root frame remains on the stack (stack.length === 1), halts the machine. If a dynamic is active (stack.length > 1), the shell pops one frame: restores the caller's instructions and sets state to `{returnState}_completed` (where `returnState` is the state the caller was in when it pushed). Cascade-pops while state remains `done`.
 - `waiting_for_user` — reads `## Pending Questions` from MEMORY, prompts user one question at a time, writes answers to `## Answers` in MEMORY, sets state to `user_responded`. Questions are non-blocking: the LLM adds them to `## Pending Questions` without changing state and keeps working. Only sets `waiting_for_user` when all remaining work is blocked on unanswered questions.
 
 The shell also intercepts the `## Push` MEMORY section (see Dynamics below).
@@ -116,7 +116,7 @@ dynamics/consult.md
 ```
 
 Before the next LLM invocation, the shell:
-1. Saves the current `{state, instructions}` as a new frame on the call stack.
+1. Saves a new frame `{ returnState, frameDir }` on the call stack. The caller's INSTRUCTIONS.md and MEMORY.md remain on disk in the caller's frame directory; the child gets its own frame directory with fresh files.
 2. Loads the target file as the new `INSTRUCTIONS.md`.
 3. Strips the `## Push` section from MEMORY.
 4. Sets state to `empty` so the dynamic starts fresh.
@@ -191,6 +191,8 @@ instances/foo/
 **Frame naming:** `frames/f<NNN>-<slug>` where NNN is a monotonically increasing counter (zero-padded to 3 digits, widens beyond 999) and slug is derived from the push target filename (e.g. `dynamics/verify.md` → `verify`). The root frame is always `frames/f000-strategy`.
 
 **Halt detection:** `state === "done"` AND `stack.length === 1` (only the root frame remains).
+
+**Edge case:** if a child's `## Return` block contains a `state: done` entry, the splice writes `## State\ndone` into the caller's MEMORY, which can cascade into another pop and (if the cascading caller is the root frame) trigger an immediate halt. Use `state` as a return key only deliberately.
 
 ### Cwd-based path invariants
 
@@ -278,8 +280,8 @@ Interpreters live in `interpreters/<name>/`. Each has an `INSTRUCTIONS.md` and o
 - **default** (no argument to new-instance.sh) — Step-by-step executor. Reads PROGRAM.md steps, decomposes each into sub-instructions with verification.
 - **`interpreters/game-team`** — Game dev team simulation with fuzzy natural-language conditions. Six roles (team lead, architect, game designer, developer, 2D artist, UI/UX). Scheduled for deletion in Phase 4 of the agent-workflows plan; exempt from the Phase-1 directory layout convention.
 - **`interpreters/1-iterative-refinement/a-self-refine`** — Self-Refine (patterns.md Group 1). Single role drafts, critiques its own output via `self-critique.md`, iterates until accepted. Uses `./scoped/draft.md` for the current draft; returns `## Refined` via `## Return`.
-- **`interpreters/1-iterative-refinement/b-evaluator-optimizer`** — Evaluator–Optimizer (patterns.md Group 1). Generator produces attempts; external evaluator (`evaluate.md`) judges against an explicit `## Criterion` and returns pass/fail with feedback. Uses `./scoped/attempt.md` + `./scoped/criterion.md`; returns `## Verdict` + `## Feedback` via `## Return`.
-- **`interpreters/1-iterative-refinement/c-reflexion`** — Reflexion (patterns.md Group 1). Evaluator–Optimizer plus a `reflect.md` step that distils each failed attempt into a verbal lesson accumulated via surgical appends to `./scoped/lessons.md`. Returns `## Verdict` + `## Feedback` + `## Lesson` via `## Return`.
+- **`interpreters/1-iterative-refinement/b-evaluator-optimizer`** — Evaluator–Optimizer (patterns.md Group 1). Generator produces attempts; external evaluator (`evaluate.md`) judges against an explicit `## Criterion` and returns pass/fail with feedback. `./scoped/attempt.md` and `./scoped/criterion.md` live in the strategy frame's scoped dir (the dynamic is a one-shot evaluator with no scoped state of its own); returns `## Verdict` + `## Feedback` via `## Return`.
+- **`interpreters/1-iterative-refinement/c-reflexion`** — Reflexion (patterns.md Group 1). Evaluator–Optimizer plus a `reflect.md` step that distils each failed attempt into a verbal lesson accumulated via surgical appends to `./scoped/lessons.md`. `./scoped/attempt.md`, `./scoped/criterion.md`, and `./scoped/lessons.md` live in the strategy frame's scoped dir. Returns `## Verdict` + `## Feedback` + `## Lesson` via `## Return`.
 - **`interpreters/1-iterative-refinement/d-cove`** — Chain-of-Verification (patterns.md Group 1, nested). Drafter pushes `verify.md`; verifier decomposes the draft into atomic claims and pushes `answer-independently.md` per claim (stack depth 2). Uses `./scoped/draft.md`; verifier uses its own `./scoped/verifications.md` with surgical `sed -i` updates; returns `## Revised` via `## Return`.
 
 ### Creating a new interpreter
