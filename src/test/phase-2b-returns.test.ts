@@ -122,6 +122,17 @@ describe("phase-2b end-to-end push/pop/splice", () => {
     // verify's MEMORY got a ## Answer splice.
     assert.match(pop1.callerMemoryAfter, /## Answer\nyes, q1 is true/);
 
+    // Simulate main.ts-side filesystem effects after pop:
+    // - Write pop1.callerMemoryAfter to the caller's frame MEMORY.md
+    // - rmSync the popped frame dir (the answer-independently child)
+    writeFileSync(
+      resolve(tmp, pop1.callerFrameDir, "MEMORY.md"),
+      pop1.callerMemoryAfter,
+      "utf-8",
+    );
+    const poppedFrameDir = pop1.events[0].frameDir;
+    rmSync(resolve(tmp, poppedFrameDir), { recursive: true, force: true });
+
     // Critical assertion: verify.md's scoped/verifications.md is UNTOUCHED.
     const verifsOnDisk = readFileSync(
       resolve(tmp, push1.frameDir, "scoped/verifications.md"),
@@ -132,5 +143,13 @@ describe("phase-2b end-to-end push/pop/splice", () => {
     // Critical assertion: strategy's ## Draft is UNTOUCHED on disk.
     const stratDraft = readFileSync(rootMemPath, "utf-8");
     assert.match(stratDraft, /## Draft\nmulti-claim draft/);
+
+    // Additional assertion: the popped child frame dir should no longer exist.
+    assert.equal(existsSync(resolve(tmp, poppedFrameDir)), false);
+
+    // Additional assertion: verify's MEMORY.md should now contain the spliced state and answer.
+    const verifyMemAfter = readFileSync(resolve(tmp, push1.frameDir, "MEMORY.md"), "utf-8");
+    assert.match(verifyMemAfter, /^## State\nasking_completed/m);
+    assert.match(verifyMemAfter, /## Answer\nyes, q1 is true/);
   });
 });
