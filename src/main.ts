@@ -5,7 +5,7 @@
  * interaction, and repeats. All markdown parsing is in memory.ts,
  * all configuration in config.ts.
  */
-import { mkdirSync, copyFileSync, readFileSync, writeFileSync, readdirSync, existsSync, rmSync } from "fs";
+import { mkdirSync, copyFileSync, cpSync, readFileSync, writeFileSync, readdirSync, existsSync, rmSync } from "fs";
 import { execSync } from "child_process";
 import { resolve, dirname } from "path";
 import { createInterface } from "readline";
@@ -312,11 +312,13 @@ function getStartCycle(): number {
   } catch { return 1; }
 }
 
-function snapshot(cycle: number, hash: string, memoryPath: string, instructionsPath: string) {
+function snapshot(cycle: number, hash: string): void {
   const dir = resolve(HISTORY_DIR, `${String(cycle).padStart(4, "0")}-${hash}`);
   mkdirSync(dir, { recursive: true });
-  if (existsSync(memoryPath)) copyFileSync(memoryPath, resolve(dir, "MEMORY.md"));
-  if (existsSync(instructionsPath)) copyFileSync(instructionsPath, resolve(dir, "INSTRUCTIONS.md"));
+  const framesSrc = resolve(BASE_DIR, "frames");
+  if (existsSync(framesSrc)) {
+    cpSync(framesSrc, resolve(dir, "frames"), { recursive: true });
+  }
   if (existsSync(CALL_STACK_PATH)) {
     copyFileSync(CALL_STACK_PATH, resolve(dir, ".call-stack.json"));
   }
@@ -461,7 +463,7 @@ async function main() {
     if (currentState === "waiting_for_user") {
       log(`--- Cycle ${cycle} (frame: ${fd2}) (user interaction) ---`);
       const hash = commitCycle(BASE_DIR, cycle, "waiting_for_user");
-      snapshot(cycle, hash, mp2, ip2);
+      snapshot(cycle, hash);
       await handleUserInteraction(mp2);
       log("");
       continue;
@@ -492,7 +494,7 @@ async function main() {
       if (matchedValue === "none") {
         handleNoMatch(getMemoryState(mp3), mp3);
         const hash = commitCycle(BASE_DIR, cycle, "waiting_for_user");
-        snapshot(cycle, hash, mp3, ip3);
+        snapshot(cycle, hash);
         await handleUserInteraction(mp3);
         log("");
         continue;
@@ -501,7 +503,7 @@ async function main() {
       executeSyscalls(ip3, fd3);
       const state = getMemoryState(mp3);
       const hash = commitCycle(BASE_DIR, cycle, state);
-      snapshot(cycle, hash, mp3, ip3);
+      snapshot(cycle, hash);
 
       await sendCycleSummary(cycle, result.summary, mp3);
       await presentNewQuestions(mp3);
@@ -520,7 +522,7 @@ async function main() {
 
     const finalState = result.noMatch ? "waiting_for_user" : state;
     const hash = commitCycle(BASE_DIR, cycle, finalState);
-    snapshot(cycle, hash, mp3, ip3);
+    snapshot(cycle, hash);
 
     await sendCycleSummary(cycle, result.summary, mp3);
     await presentNewQuestions(mp3);
