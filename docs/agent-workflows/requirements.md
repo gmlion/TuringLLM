@@ -200,6 +200,24 @@ Phase 2 also introduces the **arguments-via-INSTRUCTIONS** shell convention (`##
 
 ---
 
+## Phase 2b — Per-frame directories and ## Return splicing
+
+Shipped on top of Phase 2 without adding new interpreters. A structural upgrade to the shell and all four Group-1 interpreters.
+
+**Deliverables:**
+- Per-frame directory layout: `instances/<name>/frames/f<NNN>-<slug>/` containing each frame's `INSTRUCTIONS.md`, `MEMORY.md`, and `scoped/`.
+- New `StackEntry` shape: `{ returnState, frameDir }` — no more `instructions` field; INSTRUCTIONS.md lives on disk per frame.
+- `activeFramePaths(callStack)` in `src/config.ts`; cwd handoff per cycle.
+- Root frame `frames/f000-strategy` is always `stack[0]` with `returnState: "<root>"`. Halt: `state === "done"` AND `stack.length === 1`.
+- `## Return` splicing: child writes `## Return\nkey: value`; on pop the shell splices into the caller's MEMORY as `## <CapitalizedKey>` sections.
+- Surgical-edit convention in system prompt: `sed -i`, `awk`, `echo >>` for files other than `MEMORY.md`/`INSTRUCTIONS.md`/`PROGRAM.md`.
+- All four interpreters (`a-self-refine`, `b-evaluator-optimizer`, `c-reflexion`, `d-cove`) migrated to `./scoped/` files for heap state and `## Return` for outputs.
+- **Breaking change (R43):** pre-2b instances cannot resume; `instances/` was wiped and the new layout is mandatory.
+
+Spec: `docs/specs/2026-04-23-agent-workflows-phase-2b-push-returns/`.
+
+---
+
 ## Phase 3 — Planning & decomposition (patterns.md Group 2)
 
 Three interpreters. Built together because Plan-and-Execute's dynamics

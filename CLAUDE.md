@@ -156,6 +156,119 @@ The `_completed` suffix prevents an infinite loop: the caller's original `{calle
 
 **Implementation.** All push/pop semantics live in `src/call-stack.ts` as pure functions (`applyPush`, `applyPop`) that take `{stack, memory, instructions}` and return the transformed state. The shell in `src/main.ts` runs them before each LLM invocation and writes results back to disk. This split is why the stack logic is unit-tested independently of the main loop.
 
+## Per-frame directories and ## Return splicing (Phase 2b)
+
+Phase 2b replaces the flat instance layout (INSTRUCTIONS.md + MEMORY.md at the root) with a **per-frame directory tree**. Each call stack frame lives in its own directory; the shell sets cwd to the active frame before every LLM cycle.
+
+### Frame directory layout
+
+```
+instances/foo/
+├── PROGRAM.md          # User's program (read-only to machine; always at instance root)
+├── workspace/          # Project artifacts (has its own git repo; always at instance root)
+├── .call-stack.json    # Saved call stack
+├── frames/
+│   ├── f000-strategy/  # Root frame (stack[0], returnState: "<root>")
+│   │   ├── INSTRUCTIONS.md
+│   │   ├── MEMORY.md
+│   │   └── scoped/     # Per-frame heap files (draft.md, attempt.md, etc.)
+│   ├── f001-verify/    # Pushed frame (stack[1])
+│   │   ├── INSTRUCTIONS.md
+│   │   ├── MEMORY.md
+│   │   └── scoped/
+│   └── f002-answer-independently/   # Nested pushed frame (stack[2])
+│       ├── INSTRUCTIONS.md
+│       ├── MEMORY.md
+│       └── scoped/
+├── run.sh
+├── .env
+├── .api_key
+├── .gitignore
+├── history/
+└── logs/
+```
+
+**Frame naming:** `frames/f<NNN>-<slug>` where NNN is a monotonically increasing counter (zero-padded to 3 digits, widens beyond 999) and slug is derived from the push target filename (e.g. `dynamics/verify.md` → `verify`). The root frame is always `frames/f000-strategy`.
+
+**Halt detection:** `state === "done"` AND `stack.length === 1` (only the root frame remains).
+
+### Cwd-based path invariants
+
+The shell sets cwd to the active frame directory before every LLM invocation. From any frame, paths are invariant:
+
+| Path | What it is |
+|---|---|
+| `./MEMORY.md` | This frame's memory |
+| `./INSTRUCTIONS.md` | This frame's instructions |
+| `./scoped/` | This frame's private heap files |
+| `../../PROGRAM.md` | The user's program (read-only) |
+| `../../workspace/` | The project workspace |
+
+### Canonical per-frame MEMORY schema
+
+Every frame's MEMORY.md uses this schema:
+
+```markdown
+## State
+<state-value>
+
+## Matched Instruction
+<instruction-label or "none">
+
+## Last Action
+<prose describing what the LLM did this cycle>
+
+## Result
+<outcome of the last action>
+
+## Push
+<path>          ← optional; triggers a push before the next cycle
+
+## Push-Args
+key: value      ← optional; accompanies ## Push
+key: |
+  multi-line
+  value
+
+## Return
+key: value      ← optional; written by a dynamic before setting state to done
+```
+
+### ## Return splicing
+
+When a dynamic sets `state: done`, the shell pops the frame and splices any `## Return` block into the caller's MEMORY. The grammar is identical to `## Push-Args` (key-value or key-pipe block scalar). Each entry becomes a top-level MEMORY section in the caller: key `foo` → `## Foo` (first character uppercased, rest preserved).
+
+Example: a dynamic writes:
+
+```
+## Return
+verdict: pass
+feedback: |
+  Looks good.
+```
+
+After pop, the caller's MEMORY gains:
+
+```
+## Verdict
+pass
+
+## Feedback
+Looks good.
+```
+
+If the caller already has a `## Verdict` section, the shell replaces it in place (surgical splice). If not, the shell appends it.
+
+### Scoped files and the surgical-edit convention
+
+Per-frame heap state that is too large or too structured for MEMORY sections lives in `./scoped/` files. Examples: `./scoped/draft.md`, `./scoped/attempt.md`, `./scoped/lessons.md`.
+
+**Surgical-edit rule:** use `sed -i`, `awk`, or `echo >>` for files other than `MEMORY.md`, `INSTRUCTIONS.md`, and `PROGRAM.md`. Wholesale rewrites of `scoped/` files that accumulate state (e.g. `lessons.md`) will silently drop prior content. The system prompt enforces this convention.
+
+### Breaking change (R43)
+
+Pre-Phase-2b instances (those with `INSTRUCTIONS.md` and `MEMORY.md` directly at the instance root, without a `frames/` subtree) **cannot resume** under the Phase-2b shell. The instance layout is a breaking change. Wipe `instances/` and recreate from scratch with `new-instance.sh` if resuming old work.
+
 ## Interpreters
 
 Interpreters live in `interpreters/<name>/`. Each has an `INSTRUCTIONS.md` and optional supporting `*.md` files (role descriptions, etc.).
@@ -164,9 +277,10 @@ Interpreters live in `interpreters/<name>/`. Each has an `INSTRUCTIONS.md` and o
 
 - **default** (no argument to new-instance.sh) — Step-by-step executor. Reads PROGRAM.md steps, decomposes each into sub-instructions with verification.
 - **`interpreters/game-team`** — Game dev team simulation with fuzzy natural-language conditions. Six roles (team lead, architect, game designer, developer, 2D artist, UI/UX). Scheduled for deletion in Phase 4 of the agent-workflows plan; exempt from the Phase-1 directory layout convention.
-- **`interpreters/1-iterative-refinement/a-self-refine`** — Self-Refine (patterns.md Group 1). Single role drafts, critiques its own output via `self-critique.md`, iterates until accepted.
-- **`interpreters/1-iterative-refinement/b-evaluator-optimizer`** — Evaluator–Optimizer (patterns.md Group 1). Generator produces attempts; external evaluator (`evaluate.md`) judges against an explicit `## Criterion` and returns pass/fail with feedback.
-- **`interpreters/1-iterative-refinement/c-reflexion`** — Reflexion (patterns.md Group 1). Evaluator–Optimizer plus a `reflect.md` step that distils each failed attempt into a verbal lesson accumulated in `## Lessons` and read back into every subsequent attempt.
+- **`interpreters/1-iterative-refinement/a-self-refine`** — Self-Refine (patterns.md Group 1). Single role drafts, critiques its own output via `self-critique.md`, iterates until accepted. Uses `./scoped/draft.md` for the current draft; returns `## Refined` via `## Return`.
+- **`interpreters/1-iterative-refinement/b-evaluator-optimizer`** — Evaluator–Optimizer (patterns.md Group 1). Generator produces attempts; external evaluator (`evaluate.md`) judges against an explicit `## Criterion` and returns pass/fail with feedback. Uses `./scoped/attempt.md` + `./scoped/criterion.md`; returns `## Verdict` + `## Feedback` via `## Return`.
+- **`interpreters/1-iterative-refinement/c-reflexion`** — Reflexion (patterns.md Group 1). Evaluator–Optimizer plus a `reflect.md` step that distils each failed attempt into a verbal lesson accumulated via surgical appends to `./scoped/lessons.md`. Returns `## Verdict` + `## Feedback` + `## Lesson` via `## Return`.
+- **`interpreters/1-iterative-refinement/d-cove`** — Chain-of-Verification (patterns.md Group 1, nested). Drafter pushes `verify.md`; verifier decomposes the draft into atomic claims and pushes `answer-independently.md` per claim (stack depth 2). Uses `./scoped/draft.md`; verifier uses its own `./scoped/verifications.md` with surgical `sed -i` updates; returns `## Revised` via `## Return`.
 
 ### Creating a new interpreter
 
@@ -191,12 +305,19 @@ Supporting `.md` files (role descriptions, templates) are copied into the instan
 ```
 instances/foo/
 ├── PROGRAM.md         # User's program (read-only to machine)
-├── INSTRUCTIONS.md    # Strategy + generated sub-instructions (or a dynamic, while one is active)
-├── MEMORY.md          # Current state; may contain ## Push to delegate to a dynamic
-├── .call-stack.json   # Saved call stack (empty array at depth 0)
+├── .call-stack.json   # Saved call stack; stack[0] is always the root frame
 ├── .env               # Provider/model config (gitignored)
 ├── workspace/         # Project artifacts (has its own git repo)
 ├── dynamics/          # Reusable instruction files copied from the interpreter (optional)
+├── frames/
+│   ├── f000-strategy/ # Root frame (always present)
+│   │   ├── INSTRUCTIONS.md   # Strategy + generated sub-instructions
+│   │   ├── MEMORY.md         # Current state; may contain ## Push / ## Return
+│   │   └── scoped/           # Per-frame heap files (draft.md, etc.)
+│   └── f001-<slug>/   # Pushed frames appear here while active
+│       ├── INSTRUCTIONS.md
+│       ├── MEMORY.md
+│       └── scoped/
 ├── run.sh             # Launch script
 ├── .api_key           # Cached API key (gitignored)
 ├── .gitignore         # Ignores .api_key, .env, logs/, history/, workspace/.git/

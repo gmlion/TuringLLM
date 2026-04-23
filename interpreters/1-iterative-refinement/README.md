@@ -51,9 +51,43 @@ All four dynamics in this group receive their per-call inputs via `## Push-Args`
 
 Outputs (`## Critique`, `## Refined`, `## Verdict`, `## Feedback`, `## Lesson`, `## Revised`, `## Answer`) are still written to MEMORY — they're the call's return value to the caller.
 
+## Per-frame scoped files (Phase 2b)
+
+Phase 2b introduced a per-frame directory layout (`frames/f<NNN>-<slug>/`) and a `./scoped/` subdirectory in each frame for heap state that is too large or too structured for MEMORY sections. All four interpreters in this group were retrofitted.
+
+### File layout per interpreter
+
+**a-self-refine**
+
+- `./scoped/draft.md` — the current draft blob. Wholesale rewrite is acceptable on each iteration (one atomic blob, no history to preserve).
+- Dynamic `self-critique.md` returns its output via `## Return` → `## Refined` in the caller's MEMORY.
+
+**b-evaluator-optimizer**
+
+- `./scoped/attempt.md` — the generator's current attempt. Wholesale rewrite is acceptable on each fail-retry cycle.
+- `./scoped/criterion.md` — the acceptance criterion. Written once at Initialize from PROGRAM.md; never rewritten.
+- Dynamic `evaluate.md` returns `## Verdict` + `## Feedback` via `## Return`.
+
+**c-reflexion**
+
+- `./scoped/attempt.md` — same as b; wholesale rewrite per retry.
+- `./scoped/criterion.md` — set once at Initialize.
+- `./scoped/lessons.md` — accumulated verbal lessons. **Surgical append only** (`echo "- L<N>: ..." >> ./scoped/lessons.md`). Wholesale rewrites are forbidden; they silently discard prior lessons and break the pattern's episodic-memory guarantee.
+- Dynamic `reflect.md` returns `## Lesson` via `## Return`; the strategy then appends it to `lessons.md`.
+
+**d-cove**
+
+- Strategy frame owns `./scoped/draft.md` (the candidate answer; wholesale rewrite OK).
+- `verify.md` runs in its **own frame** (`frames/f001-verify/`) and owns `./scoped/verifications.md` — a claim-by-claim record (`V1: …`, `V2: …`, etc.). Each `answer-independently.md` pop splices its `## Answer` result back into `verifications.md` using `sed -i` for the matching line. **Surgical `sed -i` updates are mandatory**; wholesale rewrites are forbidden because they would lose prior answered claims.
+- `verify.md` returns `## Revised` via `## Return` once all pending claims are answered.
+
+### Surgical-edit convention
+
+Files that accumulate state across multiple pushes or within a single dynamic's run must be edited surgically. The system prompt specifies: use `sed -i`, `awk`, or `echo >>` for any file other than `MEMORY.md`, `INSTRUCTIONS.md`, and `PROGRAM.md`. See `CLAUDE.md` "Per-frame directories and ## Return splicing → Scoped files and the surgical-edit convention" for the normative rule.
+
 ## Coming next in this group
 
-Phase 2 (CoVe / `d-cove`) shipped together with the arguments-via-INSTRUCTIONS shell convention. Future variants in this group, if any, would compose CoVe with iteration (e.g. CoVe + Evaluator–Optimizer hybrid).
+Phase 2b (per-frame layout + ## Return) closed out Group 1. Future variants in this group, if any, would compose CoVe with iteration (e.g. CoVe + Evaluator–Optimizer hybrid).
 
 See `docs/agent-workflows/requirements.md` for the full phase plan and
 `docs/agent-workflows/patterns.md` §Group 1 for literature references
