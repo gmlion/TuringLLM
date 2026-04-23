@@ -79,7 +79,7 @@ export async function runCycle(
       logRaw(`  [tool_input] ${JSON.stringify(input)}`);
 
       const instanceDir = resolve(memoryPath, "..");
-      const result = await executeTool(toolUse.name, input, instructionsPath, getWorkspacePath(instanceDir));
+      const result = await executeTool(toolUse.name, input, instructionsPath, getWorkspacePath(instanceDir), instanceDir);
 
       logRaw(`  [tool_result] ${result.output}`);
       logRaw(`  [tool_error] ${result.error}`);

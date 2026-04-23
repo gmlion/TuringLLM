@@ -88,7 +88,8 @@ export async function executeTool(
   name: string,
   input: Record<string, unknown>,
   instructionsPath: string,
-  workspacePath?: string
+  workspacePath?: string,
+  cwd?: string
 ): Promise<ToolResult> {
   switch (name) {
     case "bash": {
@@ -104,6 +105,7 @@ export async function executeTool(
           encoding: "utf-8",
           timeout,
           maxBuffer: 1024 * 1024,
+          ...(cwd ? { cwd } : {}),
         });
         return { output: stdout || "(no output)", error: false };
       } catch (err: unknown) {

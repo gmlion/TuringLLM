@@ -56,7 +56,8 @@ async function getModel(): Promise<LlamaModel> {
 function buildFunctions(
   anthropicTools: Anthropic.Tool[],
   instructionsPath: string,
-  workspacePath: string | undefined
+  workspacePath: string | undefined,
+  frameDir: string
 ) {
   const results: { name: string; output: string; error: boolean }[] = [];
 
@@ -77,7 +78,7 @@ function buildFunctions(
         logRaw(`  [tool_call] ${toolName}`);
         logRaw(`  [tool_input] ${JSON.stringify(params)}`);
 
-        const result = await executeTool(toolName, params, instructionsPath, workspacePath);
+        const result = await executeTool(toolName, params, instructionsPath, workspacePath, frameDir);
 
         logRaw(`  [tool_result] ${result.output}`);
         logRaw(`  [tool_error] ${result.error}`);
@@ -112,7 +113,7 @@ export async function runCycle(
   const instanceDir = resolve(memoryPath, "..");
   const workspacePath = getWorkspacePath(instanceDir);
 
-  const { functions, results } = buildFunctions(tools, instructionsPath, workspacePath);
+  const { functions, results } = buildFunctions(tools, instructionsPath, workspacePath, instanceDir);
 
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     results.length = 0;
