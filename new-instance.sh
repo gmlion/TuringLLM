@@ -24,10 +24,37 @@ if [ -d "$DIR" ]; then
   exit 1
 fi
 
-mkdir -p "$DIR"
+mkdir -p "$DIR/frames/f000-strategy/scoped"
 
-# PROGRAM.md — always a fresh template for the user to fill in
-cat > "$DIR/PROGRAM.md" << 'EOF'
+# INSTRUCTIONS.md and strategy-scoped support files
+if [ -n "$INTERPRETER" ]; then
+  INTERP_DIR="$SCRIPT_DIR/$INTERPRETER"
+  if [ ! -f "$INTERP_DIR/INSTRUCTIONS.md" ]; then
+    echo "Error: interpreter at '$INTERP_DIR' has no INSTRUCTIONS.md"
+    exit 1
+  fi
+  cp "$INTERP_DIR/INSTRUCTIONS.md" "$DIR/frames/f000-strategy/INSTRUCTIONS.md"
+
+  # Support files (role descriptions, test harnesses, etc.) — strategy-scoped.
+  # Excludes INSTRUCTIONS.md (above) and PROGRAM.md (instance root, handled below).
+  for f in "$INTERP_DIR"/*.md; do
+    [ -e "$f" ] || continue
+    base="$(basename "$f")"
+    if [ "$base" != "INSTRUCTIONS.md" ] && [ "$base" != "PROGRAM.md" ]; then
+      cp "$f" "$DIR/frames/f000-strategy/$base"
+    fi
+  done
+
+  # Dynamics — shared across all frames, at instance root.
+  if [ -d "$INTERP_DIR/dynamics" ]; then
+    cp -r "$INTERP_DIR/dynamics" "$DIR/dynamics"
+  fi
+
+  # PROGRAM.md — instance root. Use interpreter's demo if present; else template.
+  if [ -f "$INTERP_DIR/PROGRAM.md" ]; then
+    cp "$INTERP_DIR/PROGRAM.md" "$DIR/PROGRAM.md"
+  else
+    cat > "$DIR/PROGRAM.md" << 'EOF'
 # Goal
 (describe the goal here)
 
@@ -37,41 +64,20 @@ cat > "$DIR/PROGRAM.md" << 'EOF'
 ## Step 2: (second high-level step)
 (describe what to do)
 EOF
-
-# INSTRUCTIONS.md — from interpreter or built-in default
-if [ -n "$INTERPRETER" ]; then
-  INTERP_DIR="$SCRIPT_DIR/$INTERPRETER"
-  if [ ! -f "$INTERP_DIR/INSTRUCTIONS.md" ]; then
-    echo "Error: interpreter at '$INTERP_DIR' has no INSTRUCTIONS.md"
-    exit 1
-  fi
-  cp "$INTERP_DIR/INSTRUCTIONS.md" "$DIR/INSTRUCTIONS.md"
-
-  # Copy any supporting files (role descriptions, etc.) into the instance
-  for f in "$INTERP_DIR"/*.md; do
-    base="$(basename "$f")"
-    if [ "$base" != "INSTRUCTIONS.md" ]; then
-      cp "$f" "$DIR/$base"
-    fi
-  done
-
-  # Copy dynamics directory if it exists
-  if [ -d "$INTERP_DIR/dynamics" ]; then
-    cp -r "$INTERP_DIR/dynamics" "$DIR/dynamics"
   fi
 else
-  cat > "$DIR/INSTRUCTIONS.md" << 'INSTEOF'
+  cat > "$DIR/frames/f000-strategy/INSTRUCTIONS.md" << 'INSTEOF'
 # Strategy
 
 IMPORTANT: Everything between "# Strategy" and "# Sub-instructions" is the strategy. It must be copied VERBATIM into every update_instructions call. Never modify, summarize, or omit any strategy instruction. Only the "# Sub-instructions" section below changes.
 
 ## Instruction: Initialize
 **Condition:** MEMORY state is "empty"
-**Action:** Read PROGRAM.md to understand the goal. Set MEMORY state to "strategy_ready" with a note about the overall plan.
+**Action:** Read ../../PROGRAM.md to understand the goal. Set MEMORY state to "strategy_ready" with a note about the overall plan.
 
 ## Instruction: Load next program step
 **Condition:** MEMORY state is "strategy_ready"
-**Action:** Read PROGRAM.md. Find the first step not marked done in MEMORY. Decompose it into 2-4 concrete sub-instructions for the CURRENT step only. Write them in the "# Sub-instructions" section below. Each action sub-instruction must be followed by a verification sub-instruction. The LAST sub-instruction must always be:
+**Action:** Read ../../PROGRAM.md. Find the first step not marked done in MEMORY. Decompose it into 2-4 concrete sub-instructions for the CURRENT step only. Write them in the "# Sub-instructions" section below. Each action sub-instruction must be followed by a verification sub-instruction. The LAST sub-instruction must always be:
 
   ## Instruction: Step complete
   **Condition:** MEMORY state is "<final_verified_state>"
@@ -87,16 +93,29 @@ If all steps in PROGRAM.md are done, set MEMORY state to "done" instead. Set MEM
 
 (none yet — the "Load next program step" instruction will populate these)
 INSTEOF
+  cat > "$DIR/PROGRAM.md" << 'EOF'
+# Goal
+(describe the goal here)
+
+## Step 1: (first high-level step)
+(describe what to do)
+
+## Step 2: (second high-level step)
+(describe what to do)
+EOF
 fi
 
-# MEMORY.md — always starts empty
-cat > "$DIR/MEMORY.md" << 'EOF'
+# Strategy's MEMORY: canonical fresh-state shape.
+cat > "$DIR/frames/f000-strategy/MEMORY.md" << 'EOF'
 ## State
 empty
 EOF
 
-# SYSCALLS.md — empty, used by stateful mode
+# SYSCALLS.md — empty, used by stateful mode (instance root, unchanged).
 touch "$DIR/SYSCALLS.md"
+
+# Call stack: root frame pre-populated per Phase 2b R17.
+echo '{"nextCounter":1,"stack":[{"returnState":"<root>","frameDir":"frames/f000-strategy"}]}' > "$DIR/.call-stack.json"
 
 # .gitignore for instance
 cat > "$DIR/.gitignore" << 'EOF'
@@ -108,7 +127,7 @@ history/
 workspace/.git/
 EOF
 
-# run.sh
+# run.sh — unchanged from Phase 2.
 cat > "$DIR/run.sh" << 'RUNEOF'
 #!/usr/bin/env bash
 set -euo pipefail
