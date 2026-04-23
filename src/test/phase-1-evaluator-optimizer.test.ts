@@ -1,10 +1,9 @@
 import { test, describe, beforeEach, afterEach } from "node:test";
 import { strict as assert } from "node:assert";
 import { mkdtempSync, rmSync, mkdirSync, writeFileSync, readFileSync, existsSync } from "fs";
-import { resolve } from "path";
+import { resolve, dirname } from "path";
 import { tmpdir } from "os";
 import { fileURLToPath } from "url";
-import { dirname } from "path";
 import { applyPush, applyPop, type CallStack } from "../call-stack.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -52,7 +51,7 @@ describe("1b evaluator-optimizer", () => {
 
   test("evaluate dynamic declares state=done (as MEMORY value)", () => {
     const dyn = readFileSync(resolve(INTERP, "dynamics/evaluate.md"), "utf-8");
-    assert.match(dyn, /state=done/, "evaluate.md should write state=done");
+    assert.match(dyn, /^\s*## State\s*\n\s*done\b/m, "evaluate.md Return block should set state to done");
     assert.match(dyn, /state is "empty"/, "evaluate.md should have empty-state condition");
   });
 
@@ -181,8 +180,6 @@ describe("1b evaluator-optimizer", () => {
       const { cs, rootMemPath } = setupRootFrame(
         "## State\nattempted\n## Push\ndynamics/evaluate.md\n## Push-Args\nattempt: |\n  second attempt\ncriterion: |\n  must do X"
       );
-      writeFileSync(resolve(tmp, "frames/f000-strategy/scoped/attempt.md"), "second attempt\n", "utf-8");
-      writeFileSync(resolve(tmp, "frames/f000-strategy/scoped/criterion.md"), "must do X\n", "utf-8");
 
       const evaluateContent = readFileSync(resolve(INTERP, "dynamics/evaluate.md"), "utf-8");
       const rootMem = readFileSync(rootMemPath, "utf-8");
