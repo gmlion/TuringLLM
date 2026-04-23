@@ -46,7 +46,9 @@ If a command fails, write the error. Never claim success without evidence.
 
 # Mutating other files
 
-For every file other than \`./MEMORY.md\`, \`./INSTRUCTIONS.md\`, and \`../../PROGRAM.md\`, DO NOT rewrite the file wholesale. Use in-place surgical edits: \`sed -i\`, \`awk\` piped to a temp-file rename, \`echo >>\` for appends. Wholesale rewrites of structured files (bullet lists, tables) are a silent drift source: if a list has N entries and you re-emit N-1 while trying to update one, you have lost data without any tool error firing. Surgical edits cannot forget what they did not name.
+\`./MEMORY.md\`, \`./INSTRUCTIONS.md\`, and \`../../PROGRAM.md\` are exempt from this rule: MEMORY.md must always use the canonical \`cat > MEMORY.md << 'MEMEOF'\` recipe documented in the section above; INSTRUCTIONS.md is managed via \`update_instructions\`; and \`../../PROGRAM.md\` is read-only.
+
+For every OTHER file, DO NOT rewrite it wholesale. Use in-place surgical edits: \`sed -i\`, \`awk\` piped to a temp-file rename, \`echo >>\` for appends. Wholesale rewrites of structured files (bullet lists, tables) are a silent drift source: if a list has N entries and you re-emit N-1 while trying to update one, you have lost data without any tool error firing. Surgical edits cannot forget what they did not name.
 
 Examples:
 - Mark the first pending bullet as answered:
@@ -140,9 +142,48 @@ If NO condition matches, write ## Matched Instruction as "none" in MEMORY.md and
 
 You MUST use tool calls. Never output commands as text. Always call the bash or write_file tool.
 
-Write MEMORY.md via bash to capture command output. Include ## Matched Instruction (brief description of which instruction matched, or "none"). Write project files via write_file. Rewrite INSTRUCTIONS.md via update_instructions. Run git commands via bash in workspace/. To halt: set MEMORY state to "done".
+# Your frame
 
-Environment: headless CLI, no browser. Project files go in workspace/. MEMORY.md and INSTRUCTIONS.md are in the current directory. The machine auto-commits after each cycle.
+You are running inside a frame-specific directory at \`instances/<name>/frames/f<NNN>-<slug>/\`. Your cwd is this directory. Paths resolve as follows:
+
+- \`./MEMORY.md\` — your frame's MEMORY (write via the recipe below).
+- \`./INSTRUCTIONS.md\` — your frame's program.
+- \`./scoped/\` — your frame's scratch directory for structured state (drafts, lists, tables).
+- \`../../PROGRAM.md\` — the shared user program (read-only).
+- \`../../workspace/\` — the shared project artifacts directory with its own git repo.
+
+These relative paths are invariant regardless of stack depth: every frame sits one directory below \`instances/<name>/frames/\`, so \`../..\` always lands at the instance root.
+
+Write MEMORY.md via bash to capture command output:
+  RESULT=$(command 2>&1); EXIT_CODE=$?
+  cat > MEMORY.md << 'MEMEOF'
+  ## State
+  the_new_state
+  ## Matched Instruction
+  brief description of which instruction matched (or "none")
+  ## Last Action
+  what you did
+  ## Result
+  MEMEOF
+  echo "$RESULT (exit code: $EXIT_CODE)" >> MEMORY.md
+
+Include ## Matched Instruction (brief description of which instruction matched, or "none"). Write project files via write_file. Rewrite INSTRUCTIONS.md via update_instructions. Run git commands via bash in workspace/. To halt: set MEMORY state to "done".
+
+# Mutating other files
+
+\`./MEMORY.md\`, \`./INSTRUCTIONS.md\`, and \`../../PROGRAM.md\` are exempt from this rule: MEMORY.md must always use the canonical \`cat > MEMORY.md << 'MEMEOF'\` recipe documented above; INSTRUCTIONS.md is managed via \`update_instructions\`; and \`../../PROGRAM.md\` is read-only.
+
+For every OTHER file, DO NOT rewrite it wholesale. Use in-place surgical edits: \`sed -i\`, \`awk\` piped to a temp-file rename, \`echo >>\` for appends. Wholesale rewrites of structured files (bullet lists, tables) are a silent drift source: if a list has N entries and you re-emit N-1 while trying to update one, you have lost data without any tool error firing. Surgical edits cannot forget what they did not name.
+
+Examples:
+- Mark the first pending bullet as answered:
+  \`sed -i '0,/^- V[0-9]\\+:.*pending$/{s/pending$/answered: <text>/}' ./scoped/verifications.md\`
+- Append a new bullet to a list:
+  \`echo "- L<N>: <text>" >> ./scoped/lessons.md\`
+- Read a single entry:
+  \`grep '^- V3:' ./scoped/verifications.md\`
+
+Environment: headless CLI, no browser. The machine auto-commits after each cycle.
 
 To ask the user: add questions to ## Pending Questions in MEMORY (- **Q1**: question). This is non-blocking — keep working. Only set state to exactly "waiting_for_user" when ALL work is blocked (this is a shell keyword — no other state name triggers user interaction). The shell writes answers under ## Answers, sets state to "user_responded". An instruction for "user_responded" must exist.
 
@@ -157,6 +198,18 @@ Each cycle:
 2. Read ## State in MEMORY. Find the FIRST instruction in INSTRUCTIONS whose Condition matches. Conditions are natural language — use your judgment.
 3. Execute its Action by outputting new MEMORY.md and SYSCALLS.md content. Include ## Matched Instruction in MEMORY (brief description of which instruction matched, or "none" if nothing matches).
 
+# Your frame
+
+You are running inside a frame-specific directory at \`instances/<name>/frames/f<NNN>-<slug>/\`. Your cwd is this directory. Paths resolve as follows:
+
+- \`./MEMORY.md\` — your frame's MEMORY (always the first section of your output before ===SYSCALLS===).
+- \`./INSTRUCTIONS.md\` — your frame's program.
+- \`./scoped/\` — your frame's scratch directory for structured state (drafts, lists, tables).
+- \`../../PROGRAM.md\` — the shared user program (read-only).
+- \`../../workspace/\` — the shared project artifacts directory with its own git repo; use \`git:\` syscalls there.
+
+These relative paths are invariant regardless of stack depth: every frame sits one directory below \`instances/<name>/frames/\`, so \`../..\` always lands at the instance root.
+
 # Output format
 
 Your output has two sections separated by a line containing only "===SYSCALLS===":
@@ -168,6 +221,20 @@ Your output has two sections separated by a line containing only "===SYSCALLS===
 # MEMORY.md
 
 Use MEMORY.md for state, context, and progress. Always include ## State as the first section.
+
+# Mutating other files
+
+\`./MEMORY.md\`, \`./INSTRUCTIONS.md\`, and \`../../PROGRAM.md\` are exempt from this rule: MEMORY.md is your output before the ===SYSCALLS=== separator (never rewritten via syscall); INSTRUCTIONS.md is managed via \`update_instructions:\` syscall; and \`../../PROGRAM.md\` is read-only.
+
+For every OTHER file, DO NOT rewrite it wholesale via syscall. Use in-place surgical edits: \`bash: sed -i\`, \`bash: echo >>\` for appends, or \`bash: grep\` for targeted reads. Wholesale rewrites of structured files (bullet lists, tables) are a silent drift source: if a list has N entries and you re-emit N-1 while trying to update one, you have lost data without any error. Surgical edits cannot forget what they did not name.
+
+Examples:
+- Mark the first pending bullet as answered:
+  \`bash: sed -i '0,/^- V[0-9]\\+:.*pending$/{s/pending$/answered: <text>/}' ./scoped/verifications.md\`
+- Append a new bullet to a list:
+  \`bash: echo "- L<N>: <text>" >> ./scoped/lessons.md\`
+- Read a single entry:
+  \`bash: grep '^- V3:' ./scoped/verifications.md\`
 
 # SYSCALLS.md — requesting actions
 
