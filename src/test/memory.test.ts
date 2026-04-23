@@ -4,6 +4,7 @@ import {
   parseState, setState, getAnswersSection, writeAnswer,
   parsePendingQuestions, parsePush, removePush,
   parsePushArgs, removePushArgs,
+  parseReturn, removeReturn, spliceReturns,
 } from "../memory.js";
 
 describe("parseState", () => {
@@ -214,5 +215,91 @@ describe("removePushArgs", () => {
   test("returns memory unchanged when section absent", () => {
     const memory = "## State\nfoo\n## Push\nx.md";
     assert.equal(removePushArgs(memory), memory);
+  });
+});
+
+describe("parseReturn", () => {
+  test("returns empty entries when section absent", () => {
+    const memory = "## State\ndone\n## Last Action\nfoo";
+    const r = parseReturn(memory);
+    assert.deepEqual(r.entries, {});
+    assert.deepEqual(r.malformedLines, []);
+  });
+
+  test("parses single-line key: value pairs", () => {
+    const memory = "## State\ndone\n## Return\nanswer: yes\nverdict: pass\n## Last Action\nfoo";
+    const r = parseReturn(memory);
+    assert.deepEqual(r.entries, { answer: "yes", verdict: "pass" });
+    assert.deepEqual(r.malformedLines, []);
+  });
+
+  test("parses block scalar with two-space indent", () => {
+    const memory = "## State\ndone\n## Return\ndraft: |\n  line one\n  line two\nshort: hi";
+    const r = parseReturn(memory);
+    assert.deepEqual(r.entries, { draft: "line one\nline two", short: "hi" });
+  });
+
+  test("collects malformed lines for logging", () => {
+    const memory = "## State\ndone\n## Return\nok: yes\nbroken-no-colon\nalso-ok: true";
+    const r = parseReturn(memory);
+    assert.deepEqual(r.entries, { ok: "yes", "also-ok": "true" });
+    assert.deepEqual(r.malformedLines, ["broken-no-colon"]);
+  });
+
+  test("stops at next ## heading", () => {
+    const memory = "## State\ndone\n## Return\nq: hi\n## Other\nignored: yes";
+    const r = parseReturn(memory);
+    assert.deepEqual(r.entries, { q: "hi" });
+  });
+});
+
+describe("removeReturn", () => {
+  test("strips section between ## Return and next ##", () => {
+    const memory = "## State\ndone\n## Return\nq: hi\n## Other\nkeep: this";
+    assert.equal(removeReturn(memory), "## State\ndone\n## Other\nkeep: this");
+  });
+
+  test("strips section to end when no following heading", () => {
+    const memory = "## State\ndone\n## Return\nq: hi";
+    assert.equal(removeReturn(memory), "## State\ndone");
+  });
+
+  test("returns memory unchanged when section absent", () => {
+    const memory = "## State\ndone\n## Last Action\nfoo";
+    assert.equal(removeReturn(memory), memory);
+  });
+});
+
+describe("spliceReturns", () => {
+  test("appends a new section for a new key", () => {
+    const caller = "## State\nattempted_completed\n";
+    const r = spliceReturns(caller, { verdict: "pass" });
+    assert.match(r, /## State\nattempted_completed/);
+    assert.match(r, /## Verdict\npass/);
+  });
+
+  test("replaces an existing section body", () => {
+    const caller = "## State\nfoo\n## Verdict\nfail\n## Feedback\nold";
+    const r = spliceReturns(caller, { verdict: "pass" });
+    assert.match(r, /## Verdict\npass/);
+    assert.doesNotMatch(r, /## Verdict\nfail/);
+    assert.match(r, /## Feedback\nold/);
+  });
+
+  test("capitalizes only the first character of the key", () => {
+    const caller = "## State\nfoo\n";
+    const r = spliceReturns(caller, { answerId: "42" });
+    assert.match(r, /## AnswerId\n42/);
+  });
+
+  test("handles multi-line values", () => {
+    const caller = "## State\nfoo\n";
+    const r = spliceReturns(caller, { draft: "line1\nline2\nline3" });
+    assert.match(r, /## Draft\nline1\nline2\nline3/);
+  });
+
+  test("returns caller unchanged when returns map is empty", () => {
+    const caller = "## State\nfoo\n## Something\nbar";
+    assert.equal(spliceReturns(caller, {}), caller);
   });
 });

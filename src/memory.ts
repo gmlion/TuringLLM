@@ -133,3 +133,91 @@ export function parsePushArgs(memory: string): Record<string, string> {
 export function removePushArgs(memory: string): string {
   return memory.replace(/\n?## Push-Args\n[^\n]*(\n(?!## )[^\n]*)*/m, "");
 }
+
+/**
+ * Parse the ## Return section into (entries, malformedLines).
+ * Grammar is identical to parsePushArgs: `key: value` or `key: |` block scalar
+ * with 2-space indentation. Malformed lines (no `:`, or identifier rule
+ * violation) are collected separately so the caller can log them.
+ */
+export function parseReturn(memory: string): {
+  entries: Record<string, string>;
+  malformedLines: string[];
+} {
+  const headerRe = /(^|\n)## Return\n/;
+  const headerMatch = memory.match(headerRe);
+  if (!headerMatch) return { entries: {}, malformedLines: [] };
+  const start = (headerMatch.index ?? 0) + headerMatch[0].length;
+
+  const remainder = memory.slice(start);
+  const nextHeading = remainder.match(/\n## [A-Z]/);
+  const sectionEnd = nextHeading
+    ? start + (nextHeading.index ?? 0)
+    : memory.length;
+  const section = memory.slice(start, sectionEnd);
+
+  const entries: Record<string, string> = {};
+  const malformedLines: string[] = [];
+  const lines = section.split("\n");
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+    if (line === "") { i++; continue; }
+    const blockMatch = line.match(/^([a-zA-Z_][a-zA-Z0-9_]*): \|$/);
+    if (blockMatch) {
+      const key = blockMatch[1];
+      const valueLines: string[] = [];
+      i++;
+      while (i < lines.length && (lines[i].startsWith("  ") || lines[i] === "")) {
+        valueLines.push(lines[i].startsWith("  ") ? lines[i].slice(2) : "");
+        i++;
+      }
+      while (valueLines.length > 0 && valueLines[valueLines.length - 1] === "") {
+        valueLines.pop();
+      }
+      entries[key] = valueLines.join("\n");
+      continue;
+    }
+    const singleMatch = line.match(/^([a-zA-Z_][a-zA-Z0-9_-]*): (.+)$/);
+    if (singleMatch) {
+      entries[singleMatch[1]] = singleMatch[2];
+    } else {
+      malformedLines.push(line);
+    }
+    i++;
+  }
+  return { entries, malformedLines };
+}
+
+/** Remove the ## Return section from MEMORY. Mirror of removePushArgs. */
+export function removeReturn(memory: string): string {
+  return memory.replace(/\n?## Return\n[^\n]*(\n(?!## )[^\n]*)*/m, "");
+}
+
+/**
+ * Splice return entries into caller MEMORY as ## <CapitalizedKey> sections.
+ * Upsert: replace an existing section's body if present, append a new
+ * section at the end otherwise. First character of the key is uppercased;
+ * remaining characters preserved (so "answerId" → "## AnswerId").
+ */
+export function spliceReturns(
+  callerMemory: string,
+  returns: Record<string, string>,
+): string {
+  let out = callerMemory;
+  for (const [key, value] of Object.entries(returns)) {
+    const capitalized = key.charAt(0).toUpperCase() + key.slice(1);
+    const sectionName = `## ${capitalized}`;
+    const re = new RegExp(
+      `(^|\\n)${sectionName}\\n[^\\n]*(\\n(?!## )[^\\n]*)*`,
+      "m",
+    );
+    if (re.test(out)) {
+      out = out.replace(re, `$1${sectionName}\n${value}`);
+    } else {
+      if (!out.endsWith("\n")) out += "\n";
+      out += `${sectionName}\n${value}\n`;
+    }
+  }
+  return out;
+}
