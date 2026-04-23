@@ -1,6 +1,6 @@
 import { test, describe } from "node:test";
 import { strict as assert } from "node:assert";
-import { substitutePlaceholders, applyPush } from "../call-stack.js";
+import { substitutePlaceholders, applyPushLegacy as applyPush } from "../call-stack.js";
 
 describe("substitutePlaceholders", () => {
   test("substitutes single known placeholder", () => {

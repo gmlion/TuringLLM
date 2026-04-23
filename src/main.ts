@@ -22,7 +22,7 @@ import {
   parseState, parsePendingQuestions, getAnswersSection,
   writeAnswer, setState, type PendingQuestion,
 } from "./memory.js";
-import { loadCallStack, saveCallStack, applyPop, applyPush } from "./call-stack.js";
+import { loadCallStackLegacy, saveCallStackLegacy, applyPopLegacy, applyPushLegacy } from "./call-stack.js";
 
 // --- Utilities ---
 
@@ -337,14 +337,14 @@ function handleNoMatch(state: string): void {
  * present. Writes updated memory/instructions/stack to disk and returns
  * whether the machine should halt (state=done at depth 0).
  */
-function runStackBlock(callStack: import("./call-stack.js").StackEntry[]): boolean {
-  const popped = applyPop(callStack, readFile(MEMORY_PATH), readFile(INSTRUCTIONS_PATH));
+function runStackBlock(callStack: import("./call-stack.js").StackEntryLegacy[]): boolean {
+  const popped = applyPopLegacy(callStack, readFile(MEMORY_PATH), readFile(INSTRUCTIONS_PATH));
   if (popped.events.length > 0) {
     writeFileSync(MEMORY_PATH, popped.memory, "utf-8");
     writeFileSync(INSTRUCTIONS_PATH, popped.instructions, "utf-8");
     callStack.length = 0;
     callStack.push(...popped.stack);
-    saveCallStack(CALL_STACK_PATH, callStack);
+    saveCallStackLegacy(CALL_STACK_PATH, callStack);
     for (const ev of popped.events) {
       log(`  [pop] \u2192 ${ev.returnState}_completed (depth ${ev.depthAfter})`);
     }
@@ -352,7 +352,7 @@ function runStackBlock(callStack: import("./call-stack.js").StackEntry[]): boole
 
   if (getMemoryState() === "done" && callStack.length === 0) return true;
 
-  const pushed = applyPush(
+  const pushed = applyPushLegacy(
     callStack,
     readFile(MEMORY_PATH),
     readFile(INSTRUCTIONS_PATH),
@@ -366,7 +366,7 @@ function runStackBlock(callStack: import("./call-stack.js").StackEntry[]): boole
     writeFileSync(INSTRUCTIONS_PATH, pushed.instructions, "utf-8");
     callStack.length = 0;
     callStack.push(...pushed.stack);
-    saveCallStack(CALL_STACK_PATH, callStack);
+    saveCallStackLegacy(CALL_STACK_PATH, callStack);
     log(`  [push] ${pushed.target} (depth ${callStack.length})`);
   } else if (pushed.reason === "missing-target") {
     writeFileSync(MEMORY_PATH, pushed.memory, "utf-8");
@@ -394,7 +394,7 @@ async function main() {
   ensureMachineRepo(BASE_DIR);
   ensureProjectRepo(BASE_DIR);
 
-  const callStack = loadCallStack(CALL_STACK_PATH);
+  const callStack = loadCallStackLegacy(CALL_STACK_PATH);
 
   const startCycle = getStartCycle();
   log(`  Resuming from cycle ${startCycle}`);

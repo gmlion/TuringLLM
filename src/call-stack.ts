@@ -8,6 +8,15 @@
  *
  * The push/pop transforms are pure — no file I/O — so stack semantics can
  * be tested in isolation. The shell writes the results to disk.
+ *
+ * Phase 2b shape:
+ *   - StackEntry: { returnState, frameDir }  (frameDir replaces inline instructions)
+ *   - CallStack:  { nextCounter, stack }     (was a bare StackEntry[])
+ *   - Root frame is always stack[0]; never popped.  Halt = done + stack.length === 1.
+ *
+ * Legacy (pre-Phase-2b) shape is kept under the *Legacy suffix for backward
+ * compatibility while T4/T5 are pending.  applyPush/applyPop are stubs that
+ * throw until T4/T5 are complete.
  */
 import { readFileSync, writeFileSync } from "fs";
 import {
@@ -19,27 +28,136 @@ import {
   removePushArgs,
 } from "./memory.js";
 
-export type StackEntry = { returnState: string; instructions: string };
+// ---------------------------------------------------------------------------
+// Phase 2b types
+// ---------------------------------------------------------------------------
 
-// --- Persistence ---
+export type StackEntry = {
+  returnState: string;
+  frameDir: string;
+};
 
-export function loadCallStack(path: string): StackEntry[] {
+export type CallStack = {
+  nextCounter: number;
+  stack: StackEntry[];
+};
+
+// ---------------------------------------------------------------------------
+// Phase 2b persistence constants and helpers
+// ---------------------------------------------------------------------------
+
+const ROOT_FRAME_DIR = "frames/f000-strategy";
+const ROOT_RETURN_STATE = "<root>";
+
+function freshCallStack(): CallStack {
+  return {
+    nextCounter: 1,
+    stack: [{ returnState: ROOT_RETURN_STATE, frameDir: ROOT_FRAME_DIR }],
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Phase 2b persistence — loadCallStack / saveCallStack
+// ---------------------------------------------------------------------------
+
+export function loadCallStack(path: string): CallStack {
+  try {
+    const parsed = JSON.parse(readFileSync(path, "utf-8"));
+    if (
+      parsed &&
+      typeof parsed === "object" &&
+      !Array.isArray(parsed) &&
+      typeof parsed.nextCounter === "number" &&
+      Array.isArray(parsed.stack) &&
+      parsed.stack.length > 0 &&
+      parsed.stack.every(
+        (e: unknown) =>
+          e !== null &&
+          typeof e === "object" &&
+          typeof (e as StackEntry).returnState === "string" &&
+          typeof (e as StackEntry).frameDir === "string",
+      )
+    ) {
+      return parsed as CallStack;
+    }
+  } catch { /* fall through */ }
+  return freshCallStack();
+}
+
+export function saveCallStack(path: string, callStack: CallStack): void {
+  writeFileSync(path, JSON.stringify(callStack, null, 2), "utf-8");
+}
+
+// ---------------------------------------------------------------------------
+// Phase 2b stubs — applyPush / applyPop (to be implemented in T4 / T5)
+// ---------------------------------------------------------------------------
+
+export type PopEvent = { returnState: string; depthAfter: number };
+
+export type PopResult = {
+  stack: StackEntry[];
+  memory: string;
+  instructions: string;
+  events: PopEvent[];
+};
+
+export type PushResult =
+  | {
+      ok: true;
+      stack: StackEntry[];
+      memory: string;
+      instructions: string;
+      target: string;
+    }
+  | { ok: false; memory: string; reason: "no-push" }
+  | { ok: false; memory: string; reason: "missing-target"; target: string }
+  | {
+      ok: false;
+      memory: string;
+      reason: "unresolved-placeholder";
+      target: string;
+      placeholders: string[];
+    };
+
+/** Stub — full implementation coming in T5. */
+export function applyPop(
+  _stack: StackEntry[],
+  _memory: string,
+  _instructions: string,
+): PopResult {
+  throw new Error("applyPop: T5 not implemented yet");
+}
+
+/** Stub — full implementation coming in T4. */
+export function applyPush(
+  _stack: StackEntry[],
+  _memory: string,
+  _instructions: string,
+  _readTarget: (path: string) => string | null,
+): PushResult {
+  throw new Error("applyPush: T4 not implemented yet");
+}
+
+// ---------------------------------------------------------------------------
+// Legacy types and functions (pre-Phase-2b; used by main.ts and existing tests
+// until T4/T5 rewrite the callers).
+// ---------------------------------------------------------------------------
+
+export type StackEntryLegacy = { returnState: string; instructions: string };
+
+export function loadCallStackLegacy(path: string): StackEntryLegacy[] {
   try {
     const parsed = JSON.parse(readFileSync(path, "utf-8"));
     return Array.isArray(parsed) ? parsed : [];
   } catch { return []; }
 }
 
-export function saveCallStack(path: string, stack: StackEntry[]): void {
+export function saveCallStackLegacy(path: string, stack: StackEntryLegacy[]): void {
   writeFileSync(path, JSON.stringify(stack, null, 2), "utf-8");
 }
 
-// --- Pure transforms ---
-
-export type PopEvent = { returnState: string; depthAfter: number };
-
-export type PopResult = {
-  stack: StackEntry[];
+export type PopResultLegacy = {
+  stack: StackEntryLegacy[];
   memory: string;
   instructions: string;
   events: PopEvent[];
@@ -52,11 +170,11 @@ export type PopResult = {
  * to "{returnState}_completed" (so the caller's entry condition for that
  * state does not immediately re-fire).
  */
-export function applyPop(
-  stack: StackEntry[],
+export function applyPopLegacy(
+  stack: StackEntryLegacy[],
   memory: string,
   instructions: string,
-): PopResult {
+): PopResultLegacy {
   const newStack = [...stack];
   const events: PopEvent[] = [];
   let curMemory = memory;
@@ -72,10 +190,10 @@ export function applyPop(
   return { stack: newStack, memory: curMemory, instructions: curInstructions, events };
 }
 
-export type PushResult =
+export type PushResultLegacy =
   | {
       ok: true;
-      stack: StackEntry[];
+      stack: StackEntryLegacy[];
       memory: string;
       instructions: string;
       target: string;
@@ -103,12 +221,12 @@ export type PushResult =
  * `readTarget` returns null for missing or empty files; otherwise the
  * target's content.
  */
-export function applyPush(
-  stack: StackEntry[],
+export function applyPushLegacy(
+  stack: StackEntryLegacy[],
   memory: string,
   instructions: string,
   readTarget: (path: string) => string | null,
-): PushResult {
+): PushResultLegacy {
   const target = parsePush(memory);
   if (!target) return { ok: false, memory, reason: "no-push" };
 
@@ -147,6 +265,10 @@ export function applyPush(
 
   return { ok: true, stack: newStack, memory: newMemory, instructions: substituted, target };
 }
+
+// ---------------------------------------------------------------------------
+// Pure helpers (shared by legacy and future Phase-2b implementations)
+// ---------------------------------------------------------------------------
 
 const PLACEHOLDER_RE = /\{\{([a-zA-Z_][a-zA-Z0-9_]*)\}\}/g;
 

@@ -1,6 +1,6 @@
 import { test, describe } from "node:test";
 import { strict as assert } from "node:assert";
-import { applyPop, applyPush, type StackEntry } from "../call-stack.js";
+import { applyPopLegacy as applyPop, applyPushLegacy as applyPush, type StackEntryLegacy as StackEntry } from "../call-stack.js";
 import { parseState, setState } from "../memory.js";
 
 /**

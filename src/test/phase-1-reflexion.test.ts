@@ -3,7 +3,7 @@ import { strict as assert } from "node:assert";
 import { readFileSync, existsSync } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
-import { applyPop, applyPush, type StackEntry } from "../call-stack.js";
+import { applyPopLegacy as applyPop, applyPushLegacy as applyPush, type StackEntryLegacy as StackEntry } from "../call-stack.js";
 import { parseState, setState } from "../memory.js";
 
 const __filename = fileURLToPath(import.meta.url);
