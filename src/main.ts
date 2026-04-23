@@ -14,7 +14,7 @@ import { ensureMachineRepo, ensureProjectRepo, commitCycle, getWorkspacePath } f
 import { ALLOWED_GIT_COMMANDS } from "./tools.js";
 import { TelegramSession } from "./telegram.js";
 import {
-  BASE_DIR, MEMORY_PATH, INSTRUCTIONS_PATH, HISTORY_DIR, SYSCALLS_PATH,
+  BASE_DIR, activeFramePaths, HISTORY_DIR, SYSCALLS_PATH,
   CALL_STACK_PATH, PROVIDER, STATEFUL, INSTANCE_NAME,
   TELEGRAM_TOKEN, TELEGRAM_CHAT_ID, USE_TELEGRAM,
 } from "./config.js";
@@ -57,12 +57,12 @@ function readFile(path: string): string {
   try { return readFileSync(path, "utf-8"); } catch { return ""; }
 }
 
-function getMemoryState(): string {
-  return parseState(readFile(MEMORY_PATH));
+function getMemoryState(memoryPath: string): string {
+  return parseState(readFile(memoryPath));
 }
 
-function getPendingQuestions(): PendingQuestion[] {
-  return parsePendingQuestions(readFile(MEMORY_PATH));
+function getPendingQuestions(memoryPath: string): PendingQuestion[] {
+  return parsePendingQuestions(readFile(memoryPath));
 }
 
 // --- User session ---
@@ -161,14 +161,14 @@ const userSession: UserSession = {
 
 // --- Interaction helpers ---
 
-async function sendCycleSummary(cycle: number, summary: string | undefined): Promise<void> {
+async function sendCycleSummary(cycle: number, summary: string | undefined, memoryPath: string): Promise<void> {
   if (!telegramSession || telegramSession.degraded || !summary) return;
-  if (getPendingQuestions().length === 0) return;
+  if (getPendingQuestions(memoryPath).length === 0) return;
   await telegramSession.sendInfo(`[${INSTANCE_NAME}] Cycle ${cycle}\n\n${summary}`);
 }
 
-async function presentNewQuestions(): Promise<void> {
-  for (const q of getPendingQuestions()) {
+async function presentNewQuestions(memoryPath: string): Promise<void> {
+  for (const q of getPendingQuestions(memoryPath)) {
     if (!userSession.wasPresented(q.id, q.question)) {
       if (USE_TELEGRAM) log(`  [telegram] Sending ${q.id}: ${q.question}`);
       await userSession.presentQuestion(q.id, q.question);
@@ -176,12 +176,12 @@ async function presentNewQuestions(): Promise<void> {
   }
 }
 
-async function collectReplies(): Promise<void> {
+async function collectReplies(memoryPath: string): Promise<void> {
   const newIds = await userSession.collectReplies();
   if (newIds.length === 0) return;
 
   const answers = userSession.getAnswers();
-  let memory = readFile(MEMORY_PATH);
+  let memory = readFile(memoryPath);
   const existing = getAnswersSection(memory);
   let wrote = false;
 
@@ -192,13 +192,13 @@ async function collectReplies(): Promise<void> {
     memory = writeAnswer(memory, qId, answer);
     wrote = true;
   }
-  if (wrote) writeFileSync(MEMORY_PATH, memory, "utf-8");
+  if (wrote) writeFileSync(memoryPath, memory, "utf-8");
 }
 
-async function handleUserInteraction(): Promise<void> {
-  await presentNewQuestions();
+async function handleUserInteraction(memoryPath: string): Promise<void> {
+  await presentNewQuestions(memoryPath);
 
-  const questions = getPendingQuestions();
+  const questions = getPendingQuestions(memoryPath);
   if (questions.length === 0) {
     await userSession.presentQuestion("Q0", "(the machine is asking for input but provided no question)");
   }
@@ -208,7 +208,7 @@ async function handleUserInteraction(): Promise<void> {
   const newIds = await userSession.waitForAny();
 
   const answers = userSession.getAnswers();
-  let memory = readFile(MEMORY_PATH);
+  let memory = readFile(memoryPath);
   const existing = getAnswersSection(memory);
   for (const qId of newIds) {
     const answer = answers.get(qId);
@@ -216,15 +216,15 @@ async function handleUserInteraction(): Promise<void> {
     log(`  [${qId} answered] ${answer}`);
     memory = writeAnswer(memory, qId, answer);
   }
-  writeFileSync(MEMORY_PATH, memory, "utf-8");
+  writeFileSync(memoryPath, memory, "utf-8");
 
-  memory = readFile(MEMORY_PATH);
-  writeFileSync(MEMORY_PATH, setState(memory, "user_responded"), "utf-8");
+  memory = readFile(memoryPath);
+  writeFileSync(memoryPath, setState(memory, "user_responded"), "utf-8");
 }
 
 // --- Syscalls (stateful mode) ---
 
-function executeSyscalls(): void {
+function executeSyscalls(instructionsPath: string, frameDir: string): void {
   const content = readFile(SYSCALLS_PATH);
   if (!content.trim()) return;
 
@@ -240,7 +240,7 @@ function executeSyscalls(): void {
       const command = firstLine.slice(5).trim() || rest;
       log(`  [bash] ${command}`);
       try {
-        const output = execSync(command, { encoding: "utf-8", maxBuffer: 1024 * 1024, cwd: BASE_DIR });
+        const output = execSync(command, { encoding: "utf-8", maxBuffer: 1024 * 1024, cwd: frameDir });
         results.push(`## Result ${i + 1}: bash\n${output || "(no output)"}`);
       } catch (err: unknown) {
         const e = err as { stdout?: string; stderr?: string; status?: number };
@@ -259,7 +259,7 @@ function executeSyscalls(): void {
       }
     } else if (firstLine.startsWith("update_instructions:")) {
       log(`  [update_instructions]`);
-      writeFileSync(INSTRUCTIONS_PATH, rest, "utf-8");
+      writeFileSync(instructionsPath, rest, "utf-8");
       results.push(`## Result ${i + 1}: update_instructions\nOK`);
     } else if (firstLine.startsWith("git:")) {
       const args = firstLine.slice(4).trim() || rest;
@@ -312,25 +312,25 @@ function getStartCycle(): number {
   } catch { return 1; }
 }
 
-function snapshot(cycle: number, hash: string) {
+function snapshot(cycle: number, hash: string, memoryPath: string, instructionsPath: string) {
   const dir = resolve(HISTORY_DIR, `${String(cycle).padStart(4, "0")}-${hash}`);
   mkdirSync(dir, { recursive: true });
-  copyFileSync(MEMORY_PATH, resolve(dir, "MEMORY.md"));
-  copyFileSync(INSTRUCTIONS_PATH, resolve(dir, "INSTRUCTIONS.md"));
+  if (existsSync(memoryPath)) copyFileSync(memoryPath, resolve(dir, "MEMORY.md"));
+  if (existsSync(instructionsPath)) copyFileSync(instructionsPath, resolve(dir, "INSTRUCTIONS.md"));
   if (existsSync(CALL_STACK_PATH)) {
     copyFileSync(CALL_STACK_PATH, resolve(dir, ".call-stack.json"));
   }
 }
 
-function handleNoMatch(state: string): void {
-  const hasPending = getPendingQuestions().length > 0;
+function handleNoMatch(state: string, memoryPath: string): void {
+  const hasPending = getPendingQuestions(memoryPath).length > 0;
   log(`  [no-match] No instruction matched state "${state}" \u2014 ${hasPending ? "pending questions exist, waiting for user" : "asking user"}`);
-  let memory = readFile(MEMORY_PATH);
+  let memory = readFile(memoryPath);
   memory = setState(memory, "waiting_for_user");
   if (!hasPending) {
     memory += `\n## Pending Questions\n- **Q0**: No instruction in INSTRUCTIONS.md matched state "${state}". What should the machine do next?\n`;
   }
-  writeFileSync(MEMORY_PATH, memory, "utf-8");
+  writeFileSync(memoryPath, memory, "utf-8");
 }
 
 // --- Call stack shell wiring ---
@@ -339,30 +339,28 @@ function handleNoMatch(state: string): void {
  * Run the pre-LLM stack block: cascade-pop on done, then push if ## Push is
  * present. Writes updated memory/instructions/stack to disk and returns
  * whether the machine should halt (state=done at depth 0).
+ *
+ * Reads/writes from the active frame's directory (derived from callStack).
+ * After mutations, callStack is updated in-place.
  */
 function runStackBlock(callStack: CallStack): boolean {
-  // Pop: use the new Phase-2b applyPop.
+  // Resolve the current active frame's paths.
+  const { memoryPath } = activeFramePaths(callStack);
+
+  // Pop: use the Phase-2b applyPop.
   const popped = applyPop(
     callStack,
-    readFile(MEMORY_PATH),
+    readFile(memoryPath),
     (fd, file) => readFile(resolve(BASE_DIR, fd, file)),
   );
 
   if (popped.events.length > 0) {
-    // Write the updated caller memory to its frame's MEMORY.md and flat path.
+    // Write the updated caller memory to its frame's MEMORY.md.
     writeFileSync(
       resolve(BASE_DIR, popped.callerFrameDir, "MEMORY.md"),
       popped.callerMemoryAfter,
       "utf-8",
     );
-    // Keep flat MEMORY_PATH in sync for provider compatibility (pre-T7).
-    writeFileSync(MEMORY_PATH, popped.callerMemoryAfter, "utf-8");
-
-    // Restore caller INSTRUCTIONS.md from the caller frame to the flat path (pre-T7 compat).
-    const callerInstrPath = resolve(BASE_DIR, popped.callerFrameDir, "INSTRUCTIONS.md");
-    if (existsSync(callerInstrPath)) {
-      writeFileSync(INSTRUCTIONS_PATH, readFile(callerInstrPath), "utf-8");
-    }
 
     // rmSync each popped frame's directory and log events.
     for (const ev of popped.events) {
@@ -381,43 +379,40 @@ function runStackBlock(callStack: CallStack): boolean {
     saveCallStack(CALL_STACK_PATH, callStack);
   }
 
+  // Re-resolve active frame paths after potential pops.
+  const { memoryPath: memPathAfterPop } = activeFramePaths(callStack);
+
   // Halt: state=done and only the root frame remains (stack.length === 1).
-  if (getMemoryState() === "done" && callStack.stack.length === 1) return true;
+  if (getMemoryState(memPathAfterPop) === "done" && callStack.stack.length === 1) return true;
 
   // Push: use the Phase-2b applyPush.
   const pushed = applyPush(
     callStack,
-    readFile(MEMORY_PATH),
+    readFile(memPathAfterPop),
     (p) => {
       const content = readFile(resolve(BASE_DIR, p));
       return content || null;
     },
   );
   if (pushed.ok) {
-    // Write caller's updated MEMORY (Push/Push-Args stripped) back.
-    writeFileSync(MEMORY_PATH, pushed.callerMemoryAfter, "utf-8");
+    // Write caller's updated MEMORY (Push/Push-Args stripped) back to caller's frame.
+    writeFileSync(memPathAfterPop, pushed.callerMemoryAfter, "utf-8");
 
     // Create the child frame directory and write its MEMORY + INSTRUCTIONS.
-    // For now (pre-T7), we also keep the flat INSTRUCTIONS_PATH in sync
-    // so existing providers (which read INSTRUCTIONS_PATH directly) still work.
     const childFrameDir = resolve(BASE_DIR, pushed.frameDir);
     mkdirSync(resolve(childFrameDir, "scoped"), { recursive: true });
     writeFileSync(resolve(childFrameDir, "MEMORY.md"), pushed.childMemory, "utf-8");
     writeFileSync(resolve(childFrameDir, "INSTRUCTIONS.md"), pushed.childInstructions, "utf-8");
-
-    // Keep the flat files in sync for legacy provider compatibility (pre-T7).
-    writeFileSync(MEMORY_PATH, pushed.childMemory, "utf-8");
-    writeFileSync(INSTRUCTIONS_PATH, pushed.childInstructions, "utf-8");
 
     // Persist the updated call stack.
     Object.assign(callStack, pushed.callStack);
     saveCallStack(CALL_STACK_PATH, callStack);
     log(`  [push] ${pushed.target} → ${pushed.frameDir} (depth ${pushed.callStack.stack.length - 1})`);
   } else if (pushed.reason === "missing-target") {
-    writeFileSync(MEMORY_PATH, pushed.memory, "utf-8");
+    writeFileSync(memPathAfterPop, pushed.memory, "utf-8");
     log(`  [push] ERROR: ${pushed.target} not found or empty, skipping`);
   } else if (pushed.reason === "unresolved-placeholder") {
-    writeFileSync(MEMORY_PATH, pushed.memory, "utf-8");
+    writeFileSync(memPathAfterPop, pushed.memory, "utf-8");
     log(`  [push] ${pushed.target}: unresolved placeholder(s) ${pushed.placeholders.join(", ")}`);
   }
   return false;
@@ -430,8 +425,7 @@ async function main() {
 
   log("Turing machine starting");
   log(`  Provider:     ${PROVIDER}`);
-  log(`  MEMORY:       ${MEMORY_PATH}`);
-  log(`  INSTRUCTIONS: ${INSTRUCTIONS_PATH}`);
+  log(`  Instance:     ${BASE_DIR}`);
   log(`  Log:          ${getLogPath()}`);
   if (USE_TELEGRAM) log(`  Telegram:     enabled (chat ${TELEGRAM_CHAT_ID})`);
 
@@ -448,7 +442,10 @@ async function main() {
   log("");
 
   for (let cycle = startCycle; ; cycle++) {
-    await collectReplies();
+    // Resolve active frame paths at the top of each cycle.
+    const { frameDir, memoryPath, instructionsPath } = activeFramePaths(callStack);
+
+    await collectReplies(memoryPath);
 
     // Deterministic stack management (before LLM invocation)
     if (runStackBlock(callStack)) {
@@ -456,21 +453,24 @@ async function main() {
       return;
     }
 
-    const currentState = getMemoryState();
+    // Re-resolve after potential push/pop mutations.
+    const { frameDir: fd2, memoryPath: mp2, instructionsPath: ip2 } = activeFramePaths(callStack);
+
+    const currentState = getMemoryState(mp2);
 
     if (currentState === "waiting_for_user") {
-      log(`--- Cycle ${cycle} (user interaction) ---`);
+      log(`--- Cycle ${cycle} (frame: ${fd2}) (user interaction) ---`);
       const hash = commitCycle(BASE_DIR, cycle, "waiting_for_user");
-      snapshot(cycle, hash);
-      await handleUserInteraction();
+      snapshot(cycle, hash, mp2, ip2);
+      await handleUserInteraction(mp2);
       log("");
       continue;
     }
 
-    log(`--- Cycle ${cycle} ---`);
+    log(`--- Cycle ${cycle} (frame: ${fd2}) ---`);
 
     const result = await withBackoff(
-      () => runCycle(INSTRUCTIONS_PATH, MEMORY_PATH),
+      () => runCycle(ip2, mp2),
       {
         label: "quota",
         initialDelaySec: 60,
@@ -480,48 +480,51 @@ async function main() {
       }
     );
 
+    // Re-resolve after provider invocation (provider may have changed files).
+    const { frameDir: fd3, memoryPath: mp3, instructionsPath: ip3 } = activeFramePaths(callStack);
+
     // Stateful mode
     if (STATEFUL) {
-      const memoryContent = readFile(MEMORY_PATH);
+      const memoryContent = readFile(mp3);
       const matchedMatch = memoryContent.match(/^## Matched Instruction\n(.+)/m);
       const matchedValue = matchedMatch ? matchedMatch[1].trim().toLowerCase() : "";
 
       if (matchedValue === "none") {
-        handleNoMatch(getMemoryState());
+        handleNoMatch(getMemoryState(mp3), mp3);
         const hash = commitCycle(BASE_DIR, cycle, "waiting_for_user");
-        snapshot(cycle, hash);
-        await handleUserInteraction();
+        snapshot(cycle, hash, mp3, ip3);
+        await handleUserInteraction(mp3);
         log("");
         continue;
       }
 
-      executeSyscalls();
-      const state = getMemoryState();
+      executeSyscalls(ip3, fd3);
+      const state = getMemoryState(mp3);
       const hash = commitCycle(BASE_DIR, cycle, state);
-      snapshot(cycle, hash);
+      snapshot(cycle, hash, mp3, ip3);
 
-      await sendCycleSummary(cycle, result.summary);
-      await presentNewQuestions();
-      if (state === "waiting_for_user") await handleUserInteraction();
+      await sendCycleSummary(cycle, result.summary, mp3);
+      await presentNewQuestions(mp3);
+      if (state === "waiting_for_user") await handleUserInteraction(mp3);
 
       log("");
       continue;
     }
 
     // Non-stateful mode
-    const state = getMemoryState();
+    const state = getMemoryState(mp3);
 
     if (result.noMatch) {
-      handleNoMatch(state);
+      handleNoMatch(state, mp3);
     }
 
     const finalState = result.noMatch ? "waiting_for_user" : state;
     const hash = commitCycle(BASE_DIR, cycle, finalState);
-    snapshot(cycle, hash);
+    snapshot(cycle, hash, mp3, ip3);
 
-    await sendCycleSummary(cycle, result.summary);
-    await presentNewQuestions();
-    if (finalState === "waiting_for_user") await handleUserInteraction();
+    await sendCycleSummary(cycle, result.summary, mp3);
+    await presentNewQuestions(mp3);
+    if (finalState === "waiting_for_user") await handleUserInteraction(mp3);
 
     log("");
   }
