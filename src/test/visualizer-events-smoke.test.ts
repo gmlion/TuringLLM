@@ -25,4 +25,10 @@ describe("visualizer.html events panel scaffold", () => {
     assert.match(html, /id=["']eventTypeFilters["']/);
     assert.match(html, /enabledEventTypes/);
   });
+
+  test("clicking a tool event fetches its payload_ref (R27)", () => {
+    const html = readFileSync(resolve(process.cwd(), "visualizer.html"), "utf-8");
+    assert.match(html, /openPayload|fetchPayload/);
+    assert.match(html, /payload_ref/);
+  });
 });

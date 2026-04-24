@@ -223,6 +223,15 @@
     <div class="panel-body" id="eventsPanel"><span class="empty-hint">Load an instance to see events.</span></div>
   </div>
 
+  <div class="panel" id="payloadPanel" style="display:none;">
+    <div class="panel-header">
+      <span>Payload</span>
+      <span id="payloadLabel" style="color:#8b949e;font-weight:normal;text-transform:none;font-size:0.95em;"></span>
+      <button onclick="closePayload()" style="margin-left:auto;background:#21262d;border:1px solid #30363d;color:#c9d1d9;padding:2px 10px;border-radius:4px;cursor:pointer;font-family:inherit;font-size:0.8em;">Close</button>
+    </div>
+    <div class="panel-body" id="payloadBody"></div>
+  </div>
+
   <div class="panel log-panel">
     <div class="panel-header">Latest Log (tail)</div>
     <div class="panel-body" id="logPanel">No log loaded</div>
@@ -715,13 +724,17 @@
         return;
       }
 
-      panel.innerHTML = filtered.map(e =>
-        `<div style="margin-bottom:6px;padding:4px 8px;border-left:2px solid ${eventColor(e.type)};">
+      panel.innerHTML = filtered.map(e => {
+        const isClickable = (e.type === 'tool_call' || e.type === 'tool_result') && e.payload_ref;
+        const clickAttrs = isClickable
+          ? ` onclick="openPayload('${escapeHtml(e.payload_ref)}')" style="margin-bottom:6px;padding:4px 8px;border-left:2px solid ${eventColor(e.type)};cursor:pointer;"`
+          : ` style="margin-bottom:6px;padding:4px 8px;border-left:2px solid ${eventColor(e.type)};"`;
+        return `<div${clickAttrs}>
           <span style="color:#8b949e;font-size:0.78em;">#${e.seq} ${(e.ts || '').slice(11,19)}</span>
           <span style="color:${eventColor(e.type)};font-weight:bold;">  ${e.type}</span>
           <span style="color:#c9d1d9;">  ${escapeHtml(eventSummary(e))}</span>
-        </div>`
-      ).join("");
+        </div>`;
+      }).join("");
     }
 
     function escapeHtml(s) {
@@ -768,6 +781,19 @@
       const file = frame.files.find(f => f.path === selectedFilePath);
       document.getElementById('filePanel').innerHTML =
         file ? renderMarkdown(file.content) : '<em>empty</em>';
+    }
+
+    async function openPayload(ref) {
+      if (!ref) return;
+      const text = await readFile(`${instanceDir}/logs/${ref}`);
+      document.getElementById('payloadLabel').textContent = ref;
+      document.getElementById('payloadBody').textContent = text || '(payload file empty or missing)';
+      document.getElementById('payloadPanel').style.display = '';
+      document.getElementById('payloadPanel').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function closePayload() {
+      document.getElementById('payloadPanel').style.display = 'none';
     }
 
     function toggleAuto() {
