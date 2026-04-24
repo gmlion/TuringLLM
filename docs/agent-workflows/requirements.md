@@ -33,6 +33,16 @@ reuse by later groups.
    `README.md`** framing the family, listing variants with a short
    comparison table, and pointing at shared dynamics. `interpreters/game-team/`
    is exempt because it is scheduled for deletion in Phase 4.
+   **When a single implementation subsumes two or more named patterns
+   from `patterns.md` (a "collapsed pattern" — e.g. Phase 3a's strategy
+   covers Plan-and-Execute, Orchestrator–Workers, Deep Research, and
+   XAgent), every subsumed pattern MUST be named with a source
+   citation in both the relevant leaf `README.md` files AND the
+   group-level `README.md`, together with the collapse rationale (why
+   one implementation suffices under the current shell). This
+   prevents the taxonomy from becoming invisible in the filesystem: a
+   reader landing on any leaf learns the full story without having to
+   read `patterns.md` first.**
 7. **Directory layout convention** (introduced in Phase 1): every new
    interpreter lives at
    `interpreters/<group-number>-<group-slug>/<exploration-letter>-<interpreter-slug>/`,
@@ -53,25 +63,57 @@ phase can build on them.
 
 A persistent archive of successful sub-computations that any interpreter can
 draw from. Directly inspired by Voyager's skill library (see `patterns.md`
-Group 2). Orthogonal to the stack — it is *data* the dynamics consume, not
-a new control-flow primitive.
+Group 2). **Not new shell infrastructure** — a convention layered on
+primitives the shell already provides.
 
-- **Convention:** `workspace/skills/<name>.md` files, each a standalone
-  prompt + metadata header (trigger conditions, expected MEMORY in/out,
-  provenance: which interpreter+instance produced it).
-- **Index:** `workspace/skills/index.json` for fast lookup by trigger
-  keyword or semantic tag.
-- **New dynamic `invoke-skill.md`:** given a skill name and input MEMORY
-  sections, loads the skill and runs it as if it were a dynamic.
-- **New dynamic `install-skill.md`:** pushed at the end of a successful
-  sub-computation to generalise it into a skill and append to the index.
-- **First consumers:** Phase 3 (plan-execute may save high-utility plans),
-  Phase 5 (debate may save strong opinion patterns), Phase 7 (AFlow's
-  operator library is a skill library by another name).
-- **Implementation order:** introduce the convention + `invoke-skill.md`
-  in the same change that introduces the first consumer (Phase 3a).
-  `install-skill.md` can follow when a second phase wants to contribute
-  skills.
+The mechanism already exists:
+
+- The `write_file` and `update_instructions` tools let an LLM write new
+  instruction content to any path at any time.
+- `## Push <path>` loads *any* file, relative to the instance directory,
+  as the new `INSTRUCTIONS.md`. The shell calls `resolve(BASE_DIR, path)`
+  on the push target and reads whatever is there — there is no
+  `dynamics/`-only restriction and no registration step. The path can
+  point at a file the LLM just wrote this same cycle.
+- Machine git auto-commits the instance tree every cycle, so any file
+  the LLM writes under the instance directory is versioned without extra
+  effort.
+
+A "skill" is therefore just an LLM-authored dynamic file. An interpreter
+opts in by:
+
+1. **Saving.** After a successful sub-computation, the strategy (or a
+   purpose-built dynamic it owns) writes the reusable instruction text to
+   `dynamics/<name>.md` — the same directory that holds the human-authored
+   dynamics shipped with the interpreter. The file is indistinguishable
+   from a built-in dynamic once on disk; its provenance can live in a
+   short front-matter header (`source: llm`, `produced-in-cycle: N`) or
+   in a side file the strategy maintains (`dynamics/index.json`).
+2. **Invoking.** On a later cycle, the strategy writes
+   `## Push\ndynamics/<name>.md` in MEMORY. The shell's existing push
+   machinery loads the file verbatim (or with `## Push-Args` substitution)
+   and the skill runs exactly like a built-in dynamic.
+
+No new shell code, no cross-cutting dynamics, no dedicated `invoke-skill`
+or `install-skill` abstractions. Interpreters that want skill
+accumulation write the save/lookup logic into their own strategy or into
+per-interpreter dynamics. Whatever convention emerges from the first
+consumer can be reused (or promoted to cross-cutting) by the second.
+
+An interpreter that wants its skill library tracked *separately* from
+the machine git (e.g. to let the LLM branch/rewind its skill library
+independently of cycle history) can store skills under `workspace/`
+instead — `workspace/` is the LLM-controlled project git. This is a
+niche choice; `dynamics/` under the machine git is the natural default.
+
+- **Status.** Nothing to ship at the cross-cutting level. Phase 3's
+  demos are single-shot and do not benefit from skill accumulation (see
+  Phase 3 for the explicit reasoning). Phase 7 (AFlow) is the first
+  phase where a library of LLM-authored dynamics is structurally
+  required — AFlow's operator library is a skill library by another
+  name, and under this framing its operators are simply LLM-materialised
+  dynamics under `dynamics/` (or `workspace/operators/` if AFlow wants
+  its own git history for them), not a separate abstraction.
 
 ### ReAct tool-calling convention
 
@@ -88,7 +130,7 @@ system prompt.
 | Group from patterns.md | Covered in | Needs |
 |---|---|---|
 | 1 — Iterative refinement | Phase 1, Phase 2 | — |
-| 2 — Planning & decomposition | Phase 3 (+ optional ReWOO variant) | `evaluate.md` from Phase 1 |
+| 2 — Planning & decomposition | Phase 3 (plan-execute baseline with 3 demos + optional ReWOO variant; parallel Orchestrator–Workers deferred) | `evaluate.md` from Phase 1 |
 | 5 — Fixed-SOP teams | Phase 4 (game-team retirement) | `evaluate.md` |
 | 4 — Peer collaboration | Phase 5 (Debate), Phase 5b (MoA) | `reflect.md` from Phase 1 |
 | 3 — Search | Phase 6 (ToT, optional GoT variant) | `evaluate.md` |
@@ -105,19 +147,15 @@ is copied wholesale by `new-instance.sh`. Names and contracts are normative.
 
 | Dynamic | Introduced in | MEMORY in | MEMORY out | Stack depth |
 |---|---|---|---|---|
-| `invoke-skill.md` | cross-cutting | `## Skill Name`, `## Skill Inputs` | `## Skill Output` | 1 |
-| `install-skill.md` | cross-cutting | `## Skill Name`, `## Skill Body`, `## Metadata` | (writes to `workspace/skills/`) | 0 |
 | `self-critique.md` | 1a | `## Draft` | `## Critique`, `## Refined` | 1 |
 | `evaluate.md` | 1b | `## Attempt`, `## Criterion` | `## Verdict`, `## Feedback` | 1 |
 | `reflect.md` | 1c | `## Attempt`, `## Verdict` | `## Lesson` | 1 |
 | `verify.md` | 2 | `## Draft` | `## Verification Questions`, `## Revised` | 2 |
 | `answer-independently.md` | 2 | `## Question` | `## Answer` | 1 |
 | `plan.md` | 3a | `## Goal` | `## Plan` | 1 |
-| `execute-step.md` | 3a | `## Current Step`, `## Context` | `## Step Result` | 1+ (may re-push plan) |
-| `execute-batch.md` | 3a (ReWOO variant) | `## Plan` with `#E` placeholders | `## Resolved Plan` | 1 |
-| `worker.md` | 3b | `## Current Subtask` | `## Subtask Result` | 1 |
-| `investigate.md` | 3c | `## Sub-question` | `## Finding` | N (recursive) |
-| `synthesize.md` | 3c | `## Findings` | `## Report` | 1 |
+| `execute-step.md` | 3a | `## Current Step`, `## Context` | `## Step Result` (via `## Return`) | 1+ (may re-push plan) |
+| `synthesize.md` | 3a (demo d3) | `## Results` | `## Report` | 1 |
+| `execute-batch.md` | 3b (ReWOO) | `## Plan` with `#E` placeholders | `## Resolved Plan` | 1 |
 | `role-<name>.md` | 4a | prior role's section | this role's section | 1 |
 | `dialogue.md` | 4b | `## Topic`, `## Participants` | `## Conclusion` | 1 |
 | `opine.md` | 5 | `## Question`, `## Round` | `## Opinion` (appended) | 1 |
@@ -220,56 +258,87 @@ Spec: `docs/specs/2026-04-23-agent-workflows-phase-2b-push-returns/`.
 
 ## Phase 3 — Planning & decomposition (patterns.md Group 2)
 
-Three interpreters. Built together because Plan-and-Execute's dynamics
-(`plan.md`, `execute-step.md`) are consumed by Orchestrator–Workers and
-Deep Research.
+One baseline interpreter with three demos, plus an optional ReWOO variant.
+Parallel Orchestrator–Workers is deferred until the shell supports parallel
+frames (see Open questions).
 
-### 3a. `interpreters/plan-execute/`
+**Why one interpreter and not four.** Plan-and-Execute, Orchestrator–
+Workers, Deep Research, and XAgent collapse to the same state machine
+under the current sequential shell (see `patterns.md` Group 2 —
+"Plan-and-Execute (includes Orchestrator–Workers, Deep Research, XAgent)").
+Under sequential execution, fan-out to generic workers is indistinguishable
+from a single executor, on-the-fly decomposition produces the same trace
+as upfront planning with replans, recursive sub-question investigation is
+a special case of `execute-step.md` re-pushing `plan.md`, and XAgent's
+"planner rewrites at any time" is just a replanner prompted to fire every
+cycle. Four named patterns, one implementation — violating "no speculative
+dynamics" would mean shipping four interpreters that do the same thing.
+The canonical framings live as distinct **demos** on the same strategy.
 
-Linear plan, sequential execution, replanning on failure.
+### 3a. `interpreters/2-planning-decomposition/a-plan-execute/`
 
-- Strategy: planner/replanner holding `## Plan`.
-- New dynamic: `plan.md` — produces an ordered step list for `## Goal`.
-- New dynamic: `execute-step.md` — executes one step. May re-push `plan.md`
-  if the step is too coarse (recursion) or push `evaluate.md` as a step-
-  acceptance gate.
+Baseline decomposition: plan, execute steps sequentially, optionally
+synthesise.
+
+- Strategy: planner/replanner holding `## Plan` and accumulated `## Results`.
+- New dynamics:
+  - `plan.md` — produces an ordered step list for `## Goal`.
+  - `execute-step.md` — executes one step. May re-push `plan.md` if the
+    step is too coarse (recursion), or push `evaluate.md` as a step-
+    acceptance gate. Returns `## Step Result` via `## Return`.
+  - `synthesize.md` — optional terminal step that aggregates accumulated
+    `## Results` into a final artefact (e.g. `workspace/report.md`).
+    Omitted for demos whose output already lives in `workspace/`.
 - **Reuse:** `evaluate.md` from 1b.
-- Demo `PROGRAM.md`: set up a Python project with tests and CI config.
-- **Validation:** log shows at least one replan triggered by a step failure.
-- **Optional second demo — ReWOO variant** (`patterns.md` Group 2). Same
-  `plan.md` but different executor: `plan.md` emits a full plan with
-  `#E1, #E2, …` placeholders for tool outputs; a new dynamic
-  `execute-batch.md` runs all tools in one pass and substitutes results
-  before a final synthesis. Same interpreter shell, different strategy
-  prompt and one extra dynamic. Shows the interleaved-vs-batched trade-off
-  cheaply. Build only after the interleaved path is solid.
+- **Three demos** (one strategy, three `PROGRAM.md` variants shipped under
+  `demos/d1/`, `demos/d2/`, `demos/d3/`):
+  - **d1 — Plan-and-Execute** (Wang et al. framing). Set up a TypeScript
+    project with tests and CI config. Output lives in `workspace/`; no
+    `synthesize.md`. **Validation:** log shows at least one replan
+    triggered by a step failure.
+  - **d2 — Orchestrator–Workers** (Anthropic framing, sequential). Analyse
+    five files in `workspace/inputs/` and produce a unified summary.
+    `plan.md` emits one subtask per file; `execute-step.md` processes
+    each; `synthesize.md` aggregates. Demonstrates that sequential
+    fan-out is the same shape as Plan-and-Execute — the distinction
+    only shows up once frames run in parallel (deferred below).
+  - **d3 — Deep Research** (product framing, Self-Ask ancestry). An open
+    research prompt ("compare approaches X, Y, Z for problem P").
+    `plan.md` emits sub-questions; `execute-step.md` answers each and
+    may recursively re-push `plan.md` when a sub-question is still too
+    broad; `synthesize.md` writes `workspace/report.md`. **Validation:**
+    log shows at least one recursive re-push of `plan.md` from inside
+    `execute-step.md`.
 
-### 3b. `interpreters/orchestrator-workers/`
+### 3b. `interpreters/2-planning-decomposition/b-rewoo/` (optional)
 
-Dynamic fan-out with generic workers.
+Structurally distinct variant, worth a separate interpreter because the
+executor shape genuinely differs.
 
-- Strategy: orchestrator holds `## Subtasks` (decomposed on the fly per
-  task) and `## Results`. Pushes `worker.md` per subtask in sequence,
-  synthesises.
-- New dynamic: `worker.md` — receives `## Current Subtask`, returns
-  `## Subtask Result`. Internally pushes `execute-step.md` for executable
-  subtasks, otherwise runs a reasoning loop.
-- **Reuse:** `execute-step.md` from 3a.
-- Demo `PROGRAM.md`: analyse 5 files in `workspace/inputs/` and produce a
-  unified summary.
+- Strategy: planner emits a complete plan up-front with `#E1, #E2, …`
+  placeholder tokens for tool outputs; `execute-batch.md` runs all tools
+  in one pass and substitutes the results; a final inline synthesis uses
+  the resolved plan. No interleaved reasoning/observation loop.
+- New dynamic: `execute-batch.md` — resolves all `#E_k` placeholders in
+  `## Plan` against a batch of tool calls, emits `## Resolved Plan`.
+- **Reuse:** `plan.md` from 3a (different prompting, same contract).
+- Demo `PROGRAM.md`: a task with multiple independent lookups (e.g.
+  "summarise the current status of projects A, B, and C from their
+  READMEs and open-issues pages"), chosen so batching matters.
+- **Validation:** per-cycle logs show one-shot tool resolution — no
+  interleaved observation-triggered reasoning between placeholder
+  expansions.
+- Build only after 3a is solid.
 
-### 3c. `interpreters/deep-research/`
+### Deferred: parallel Orchestrator–Workers
 
-Recursive decomposition producing a report.
-
-- Strategy: researcher holds `## Open Questions` and `## Findings`.
-- New dynamic: `investigate.md` — may push itself recursively when a
-  sub-question is still too broad.
-- New dynamic: `synthesize.md` — writes the final report to
-  `workspace/report.md`.
-- **Reuse:** none directly from 3a/3b (the questions are not plans).
-- Demo `PROGRAM.md`: an open research prompt ("compare approaches X, Y, Z
-  for problem P").
+Once the shell supports parallel stack frames (see Open questions
+below), genuine fan-out to generic workers in parallel becomes
+structurally distinct from sequential 3a d2. At that point, add
+`interpreters/2-planning-decomposition/c-orchestrator-workers/` with a
+new `worker.md` dynamic executed in concurrent frames, reusing `plan.md`
+(or replacing it with on-the-fly dispatch). Until then, sequential
+Orchestrator–Workers is demo d2 on 3a and is not a separate interpreter.
 
 ---
 
@@ -330,11 +399,6 @@ adds little over 4b's dialogue dynamic).
   nudge agents off stuck points.
 - Demo `PROGRAM.md`: an ambiguous-answer question ("Postgres or SQLite for
   use case U?").
-- **Cheap fallback — SPP** (`patterns.md` Group 4). For cost-constrained
-  runs, a single LLM cycles through personas in one context window. No new
-  dynamic: strategy pushes `opine.md` N times against the same worker with
-  different persona headers. Same interpreter can expose both modes via a
-  config switch.
 
 ---
 
@@ -428,8 +492,9 @@ everything below to already work.
   it via a nested shell invocation (same binary, different instance dir),
   collects the score from its final MEMORY.
 - **Reuse:** operator library seeded from 1a (self-refine), 1c (reflexion),
-  3b (orchestrator-workers), 5 (debate), 5b (MoA). MCTS helper imported
-  from Phase 6b.
+  3a (plan-execute, covering the Orchestrator–Workers and Deep Research
+  framings as demos), 5 (debate), 5b (MoA). MCTS helper imported from
+  Phase 6b.
 - Demo `PROGRAM.md`: a small automatically-scorable benchmark (a subset of
   GSM8K or HumanEval).
 
@@ -471,21 +536,30 @@ interpreters. Each is a **shell-level change**, not a phase.
   prompt is hand-written; a compiler would search prompt space inside
   each node. Requires a metric harness the shell doesn't have yet.
 - **Parallel stack frames** (already noted previously). Several phases
-  (3b, 5, 5b, 6) would benefit from concurrent pops. Shell change.
+  would benefit from concurrent pops: Phase 3's deferred parallel
+  Orchestrator–Workers variant (3c) requires this to be structurally
+  distinct from the sequential 3a d2 demo; Phases 5, 5b, and 6 would
+  also gain from it. Shell change.
 
 ---
 
 ## Out of scope for this plan
 
 - **Building blocks — Prompting techniques** — CoT, Self-Consistency, ReAct,
-  Self-Discover. Prompting affordances available to any interpreter.
-  ReAct specifically is a **shell-level convention** (see "Cross-cutting
-  building blocks" above), not a phase.
+  Self-Discover, SPP (Solo Performance Prompting). Prompting affordances
+  available to any interpreter. ReAct specifically is a **shell-level
+  convention** (see "Cross-cutting building blocks" above), not a phase.
+  SPP (`patterns.md` Group 4) lives here rather than under Phase 5 because
+  it is a single-cycle multi-persona prompt: it does not push and does
+  not exercise the stack, so an "SPP interpreter" would be a prompt-only
+  instance with no dynamics. The technique can still be used *inside* any
+  opine-like dynamic of Phase 5 when a caller wants multi-persona
+  reasoning within one frame.
 - **Group 6 (Dynamic teams)** — AgentVerse, AutoAgents, XAgents (plural).
-  AgentVerse and AutoAgents are covered **in spirit** by Phase 3b + Phase 7
-  (dynamic decomposition + operator library). XAgents (plural, rule-based
-  IF-THEN) clashes with the shell's fuzzy-NL-condition design and is not
-  pursued.
+  AgentVerse and AutoAgents are covered **in spirit** by Phase 3a's
+  Orchestrator–Workers demo (d2) plus Phase 7 (dynamic decomposition +
+  operator library). XAgents (plural, rule-based IF-THEN) clashes with
+  the shell's fuzzy-NL-condition design and is not pursued.
 - **Group 8 (Libraries)** — AutoGen, Superpowers, DSPy, LangGraph, CrewAI.
   Infrastructure, not interpreters. Superpowers' skill *content* (4-phase
   systematic debugging, TDD methodology) is a good source to mine when

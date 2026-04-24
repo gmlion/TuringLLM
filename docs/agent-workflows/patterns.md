@@ -37,7 +37,7 @@ The groups below are defined primarily by Axis A. Axis B is noted per entry.
 |---|---|---|
 | Building blocks — Prompting techniques | Squeeze more out of a single LLM call | CoT, Self-Consistency, ReAct, Self-Discover |
 | 1. Iterative refinement | Rework the same answer until it is good | Self-Refine, Evaluator–Optimizer, Reflexion, Chain-of-Verification |
-| 2. Planning & decomposition | Break the task, execute the parts | Plan-and-Execute, ReWOO, Deep Research, Orchestrator–Workers, XAgent, Voyager, AutoGPT/BabyAGI, SWE-agent/OpenHands |
+| 2. Planning & decomposition | Break the task, execute the parts | Plan-and-Execute (incl. Orchestrator–Workers, Deep Research, XAgent), ReWOO, Voyager, AutoGPT/BabyAGI, SWE-agent/OpenHands |
 | 3. Search | Explore alternative solutions, prune | Tree of Thoughts, Graph of Thoughts, LATS |
 | 4. Peer collaboration | Multiple roles work the same task from different angles | CAMEL, Multi-Agent Debate, Generative Agents, Mixture of Agents, SPP |
 | 5. Fixed-SOP teams | Hard-coded pipeline of specialists | MetaGPT, ChatDev, nWave |
@@ -65,9 +65,9 @@ Wang et al., 2022. Sample N CoT traces, majority-vote the final answer.
 *Yao et al., ICLR 2023 (arXiv:2210.03629).* Interleaves
 `Thought: → Action: → Observation:` tuples in a single prompting loop. The
 model reasons, picks a tool, sees the result, reasons again. Foundational
-substrate for almost every tool-using agent (Plan-and-Execute, XAgent,
-AutoGPT, SWE-agent). If you had to name one prompting pattern that made
-modern agents possible, this is it.
+substrate for almost every tool-using agent (Plan-and-Execute, AutoGPT,
+SWE-agent). If you had to name one prompting pattern that made modern
+agents possible, this is it.
 
 ### Self-Discover
 *Zhou et al., 2024 (arXiv:2402.03620).* The model selects, adapts, and
@@ -125,12 +125,54 @@ contagion between the main answer and its checks.
 The task is split into subtasks. Execution is sequential, recursive, or
 delegated. Workers are typically generic (not distinct personas).
 
-### Plan-and-Execute
-*Wang et al., 2023 ("Plan-and-Solve"); popularised by LangChain; spiritual
-ancestor of AutoGPT and BabyAGI.* A planner emits an ordered list of steps,
-an executor performs them one at a time, a replanner updates the list in
-light of each result. If a step is too coarse, it can spawn its own
-sub-plan.
+### Plan-and-Execute (includes Orchestrator–Workers, Deep Research, XAgent)
+*Wang et al., 2023 ("Plan-and-Solve", arXiv:2305.04091); popularised by
+LangChain; spiritual ancestor of AutoGPT and BabyAGI. Also: Anthropic,
+"Building Effective Agents", 2024 ("Orchestrator–Workers"); OpenAI Deep
+Research, Anthropic Research, Perplexity Pro (product pattern); academically
+close to Self-Ask, Press et al., arXiv:2210.03350; OpenBMB / Tsinghua,
+XAgent tech report, 2023.*
+
+Four widely-cited framings of the same shape:
+**decompose → per-unit execute (possibly recursive) → synthesise**.
+
+- **Plan-and-Execute** (Wang et al.). A planner emits an ordered list of
+  steps, an executor performs them one at a time, a replanner updates the
+  list in light of each result. If a step is too coarse, it can spawn its
+  own sub-plan.
+- **Orchestrator–Workers** (Anthropic). A central LLM dynamically breaks
+  the task down — subtasks are not pre-defined, they are determined by the
+  orchestrator per input — delegates each to a worker, synthesises results.
+  The "canonical fan-out" pattern.
+- **Deep Research** (product pattern). Question → decompose into
+  sub-questions → search/read/synthesise each → aggregate. Recursive when
+  a sub-question is still too broad. Output is typically a report.
+- **XAgent** (OpenBMB / Tsinghua). Three-component framing: **Dispatcher**
+  routes subtasks, **Outer-Loop Planner** generates and rectifies the plan
+  at any cycle (not just on step failure), **Inner-Loop Actor** executes
+  tools in a sandbox. Its own paper describes it as "functionally a Plan-
+  and-Execute with the planner/executor split explicit and the planner
+  allowed to rewrite the plan at any time." The sandboxed execution is a
+  tool-surface concern (cf. SWE-agent/OpenHands), orthogonal to the
+  control flow. Compared against AutoGPT on ~50 real-world tasks.
+
+The four framings differ in four prompting-level choices: (a) whether the
+decomposition is materialised once up-front (Plan-and-Execute, XAgent) or
+emitted subtask-by-subtask (Orchestrator–Workers); (b) whether per-unit
+execution is a single executor or fan-out to generic workers (Orchestrator–
+Workers); (c) whether the output is state-in-the-world or an aggregated
+report (Deep Research); (d) how often replanning is invited — reactively on
+failure (Plan-and-Execute) or at any cycle (XAgent). Under **sequential**
+execution these differences collapse to prompting and output-channel
+choices — sequential fan-out is indistinguishable from sequential single-
+executor, on-the-fly decomposition and up-front planning with replans yield
+identical traces, and report aggregation is a terminal synthesise step.
+Fan-out becomes structurally distinct only when executed in parallel.
+
+The genuinely distinct siblings below — ReWOO, Voyager, AutoGPT/BabyAGI,
+SWE-agent/OpenHands — each add a mechanism the baseline lacks
+(batched-placeholder execution, a permanent skill library, task-queue
+simplification, or a curated tool surface).
 
 ### ReWOO
 *Xu et al., 2023 (arXiv:2305.18323).* **R**easoning **W**ith**O**ut
@@ -139,26 +181,6 @@ sub-plan.
 substitutes the results before a final synthesis. Reduces token cost and
 the cascade failures that interleaved ReAct suffers from when an early
 observation derails later reasoning.
-
-### Deep Research
-Product pattern (OpenAI Deep Research, Anthropic Research, Perplexity Pro);
-academically close to *Self-Ask* (Press et al.). Question → decompose into
-sub-questions → search/read/synthesise each → aggregate. Recursive when a
-sub-question is still too broad. Output is typically a report.
-
-### Orchestrator–Workers
-*Anthropic, "Building Effective Agents", 2024.* An orchestrator LLM
-decomposes the task **dynamically** (unlike MetaGPT's fixed chain), delegates
-each subtask to a worker, synthesises results. The canonical "fan-out"
-pattern.
-
-### XAgent
-*OpenBMB / Tsinghua, tech report 2023.* Three components: **Dispatcher**
-routes subtasks; **Outer-Loop Planner** generates and rectifies the plan;
-**Inner-Loop Actor** executes via tools in a sandbox. Functionally a Plan-
-and-Execute with the planner/executor split explicit and the planner
-allowed to rewrite the plan at any time. Compared against AutoGPT on ~50
-real-world tasks.
 
 ### Voyager
 *Wang et al., NVIDIA, 2023 (arXiv:2305.16291).* Lifelong learning agent in
@@ -430,9 +452,10 @@ Several design moves recur across groups and deserve names of their own:
 - **Evaluator as a reusable component.** A separate-role evaluator shows up
   in Evaluator–Optimizer, Reflexion, MetaGPT's QA, AgentVerse's verifier,
   and AFlow's execution scorer. Treat it as a pluggable sub-pattern.
-- **Planner / executor split.** Plan-and-Execute, XAgent, and (implicitly)
-  Orchestrator–Workers all separate "decide what to do" from "do it". The
-  split is what makes replanning possible.
+- **Planner / executor split.** Plan-and-Execute — covering its
+  Orchestrator–Workers, Deep Research, and XAgent framings — separates
+  "decide what to do" from "do it". The split is what makes replanning
+  possible.
 - **Memory of prior attempts.** Reflexion adds it to Group 1. ADAS adds it
   to Group 7 (the agent archive). Most other patterns operate stateless.
 - **Workflow as data.** AFlow, ADAS, EvoAgentX, DyLAN all treat the workflow
