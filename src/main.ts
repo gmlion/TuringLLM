@@ -11,6 +11,11 @@ import { resolve, dirname } from "path";
 import { createInterface } from "readline";
 import { initLog, log, getLogPath } from "./logger.js";
 import { ensureMachineRepo, ensureProjectRepo, commitCycle, getWorkspacePath } from "./git.js";
+import {
+  initEvents, setCycleContext, clearCycleContext,
+  emitCycleStart, emitCycleEnd, emitPush, emitPop, emitSplice,
+  emitMachineGitCommit, emitInstructionsChanged, emitError, emitHalt, emitRetry,
+} from "./events.js";
 import { ALLOWED_GIT_COMMANDS } from "./tools.js";
 import { TelegramSession } from "./telegram.js";
 import {
@@ -47,6 +52,7 @@ export async function withBackoff<T>(
       if (attempt >= maxRetries || (opts.shouldRetry && !opts.shouldRetry(err))) throw err;
       log(`  [${opts.label}] ${err instanceof Error ? err.message : err}`);
       log(`  [${opts.label}] retrying in ${delay}s... (attempt ${attempt + 1}/${maxRetries})`);
+      emitRetry(attempt + 1, opts.label);
       await sleep(delay * 1000);
       delay = Math.min(delay * 2, maxDelay);
     }
@@ -130,7 +136,11 @@ class StdinSession implements UserSession {
 
 // --- Signal handling ---
 
-process.on("SIGINT", () => { log("\nInterrupted \u2014 exiting."); process.exit(0); });
+process.on("SIGINT", () => {
+  log("\nInterrupted \u2014 exiting.");
+  try { clearCycleContext(); emitHalt("signal"); } catch {}
+  process.exit(0);
+});
 process.on("SIGTERM", () => process.exit(0));
 
 // --- Session setup ---
@@ -375,6 +385,10 @@ function runStackBlock(callStack: CallStack): boolean {
     for (const ev of popped.events) {
       rmSync(resolve(BASE_DIR, ev.frameDir), { recursive: true, force: true });
       log(`  [pop] \u2192 ${ev.returnState}_completed (depth ${ev.depthAfter})`);
+      if (ev.splicedKeys && ev.splicedKeys.length > 0) {
+        emitSplice(popped.callerFrameDir, ev.splicedKeys);
+      }
+      emitPop(ev.frameDir, ev.returnState, ev.depthAfter);
       if (ev.missingReturn) log(`  [pop] ${ev.frameDir}: no ## Return section`);
       for (const mal of ev.malformedLines) {
         log(`  [pop] ${ev.frameDir}: malformed return entry: ${mal}`);
@@ -417,6 +431,7 @@ function runStackBlock(callStack: CallStack): boolean {
     Object.assign(callStack, pushed.callStack);
     saveCallStack(CALL_STACK_PATH, callStack);
     log(`  [push] ${pushed.target} → ${pushed.frameDir} (depth ${pushed.callStack.stack.length - 1})`);
+    emitPush(pushed.target, pushed.frameDir, pushed.callStack.stack.length - 1);
   } else if (pushed.reason === "missing-target") {
     writeFileSync(memPathAfterPop, pushed.memory, "utf-8");
     log(`  [push] ERROR: ${pushed.target} not found or empty, skipping`);
@@ -431,6 +446,8 @@ function runStackBlock(callStack: CallStack): boolean {
 
 async function main() {
   initLog(BASE_DIR);
+  initEvents(BASE_DIR);
+  clearCycleContext();
 
   log("Turing machine starting");
   log(`  Provider:     ${PROVIDER}`);
@@ -459,11 +476,19 @@ async function main() {
     // Deterministic stack management (before LLM invocation)
     if (runStackBlock(callStack)) {
       log(`\nMachine halted: done`);
+      clearCycleContext();
+      emitHalt("done");
       return;
     }
 
     // Re-resolve after potential push/pop mutations.
     const { frameDir: fd2, memoryPath: mp2, instructionsPath: ip2 } = activeFramePaths(callStack);
+
+    // Set cycle context and emit cycle_start for every cycle (including user-interaction cycles).
+    setCycleContext(cycle, callStack.stack[callStack.stack.length - 1].frameDir);
+    emitCycleStart();
+    const t0 = Date.now();
+    const instructionsBytesBefore = readFileSync(ip2, "utf-8").length;
 
     const currentState = getMemoryState(mp2);
 
@@ -471,6 +496,8 @@ async function main() {
       log(`--- Cycle ${cycle} (frame: ${fd2}) (user interaction) ---`);
       const hash = commitCycle(BASE_DIR, cycle, "waiting_for_user");
       snapshot(cycle, hash);
+      emitMachineGitCommit(hash, `cycle ${cycle}: waiting_for_user`);
+      emitCycleEnd("waiting_for_user", Date.now() - t0);
       await handleUserInteraction(mp2);
       log("");
       continue;
@@ -502,6 +529,12 @@ async function main() {
         handleNoMatch(getMemoryState(mp3), mp3);
         const hash = commitCycle(BASE_DIR, cycle, "waiting_for_user");
         snapshot(cycle, hash);
+        const instructionsBytesAfterStatefulNone = readFileSync(ip3, "utf-8").length;
+        if (instructionsBytesAfterStatefulNone !== instructionsBytesBefore) {
+          emitInstructionsChanged(instructionsBytesBefore, instructionsBytesAfterStatefulNone);
+        }
+        emitMachineGitCommit(hash, `cycle ${cycle}: waiting_for_user`);
+        emitCycleEnd("waiting_for_user", Date.now() - t0);
         await handleUserInteraction(mp3);
         log("");
         continue;
@@ -511,6 +544,12 @@ async function main() {
       const state = getMemoryState(mp3);
       const hash = commitCycle(BASE_DIR, cycle, state);
       snapshot(cycle, hash);
+      const instructionsBytesAfterStateful = readFileSync(ip3, "utf-8").length;
+      if (instructionsBytesAfterStateful !== instructionsBytesBefore) {
+        emitInstructionsChanged(instructionsBytesBefore, instructionsBytesAfterStateful);
+      }
+      emitMachineGitCommit(hash, `cycle ${cycle}: ${state}`);
+      emitCycleEnd(state, Date.now() - t0);
 
       await sendCycleSummary(cycle, result.summary, mp3);
       await presentNewQuestions(mp3);
@@ -530,6 +569,12 @@ async function main() {
     const finalState = result.noMatch ? "waiting_for_user" : state;
     const hash = commitCycle(BASE_DIR, cycle, finalState);
     snapshot(cycle, hash);
+    const instructionsBytesAfter = readFileSync(ip3, "utf-8").length;
+    if (instructionsBytesAfter !== instructionsBytesBefore) {
+      emitInstructionsChanged(instructionsBytesBefore, instructionsBytesAfter);
+    }
+    emitMachineGitCommit(hash, `cycle ${cycle}: ${finalState}`);
+    emitCycleEnd(finalState, Date.now() - t0);
 
     await sendCycleSummary(cycle, result.summary, mp3);
     await presentNewQuestions(mp3);
@@ -539,7 +584,13 @@ async function main() {
   }
 }
 
-main().catch((err) => {
+main().catch((err: unknown) => {
+  if ((err as { name?: string })?.name === "QuotaExceededError") {
+    try { clearCycleContext(); emitHalt("quota_exceeded"); } catch { /* logs may be uninitialized */ }
+    console.error("Quota exceeded — exiting cleanly (resumable):", err);
+    process.exit(0);
+  }
+  try { emitError(err instanceof Error ? err : new Error(String(err))); } catch { /* logs may be uninitialized */ }
   console.error("Fatal error:", err);
   process.exit(1);
 });
