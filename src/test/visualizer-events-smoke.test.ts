@@ -98,4 +98,14 @@ describe("visualizer.html events panel scaffold", () => {
     assert.equal(/id=["']logPanel["']/.test(html), false);
     assert.equal(/loadLatestLog/.test(html), false);
   });
+
+  test("payload viewer is a modal popup (R23)", () => {
+    const html = readFileSync(resolve(process.cwd(), "visualizer.html"), "utf-8");
+    assert.match(html, /class=["']modal-backdrop["']/);
+    assert.match(html, /class=["']modal["']/);
+    // Esc handler
+    assert.match(html, /Escape/);
+    // Backdrop click handler
+    assert.match(html, /modal-backdrop[^}]*onclick|onclick[^"]*closePayload/);
+  });
 });
