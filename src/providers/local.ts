@@ -110,10 +110,11 @@ export async function runCycle(
   const filesBefore: [string, string] = [readFile(memoryPath), readFile(instructionsPath)];
 
   const model = await getModel();
-  const instanceDir = resolve(memoryPath, "..");
-  const workspacePath = getWorkspacePath(instanceDir);
+  const frameDir = resolve(memoryPath, "..");
+  const instanceRoot = resolve(frameDir, "..", "..");
+  const workspacePath = getWorkspacePath(instanceRoot);
 
-  const { functions, results } = buildFunctions(tools, instructionsPath, workspacePath, instanceDir);
+  const { functions, results } = buildFunctions(tools, instructionsPath, workspacePath, frameDir);
 
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     results.length = 0;

@@ -66,7 +66,7 @@ After every cycle, INSTRUCTIONS.md must have a matching condition for the state 
 
 Headless CLI. No browser, no GUI. You have bash, file I/O, and network access.
 
-Project artifacts (code, assets, etc.) go in the workspace/ directory. This directory has its own git repo — the git tool operates there. MEMORY.md and INSTRUCTIONS.md stay in the instance root (the current directory). The machine auto-commits everything at the instance level after each cycle; you manage the project repo in workspace/ yourself.
+Project artifacts (code, assets, etc.) go in \`../../workspace/\`. That directory has its own git repo — the git tool operates there. MEMORY.md and INSTRUCTIONS.md live in your current frame directory (see "Your frame" above). The machine auto-commits everything at the instance level after each cycle; you manage the project repo in \`../../workspace/\` yourself.
 
 # Asking the user
 
@@ -295,7 +295,7 @@ export function getUserPrompt(
   const cwd = resolve(memoryPath, "..");
 
   if (process.env.TURING_STATEFUL === "1") {
-    const syscallsPath = resolve(memoryPath, "..", "SYSCALLS.md");
+    const syscallsPath = resolve(memoryPath, "..", "..", "..", "SYSCALLS.md");
     const syscalls = safeRead(syscallsPath);
 
     return `Working directory: ${cwd}

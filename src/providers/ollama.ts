@@ -172,7 +172,7 @@ export async function runCycle(
       writeFileSync(memoryPath, memoryContent + "\n", "utf-8");
     }
 
-    const syscallsPath = resolve(memoryPath, "..", "SYSCALLS.md");
+    const syscallsPath = resolve(memoryPath, "..", "..", "..", "SYSCALLS.md");
     // Write new syscalls (empty string if no actions requested)
     writeFileSync(syscallsPath, syscallsContent ? syscallsContent + "\n" : "", "utf-8");
 
@@ -235,8 +235,9 @@ export async function runCycle(
       logRaw(`  [tool_call] ${name}`);
       logRaw(`  [tool_input] ${JSON.stringify(input)}`);
 
-      const instanceDir = resolve(memoryPath, "..");
-      const toolResult = await executeTool(name, input, instructionsPath, getWorkspacePath(instanceDir), instanceDir);
+      const frameDir = resolve(memoryPath, "..");
+      const instanceRoot = resolve(frameDir, "..", "..");
+      const toolResult = await executeTool(name, input, instructionsPath, getWorkspacePath(instanceRoot), frameDir);
 
       logRaw(`  [tool_result] ${toolResult.output}`);
       logRaw(`  [tool_error] ${toolResult.error}`);

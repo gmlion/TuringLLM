@@ -4,6 +4,7 @@ import { mkdtempSync, writeFileSync } from "fs";
 import { join, resolve } from "path";
 import { tmpdir } from "os";
 import { executeTool } from "../tools.js";
+import { getWorkspacePath } from "../git.js";
 
 describe("executeTool bash cwd", () => {
   test("runs without error when no cwd passed", async () => {
@@ -66,5 +67,17 @@ describe("executeTool bash cwd", () => {
     );
     assert.equal(result.error, false, `unexpected error: ${result.output}`);
     assert.match(result.output.trim(), /frame-marker\.txt/);
+  });
+
+  test("workspace path resolves to instance root from a non-root frame (R37)", () => {
+    // The Phase 2b layout is <instance>/frames/f<NNN>-<slug>/MEMORY.md.
+    // Providers compute instanceRoot = resolve(memoryPath, "../../..") and pass
+    // getWorkspacePath(instanceRoot) as the git tool's cwd. From a depth>=1 frame,
+    // this must still land at <instance>/workspace, not <frame>/workspace.
+    const memoryPath = "/tmp/instances/foo/frames/f001-verify/MEMORY.md";
+    const frameDir = resolve(memoryPath, "..");
+    const instanceRoot = resolve(frameDir, "..", "..");
+    assert.equal(instanceRoot, resolve("/tmp/instances/foo"));
+    assert.equal(getWorkspacePath(instanceRoot), resolve("/tmp/instances/foo/workspace"));
   });
 });

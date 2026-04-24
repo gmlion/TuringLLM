@@ -1,6 +1,6 @@
 import { test, describe, beforeEach, afterEach } from "node:test";
 import { strict as assert } from "node:assert";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { getSystemPrompt, getUserPrompt } from "../prompt.js";
@@ -56,9 +56,12 @@ describe("getUserPrompt", () => {
   let instructionsPath: string;
 
   beforeEach(() => {
+    // Mimic the Phase 2b layout: <instance>/frames/f000-strategy/MEMORY.md
     dir = mkdtempSync(resolve(tmpdir(), "turing-prompt-"));
-    memoryPath = resolve(dir, "MEMORY.md");
-    instructionsPath = resolve(dir, "INSTRUCTIONS.md");
+    const frameDir = resolve(dir, "frames", "f000-strategy");
+    mkdirSync(frameDir, { recursive: true });
+    memoryPath = resolve(frameDir, "MEMORY.md");
+    instructionsPath = resolve(frameDir, "INSTRUCTIONS.md");
   });
 
   afterEach(() => {
