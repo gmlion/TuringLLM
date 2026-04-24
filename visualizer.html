@@ -116,7 +116,7 @@
 
     .grid-3col {
       display: grid;
-      grid-template-columns: 260px 1fr 1fr;
+      grid-template-columns: 320px 1fr 1fr;
       gap: 16px;
       /* Each column owns its own scroll. Height calc keeps the grid in one viewport. */
     }
@@ -526,7 +526,7 @@
       const stack = cycle.callStack.stack;
       const topIdx = stack.length - 1;
       // Vertical layout: stack[topIdx] (active) drawn at the TOP, stack[0] (root) at the BOTTOM.
-      const NODE_W = 220;
+      const NODE_W = 280;
       const NODE_H = 70;
       const GAP = 30;
       const PAD_X = 20;
@@ -552,13 +552,14 @@
         const isActive = stackIdx === topIdx;
         const isSelected = entry.frameDir === selectedFrameDir;
 
-        // Connector from this node DOWN to the next (which is the caller — one further from active).
+        // Connector from the lower frame (caller) UP to this node (callee — pushed on top).
+        // Arrow points UP, matching the push direction that built the stack.
         if (drawIdx < stack.length - 1) {
           const nextY = PAD_Y + (drawIdx + 1) * (NODE_H + GAP);
           const cx = x + NODE_W / 2;
           const line = document.createElementNS(svgNS, 'line');
-          line.setAttribute('x1', cx); line.setAttribute('y1', y + NODE_H);
-          line.setAttribute('x2', cx); line.setAttribute('y2', nextY);
+          line.setAttribute('x1', cx); line.setAttribute('y1', nextY);
+          line.setAttribute('x2', cx); line.setAttribute('y2', y + NODE_H);
           line.setAttribute('stroke', '#58a6ff'); line.setAttribute('stroke-width', '2');
           line.setAttribute('marker-end', 'url(#arrow)');
           svg.appendChild(line);
