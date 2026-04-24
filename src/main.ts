@@ -512,6 +512,10 @@ async function main() {
 
     await collectReplies(memoryPath);
 
+    // Set cycle context with the pre-stack-ops top frame so that push/pop/splice
+    // events fired inside runStackBlock are stamped with the correct cycle number.
+    setCycleContext(cycle, frameDir);
+
     // Deterministic stack management (before LLM invocation)
     if (runStackBlock(callStack)) {
       log(`\nMachine halted: done`);
@@ -523,7 +527,7 @@ async function main() {
     // Re-resolve after potential push/pop mutations.
     const { frameDir: fd2, memoryPath: mp2, instructionsPath: ip2 } = activeFramePaths(callStack);
 
-    // Set cycle context and emit cycle_start for every cycle (including user-interaction cycles).
+    // Re-set cycle context with the post-stack-ops active frame (the frame the LLM will execute in).
     setCycleContext(cycle, callStack.stack[callStack.stack.length - 1].frameDir);
     emitCycleStart();
     const t0 = Date.now();

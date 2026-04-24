@@ -16,7 +16,12 @@ export function initEvents(baseDir: string): void {
   if (!existsSync(eventsPath)) writeFileSync(eventsPath, "", "utf-8");
   if (existsSync(seqPath)) {
     const v = parseInt(readFileSync(seqPath, "utf-8").trim(), 10);
-    nextSeq = Number.isFinite(v) && v > 0 ? v : 1;
+    if (Number.isFinite(v) && v > 0) {
+      nextSeq = v;
+    } else {
+      console.warn(`events.ts: .events-seq corrupt (value: ${readFileSync(seqPath, "utf-8")!.trim()!.slice(0, 50)}); resetting to 1. Subsequent events will lose seq monotonicity guarantee.`);
+      nextSeq = 1;
+    }
   } else {
     nextSeq = 1;
     writeFileSync(seqPath, "1", "utf-8");

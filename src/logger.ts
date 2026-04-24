@@ -13,9 +13,17 @@ export function log(message: string): void {
 }
 
 export function logRaw(_message: string): void {
-  // Pre-better-logging this wrote diagnostic detail to the file mirror.
-  // The file mirror is gone; structured detail lives in events.jsonl.
-  // Kept as a no-op so existing call sites compile until they're audited.
+  // TODO(better-logging-followup): logRaw has 40+ call sites across providers/
+  // that previously wrote diagnostic detail (raw stdout, tool inputs, etc.) to
+  // logs/run-<ts>.log. Now silent. The structured event stream covers tool I/O
+  // for non-CC providers, but for the claude-code provider the raw subprocess
+  // stdout is no longer captured anywhere. Either:
+  //   (a) audit each logRaw call site and migrate useful diagnostics into
+  //       events.ts emitters, or
+  //   (b) extend events.ts.emitLlmResponse to carry the full provider stdout
+  //       (currently only the parsed `result` text), so CC runs are debuggable.
+  // Until then, CC runs lose verbose stdout that previously appeared in the
+  // file log.
 }
 
 export function getLogPath(): string | null {
