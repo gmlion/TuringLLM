@@ -108,4 +108,27 @@ describe("visualizer.html events panel scaffold", () => {
     // Backdrop click handler
     assert.match(html, /modal-backdrop[^}]*onclick|onclick[^"]*closePayload/);
   });
+
+  test("eventSummary has explicit case for every known event type (R21)", () => {
+    const html = readFileSync(resolve(process.cwd(), "visualizer.html"), "utf-8");
+    const types = [
+      "cycle_start","cycle_end","push","pop","splice",
+      "llm_request","llm_response","tool_call","tool_result",
+      "machine_git_commit","instructions_changed","retry","error","halt",
+    ];
+    for (const t of types) {
+      assert.match(html, new RegExp(`case ['"]${t}['"]`),
+        `eventSummary must have a case for '${t}'`);
+    }
+    // Default branch must NOT dump JSON.stringify(e)
+    assert.equal(/default:[^}]*JSON\.stringify\(e\)/.test(html), false,
+      "default branch must not dump raw JSON envelope");
+  });
+
+  test("LLM events are clickable, opening the inline payload (R22)", () => {
+    const html = readFileSync(resolve(process.cwd(), "visualizer.html"), "utf-8");
+    assert.match(html, /function openInlinePayload\s*\(/);
+    // renderEvents wires LLM events to openInlinePayload
+    assert.match(html, /llm_request[^}]*openInlinePayload|openInlinePayload[^}]*llm_request/);
+  });
 });

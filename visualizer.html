@@ -735,10 +735,16 @@
       }
 
       panel.innerHTML = filtered.map(e => {
-        const isClickable = (e.type === 'tool_call' || e.type === 'tool_result') && e.payload_ref;
-        const clickAttrs = isClickable
-          ? ` onclick="openPayload('${escapeHtml(e.payload_ref)}')" style="margin-bottom:6px;padding:4px 8px;border-left:2px solid ${eventColor(e.type)};cursor:pointer;"`
-          : ` style="margin-bottom:6px;padding:4px 8px;border-left:2px solid ${eventColor(e.type)};"`;
+        let clickAttrs;
+        if ((e.type === 'tool_call' || e.type === 'tool_result') && e.payload_ref) {
+          clickAttrs = ` onclick="openPayload('${escapeHtml(e.payload_ref)}')" style="margin-bottom:6px;padding:4px 8px;border-left:2px solid ${eventColor(e.type)};cursor:pointer;"`;
+        } else if (e.type === 'llm_request') {
+          clickAttrs = ` onclick="openInlinePayload('llm_request prompt (#${e.seq})', allEvents.find(x=>x.seq===${e.seq}).prompt)" style="margin-bottom:6px;padding:4px 8px;border-left:2px solid ${eventColor(e.type)};cursor:pointer;"`;
+        } else if (e.type === 'llm_response') {
+          clickAttrs = ` onclick="openInlinePayload('llm_response output (#${e.seq})', allEvents.find(x=>x.seq===${e.seq}).output)" style="margin-bottom:6px;padding:4px 8px;border-left:2px solid ${eventColor(e.type)};cursor:pointer;"`;
+        } else {
+          clickAttrs = ` style="margin-bottom:6px;padding:4px 8px;border-left:2px solid ${eventColor(e.type)};"`;
+        }
         return `<div${clickAttrs}>
           <span style="color:#8b949e;font-size:0.78em;">#${e.seq} ${(e.ts || '').slice(11,19)}</span>
           <span style="color:${eventColor(e.type)};font-weight:bold;">  ${e.type}</span>
@@ -766,20 +772,21 @@
     function eventSummary(e) {
       const esc = (s) => escapeHtml(String(s ?? ''));
       switch (e.type) {
-        case 'cycle_end': return `${esc(e.state)} (${e.duration_ms}ms)`;
-        case 'push': return `${esc(e.target)} → ${esc(e.frameDir)} depth ${e.depth}`;
-        case 'pop': return `${esc(e.frameDir)} → ${esc(e.returnState)} depth ${e.depth}`;
-        case 'splice': return `[${(e.splicedKeys||[]).map(esc).join(', ')}] → ${esc(e.targetFrame)}`;
-        case 'tool_call': return `${esc(e.tool)} → ${esc(e.payload_ref || '(no payload)')}`;
-        case 'tool_result': return `${esc(e.tool)} ${e.error ? '✗' : '✓'} → ${esc(e.payload_ref || '(no payload)')}`;
-        case 'machine_git_commit': return `${esc(e.hash)} — ${esc(e.subject)}`;
-        case 'llm_request': return `${esc(e.provider)}/${esc(e.model)} (${(e.prompt||'').length}B)`;
-        case 'llm_response': return `(${(e.output||'').length}B, ${e.duration_ms}ms)`;
-        case 'instructions_changed': return `${e.bytes_before}B → ${e.bytes_after}B`;
-        case 'retry': return `attempt ${e.attempt} — ${esc(e.reason)}`;
-        case 'error': return esc(e.message);
-        case 'halt': return esc(e.reason);
-        default: return esc(JSON.stringify(e).slice(0, 100));
+        case 'cycle_start':           return '';
+        case 'cycle_end':              return `${esc(e.state)} (${e.duration_ms}ms)`;
+        case 'push':                   return `${esc(e.target)} → ${esc(e.frameDir)} depth ${e.depth}`;
+        case 'pop':                    return `${esc(e.frameDir)} → ${esc(e.returnState)} depth ${e.depth}`;
+        case 'splice':                 return `[${(e.splicedKeys||[]).map(esc).join(', ')}] → ${esc(e.targetFrame)}`;
+        case 'tool_call':              return `${esc(e.tool)} → ${esc(e.payload_ref || '(no payload)')}`;
+        case 'tool_result':            return `${esc(e.tool)} ${e.error ? '✗' : '✓'} → ${esc(e.payload_ref || '(no payload)')}`;
+        case 'machine_git_commit':     return `${esc(e.hash)} — ${esc(e.subject)}`;
+        case 'llm_request':            return `${esc(e.provider)}/${esc(e.model)} (${(e.prompt||'').length}B)`;
+        case 'llm_response':           return `(${(e.output||'').length}B, ${e.duration_ms}ms)`;
+        case 'instructions_changed':   return `${e.bytes_before}B → ${e.bytes_after}B`;
+        case 'retry':                  return `attempt ${e.attempt} — ${esc(e.reason)}`;
+        case 'error':                  return esc(e.message);
+        case 'halt':                   return esc(e.reason);
+        default:                       return `(${esc(e.type)})`;
       }
     }
 
@@ -797,6 +804,10 @@
       if (!ref) return;
       const text = await readFile(`${instanceDir}/logs/${ref}`);
       showPayloadModal(ref, text || '(payload file empty or missing)');
+    }
+
+    function openInlinePayload(label, text) {
+      showPayloadModal(label, text || '(empty)');
     }
 
     function showPayloadModal(label, body) {
