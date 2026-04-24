@@ -653,18 +653,33 @@
       // Include any unknown types present in this run too (R28 forward-compat).
       const types = new Set(ALL_EVENT_TYPES);
       for (const e of allEvents) types.add(e.type);
+      // R28: default-enable any newly-discovered event types so forward-compat
+      // surfaces unknown events instead of silently hiding them.
+      for (const t of types) {
+        if (!ALL_EVENT_TYPES.includes(t) && !enabledEventTypes.has(t)) {
+          enabledEventTypes.add(t);
+        }
+      }
       for (const t of [...types].sort()) {
-        const id = `evt_${t}`;
+        // Sanitize the type-derived id (defense in depth)
+        const id = `evt_${t.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
         const cb = document.createElement('label');
         cb.style.color = enabledEventTypes.has(t) ? eventColor(t) : '#30363d';
         cb.style.cursor = 'pointer';
-        cb.innerHTML = `<input type="checkbox" id="${id}" ${enabledEventTypes.has(t) ? 'checked' : ''} style="vertical-align:middle;"/> ${t}`;
-        cb.querySelector('input').onchange = (e) => {
-          if (e.target.checked) enabledEventTypes.add(t);
+        // Use DOM API instead of innerHTML (prevents injection vectors)
+        const input = document.createElement('input');
+        input.type = 'checkbox';
+        input.id = id;
+        input.checked = enabledEventTypes.has(t);
+        input.style.verticalAlign = 'middle';
+        input.onchange = () => {
+          if (input.checked) enabledEventTypes.add(t);
           else enabledEventTypes.delete(t);
           renderEventTypeFilters();
           renderEvents();
         };
+        cb.appendChild(input);
+        cb.appendChild(document.createTextNode(' ' + t));
         c.appendChild(cb);
       }
     }
