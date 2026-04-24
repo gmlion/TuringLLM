@@ -1,6 +1,7 @@
 node_modules/
 dist/
 /instances/
+/logs/
 MEMORY.md
 .api_key
 .env
