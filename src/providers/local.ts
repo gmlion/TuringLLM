@@ -162,9 +162,12 @@ export async function runCycle(
 
     if (results.length === 0) {
       logRaw("  (no tool calls)");
-      events.push({ type: "retry", attempt: attempt + 1, reason: "no tool calls" });
-      log(`  [retry ${attempt + 1}] no tool calls`);
-      continue;
+      if (attempt < MAX_RETRIES - 1) {
+        events.push({ type: "retry", attempt: attempt + 1, reason: "no tool calls" });
+        log(`  [retry ${attempt + 1}] no tool calls`);
+        continue;
+      }
+      return { halt: false, events };
     }
 
     // Check cycle completeness

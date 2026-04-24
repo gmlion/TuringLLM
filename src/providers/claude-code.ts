@@ -39,6 +39,9 @@ export async function runCycle(
     const prompt = retryContext ? `${userPrompt}\n\n${retryContext}` : userPrompt;
 
     const t0Llm = Date.now();
+    // llm_request.prompt is the concatenated system+user prompt (convention shared
+    // across providers); the literal `-p` arg passed to the `claude` binary is just
+    // the user prompt — system prompt is passed via --system-prompt.
     events.push({ type: "llm_request", provider: "claude-code", model: process.env.CC_MODEL || "haiku", prompt: `${systemPrompt}\n\n${prompt}` });
 
     try {

@@ -170,6 +170,9 @@ export async function runCycle(
     const memoryContent = (parts[0] || "").trim();
     const syscallsContent = (parts[1] || "").trim();
 
+    // In stateful mode the response contains both MEMORY and SYSCALLS sections
+    // separated by ===SYSCALLS===; we log the full pre-split content for debugging
+    // rather than just the MEMORY portion.
     events.push({ type: "llm_response", output: result.message.content, durationMs: Date.now() - t0Llm });
 
     if (memoryContent) {

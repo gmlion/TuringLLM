@@ -16,7 +16,7 @@ describe("providers/shared.ts CycleResult shape", () => {
         { type: "retry", attempt: 1, reason: "no state change" },
       ],
     };
-    assert.equal(result.events!.length, 5);
+    assert.equal(result.events.length, 5);
   });
 
   test("ProviderEvent discriminates by type", () => {
