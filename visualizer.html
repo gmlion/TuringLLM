@@ -526,7 +526,7 @@
       const stack = cycle.callStack.stack;
       const topIdx = stack.length - 1;
       // Vertical layout: stack[topIdx] (active) drawn at the TOP, stack[0] (root) at the BOTTOM.
-      const NODE_W = 280;
+      const NODE_W = 220;
       const NODE_H = 70;
       const GAP = 30;
       const PAD_X = 20;
@@ -564,15 +564,16 @@
           line.setAttribute('marker-end', 'url(#arrow)');
           svg.appendChild(line);
 
-          // returnState label: it belongs to the LOWER node (the caller; it's the state the
-          // caller resumes to when the upper frame pops). The lower node is stack[stackIdx-1].
-          const lowerEntry = stack[stackIdx - 1];
+          // returnState label: when THIS frame pops, the caller's state becomes
+          // `<entry.returnState>_completed`. Showing the _completed transition makes the
+          // arrow informative — without the suffix the value is redundant (it equals the
+          // caller's frozen current state already shown in the lower box).
           const label = document.createElementNS(svgNS, 'text');
           label.setAttribute('x', cx + 8);
           label.setAttribute('y', y + NODE_H + GAP / 2 + 4);
           label.setAttribute('fill', '#8b949e');
           label.setAttribute('font-size', '11');
-          label.textContent = `↩ ${lowerEntry.returnState}`;
+          label.textContent = `↩ ${entry.returnState}_completed`;
           svg.appendChild(label);
         }
 
