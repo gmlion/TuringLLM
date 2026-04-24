@@ -19,4 +19,10 @@ describe("visualizer.html events panel scaffold", () => {
     assert.match(html, /selectedFrameDir/);
     assert.match(html, /renderEvents/);
   });
+
+  test("event-type filter UI present (R26)", () => {
+    const html = readFileSync(resolve(process.cwd(), "visualizer.html"), "utf-8");
+    assert.match(html, /id=["']eventTypeFilters["']/);
+    assert.match(html, /enabledEventTypes/);
+  });
 });

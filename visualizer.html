@@ -218,6 +218,7 @@
     <div class="panel-header">
       <span>Events</span>
       <span id="eventsScopeLabel" style="color:#8b949e;font-weight:normal;text-transform:none;font-size:0.95em;"></span>
+      <div id="eventTypeFilters" style="display:flex;gap:6px;flex-wrap:wrap;font-weight:normal;text-transform:none;letter-spacing:0;font-size:0.85em;"></div>
     </div>
     <div class="panel-body" id="eventsPanel"><span class="empty-hint">Load an instance to see events.</span></div>
   </div>
@@ -344,6 +345,7 @@
       renderTimeline();
       await loadLatestLog();
       await loadEvents();
+      renderEventTypeFilters();
 
       // If nothing was selected before, default to live (or last cycle if no live).
       if (selectedCycleNum === null) {
@@ -637,6 +639,36 @@
       panel.innerHTML = file ? renderMarkdown(file.content) : '<em>empty</em>';
     }
 
+    const ALL_EVENT_TYPES = [
+      'cycle_start','cycle_end','push','pop','splice',
+      'llm_request','llm_response','tool_call','tool_result',
+      'machine_git_commit','instructions_changed','retry','error','halt',
+    ];
+    const enabledEventTypes = new Set(ALL_EVENT_TYPES);
+
+    function renderEventTypeFilters() {
+      const c = document.getElementById('eventTypeFilters');
+      if (!c) return;
+      c.innerHTML = '';
+      // Include any unknown types present in this run too (R28 forward-compat).
+      const types = new Set(ALL_EVENT_TYPES);
+      for (const e of allEvents) types.add(e.type);
+      for (const t of [...types].sort()) {
+        const id = `evt_${t}`;
+        const cb = document.createElement('label');
+        cb.style.color = enabledEventTypes.has(t) ? eventColor(t) : '#30363d';
+        cb.style.cursor = 'pointer';
+        cb.innerHTML = `<input type="checkbox" id="${id}" ${enabledEventTypes.has(t) ? 'checked' : ''} style="vertical-align:middle;"/> ${t}`;
+        cb.querySelector('input').onchange = (e) => {
+          if (e.target.checked) enabledEventTypes.add(t);
+          else enabledEventTypes.delete(t);
+          renderEventTypeFilters();
+          renderEvents();
+        };
+        c.appendChild(cb);
+      }
+    }
+
     function renderEvents() {
       const panel = document.getElementById('eventsPanel');
       const scopeLabel = document.getElementById('eventsScopeLabel');
@@ -659,6 +691,7 @@
       if (selectedFrameDir) {
         filtered = filtered.filter(e => e.frame === selectedFrameDir || e.frame === null);
       }
+      filtered = filtered.filter(e => enabledEventTypes.has(e.type));
 
       scopeLabel.textContent = `— cycle ${cycleNum === -1 ? 'live' : cycleNum ?? '(all)'} / frame ${selectedFrameDir ?? '(any)'} — ${filtered.length} events`;
 
