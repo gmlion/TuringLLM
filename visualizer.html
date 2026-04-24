@@ -219,6 +219,7 @@
     // ---- State ----
     let autoInterval = null;
     let instanceDir = '';
+    let currentPage = 'home';   // 'home' | 'instance'
     // cycles[i] = { num, hash, dir, callStack: {stack:[{returnState,frameDir}], nextCounter}, frames: { <frameDir>: { state, files: [{path, content}] } } }
     let cycles = [];
     let liveCycle = null;     // pseudo-cycle for the current instance state, num = -1
@@ -381,6 +382,11 @@
     }
 
     // ---- Loading ----
+    function refresh() {
+      if (currentPage === 'home') loadHomeInstances();
+      else loadInstance();
+    }
+
     async function loadInstance() {
       const params = new URLSearchParams(window.location.search);
       instanceDir = (params.get('instance') || '').trim().replace(/\/$/, '');
@@ -840,7 +846,7 @@
         btn.textContent = 'Auto-refresh';
       } else {
         const ms = parseInt(document.getElementById('refreshInterval').value);
-        autoInterval = setInterval(loadInstance, ms);
+        autoInterval = setInterval(refresh, ms);
         btn.classList.add('active');
         btn.textContent = 'Stop';
       }
@@ -849,10 +855,12 @@
     function bootstrap() {
       const inst = new URLSearchParams(window.location.search).get('instance');
       if (inst) {
+        currentPage = 'instance';
         document.getElementById('homePage').hidden = true;
         document.getElementById('instancePage').hidden = false;
         loadInstance();
       } else {
+        currentPage = 'home';
         document.getElementById('instancePage').hidden = true;
         document.getElementById('homePage').hidden = false;
         loadHomeInstances();

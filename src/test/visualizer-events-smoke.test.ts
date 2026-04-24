@@ -144,4 +144,14 @@ describe("visualizer.html events panel scaffold", () => {
     // The renderTimeline onclick must set selectedCycleNum AND call renderSelectedCycle.
     assert.match(html, /selectedCycleNum\s*=\s*cycle\.num/);
   });
+
+  test("auto-refresh dispatches by page (R20)", () => {
+    const html = readFileSync(resolve(process.cwd(), "visualizer.html"), "utf-8");
+    assert.match(html, /function refresh\s*\(/);
+    // refresh() chooses between loadHomeInstances and loadInstance based on currentPage.
+    assert.match(html, /currentPage/);
+    assert.match(html, /loadHomeInstances\(\)/);
+    // toggleAuto must call refresh, not loadInstance directly.
+    assert.match(html, /setInterval\(refresh,/);
+  });
 });
