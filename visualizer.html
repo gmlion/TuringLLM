@@ -163,8 +163,14 @@
   </style>
 </head>
 <body>
-  <h1>Turing Machine Visualizer</h1>
-  <div class="controls">
+  <div id="homePage" hidden>
+    <h1>Turing Machine Visualizer</h1>
+    <p style="color:#8b949e;margin-bottom:16px;">Pick an instance to inspect:</p>
+    <div id="homeBody"><span class="empty-hint">Loading…</span></div>
+  </div>
+
+  <div id="instancePage" hidden>
+    <div class="controls">
     <label>Instance path:</label>
     <input type="text" id="instancePath" placeholder="instances/p2b-d" />
     <button id="loadBtn" onclick="loadInstance()">Load</button>
@@ -235,6 +241,7 @@
   <div class="panel log-panel">
     <div class="panel-header">Latest Log (tail)</div>
     <div class="panel-body" id="logPanel">No log loaded</div>
+  </div>
   </div>
 
   <script>
@@ -811,13 +818,20 @@
       }
     }
 
-    // Auto-load if URL has ?instance= parameter
-    const params = new URLSearchParams(window.location.search);
-    const inst = params.get('instance');
-    if (inst) {
-      document.getElementById('instancePath').value = inst;
-      loadInstance();
+    function bootstrap() {
+      const inst = new URLSearchParams(window.location.search).get('instance');
+      if (inst) {
+        document.getElementById('homePage').hidden = true;
+        document.getElementById('instancePage').hidden = false;
+        document.getElementById('instancePath').value = inst;
+        loadInstance();
+      } else {
+        document.getElementById('instancePage').hidden = true;
+        document.getElementById('homePage').hidden = false;
+        // Home loader added in T3.
+      }
     }
+    bootstrap();
   </script>
 </body>
 </html>
