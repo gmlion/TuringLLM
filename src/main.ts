@@ -8,6 +8,7 @@
 import { mkdirSync, copyFileSync, cpSync, readFileSync, writeFileSync, readdirSync, existsSync, rmSync } from "fs";
 import { execSync } from "child_process";
 import { resolve, dirname } from "path";
+import { fileURLToPath } from "url";
 import { createInterface } from "readline";
 import { initLog, log, getLogPath } from "./logger.js";
 import { ensureMachineRepo, ensureProjectRepo, commitCycle, getWorkspacePath } from "./git.js";
@@ -15,7 +16,9 @@ import {
   initEvents, setCycleContext, clearCycleContext,
   emitCycleStart, emitCycleEnd, emitPush, emitPop, emitSplice,
   emitMachineGitCommit, emitInstructionsChanged, emitError, emitHalt, emitRetry,
+  emitToolCall, emitToolResult, emitLlmRequest, emitLlmResponse,
 } from "./events.js";
+import type { ProviderEvent } from "./providers/shared.js";
 import { ALLOWED_GIT_COMMANDS } from "./tools.js";
 import { TelegramSession } from "./telegram.js";
 import {
@@ -55,6 +58,28 @@ export async function withBackoff<T>(
       emitRetry(attempt + 1, opts.label);
       await sleep(delay * 1000);
       delay = Math.min(delay * 2, maxDelay);
+    }
+  }
+}
+
+export function drainProviderEvents(events: ProviderEvent[]): void {
+  for (const ev of events) {
+    switch (ev.type) {
+      case "llm_request":
+        emitLlmRequest(ev.provider, ev.model, ev.prompt);
+        break;
+      case "llm_response":
+        emitLlmResponse(ev.output, ev.durationMs, ev.usage);
+        break;
+      case "tool_call":
+        emitToolCall(ev.tool, ev.input);
+        break;
+      case "tool_result":
+        emitToolResult(ev.tool, ev.output, ev.isError);
+        break;
+      case "retry":
+        emitRetry(ev.attempt, ev.reason);
+        break;
     }
   }
 }
@@ -145,15 +170,28 @@ process.on("SIGTERM", () => process.exit(0));
 
 // --- Session setup ---
 
-const stdinFallback = new StdinSession();
-const telegramSession = USE_TELEGRAM
-  ? new TelegramSession(TELEGRAM_TOKEN, TELEGRAM_CHAT_ID, INSTANCE_NAME, BASE_DIR)
-  : null;
+// Lazily initialized to avoid opening readline at import time (breaks test imports).
+let _stdinFallback: StdinSession | null = null;
+function getStdinFallback(): StdinSession {
+  if (!_stdinFallback) _stdinFallback = new StdinSession();
+  return _stdinFallback;
+}
+
+let _telegramSession: TelegramSession | null | undefined = undefined;
+function getTelegramSession(): TelegramSession | null {
+  if (_telegramSession === undefined) {
+    _telegramSession = USE_TELEGRAM
+      ? new TelegramSession(TELEGRAM_TOKEN, TELEGRAM_CHAT_ID, INSTANCE_NAME, BASE_DIR)
+      : null;
+  }
+  return _telegramSession;
+}
 
 function getUserSession(): UserSession {
+  const telegramSession = getTelegramSession();
   if (telegramSession && !telegramSession.degraded) return telegramSession;
   if (telegramSession?.degraded) log("  [telegram] Degraded \u2014 falling back to stdin");
-  return stdinFallback;
+  return getStdinFallback();
 }
 
 const userSession: UserSession = {
@@ -163,8 +201,9 @@ const userSession: UserSession = {
   waitForAny: (p) => getUserSession().waitForAny(p),
   getAnswers: () => {
     const answers = new Map<string, string>();
-    if (telegramSession) for (const [k, v] of telegramSession.getAnswers()) answers.set(k, v);
-    for (const [k, v] of stdinFallback.getAnswers()) answers.set(k, v);
+    const ts = getTelegramSession();
+    if (ts) for (const [k, v] of ts.getAnswers()) answers.set(k, v);
+    for (const [k, v] of getStdinFallback().getAnswers()) answers.set(k, v);
     return answers;
   },
 };
@@ -172,6 +211,7 @@ const userSession: UserSession = {
 // --- Interaction helpers ---
 
 async function sendCycleSummary(cycle: number, summary: string | undefined, memoryPath: string): Promise<void> {
+  const telegramSession = getTelegramSession();
   if (!telegramSession || telegramSession.degraded || !summary) return;
   if (getPendingQuestions(memoryPath).length === 0) return;
   await telegramSession.sendInfo(`[${INSTANCE_NAME}] Cycle ${cycle}\n\n${summary}`);
@@ -516,6 +556,9 @@ async function main() {
       }
     );
 
+    // Drain provider events before any other state inspection.
+    drainProviderEvents(result.events);
+
     // Re-resolve after provider invocation (provider may have changed files).
     const { frameDir: fd3, memoryPath: mp3, instructionsPath: ip3 } = activeFramePaths(callStack);
 
@@ -584,13 +627,16 @@ async function main() {
   }
 }
 
-main().catch((err: unknown) => {
-  if ((err as { name?: string })?.name === "QuotaExceededError") {
-    try { clearCycleContext(); emitHalt("quota_exceeded"); } catch { /* logs may be uninitialized */ }
-    console.error("Quota exceeded — exiting cleanly (resumable):", err);
-    process.exit(0);
-  }
-  try { emitError(err instanceof Error ? err : new Error(String(err))); } catch { /* logs may be uninitialized */ }
-  console.error("Fatal error:", err);
-  process.exit(1);
-});
+// Only run main() when this file is executed directly (not imported by tests).
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  main().catch((err: unknown) => {
+    if ((err as { name?: string })?.name === "QuotaExceededError") {
+      try { clearCycleContext(); emitHalt("quota_exceeded"); } catch { /* logs may be uninitialized */ }
+      console.error("Quota exceeded — exiting cleanly (resumable):", err);
+      process.exit(0);
+    }
+    try { emitError(err instanceof Error ? err : new Error(String(err))); } catch { /* logs may be uninitialized */ }
+    console.error("Fatal error:", err);
+    process.exit(1);
+  });
+}
