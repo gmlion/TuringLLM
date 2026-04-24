@@ -13,42 +13,7 @@
       padding: 20px;
     }
     h1 { color: #58a6ff; margin-bottom: 8px; font-size: 1.4em; }
-    .controls {
-      display: flex;
-      gap: 12px;
-      align-items: center;
-      margin-bottom: 20px;
-      flex-wrap: wrap;
-    }
-    .controls label { color: #8b949e; font-size: 0.85em; }
-    .controls input, .controls select, .controls button {
-      background: #161b22;
-      border: 1px solid #30363d;
-      color: #c9d1d9;
-      padding: 6px 12px;
-      border-radius: 6px;
-      font-family: inherit;
-      font-size: 0.85em;
-    }
-    .controls button {
-      cursor: pointer;
-      background: #21262d;
-    }
-    .controls button:hover { background: #30363d; }
-    .controls button.active { background: #1f6feb; border-color: #58a6ff; }
-    .status-bar {
-      display: flex;
-      gap: 20px;
-      margin-bottom: 16px;
-      padding: 10px 16px;
-      background: #161b22;
-      border: 1px solid #30363d;
-      border-radius: 8px;
-      font-size: 0.85em;
-    }
-    .status-bar .label { color: #8b949e; }
-    .status-bar .value { color: #58a6ff; font-weight: bold; }
-    .status-bar .state { color: #3fb950; }
+    .topbar button.active { background: #1f6feb; border-color: #58a6ff; }
 
     .panel {
       background: #161b22;
@@ -158,7 +123,6 @@
     .log-panel .panel-body .log-error { color: #f85149; }
     .log-panel .panel-body .log-retry { color: #d29922; }
 
-    #instancePath { width: 300px; }
     .empty-hint { color: #8b949e; font-style: italic; }
   </style>
 </head>
@@ -180,37 +144,22 @@
   </div>
 
   <div id="instancePage" hidden>
-    <div class="controls">
-    <label>Instance path:</label>
-    <input type="text" id="instancePath" placeholder="instances/p2b-d" />
-    <button id="loadBtn" onclick="loadInstance()">Load</button>
-    <button id="autoBtn" onclick="toggleAuto()">Auto-refresh</button>
-    <label>Interval:</label>
-    <select id="refreshInterval">
-      <option value="2000">2s</option>
-      <option value="5000" selected>5s</option>
-      <option value="10000">10s</option>
-      <option value="30000">30s</option>
-    </select>
-  </div>
-
-  <div class="status-bar">
-    <div><span class="label">Cycles: </span><span class="value" id="totalCycles">-</span></div>
-    <div><span class="label">Cycle: </span><span class="value" id="cycleLabel">-</span></div>
-    <div><span class="label">State: </span><span class="state" id="currentState">-</span></div>
-    <div><span class="label">Stack depth: </span><span class="value" id="stackDepth">-</span></div>
-    <div><span class="label">Last update: </span><span class="value" id="lastUpdate">-</span></div>
-  </div>
-
-  <div class="panel">
-    <div class="panel-header">Cycle Timeline</div>
-    <div class="legend">
-      <span><span class="legend-dot" style="background:#238636"></span> State changed</span>
-      <span><span class="legend-dot" style="background:#30363d"></span> No change</span>
-      <span><span class="legend-dot" style="background:#1f6feb"></span> Current (live)</span>
+    <div class="topbar" style="display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-bottom:16px;padding:10px 16px;background:#161b22;border:1px solid #30363d;border-radius:8px;font-size:0.85em;">
+      <a href="?" style="color:#58a6ff;text-decoration:none;">← Home</a>
+      <span style="color:#30363d;">|</span>
+      <span><span style="color:#8b949e;">Instance: </span><span id="topInstanceName" style="color:#58a6ff;font-weight:bold;"></span></span>
+      <span><span style="color:#8b949e;">State: </span><span id="topState" style="color:#3fb950;">-</span></span>
+      <span><span style="color:#8b949e;">Cycles: </span><span id="topCycles" style="color:#58a6ff;">-</span></span>
+      <span><span style="color:#8b949e;">Depth: </span><span id="topDepth" style="color:#58a6ff;">-</span></span>
+      <button id="autoBtn" onclick="toggleAuto()" style="background:#21262d;border:1px solid #30363d;color:#c9d1d9;padding:4px 10px;border-radius:6px;cursor:pointer;font-family:inherit;font-size:0.95em;">Auto-refresh</button>
+      <select id="refreshInterval" style="background:#0d1117;border:1px solid #30363d;color:#c9d1d9;padding:4px 8px;border-radius:4px;font-family:inherit;">
+        <option value="2000">2s</option>
+        <option value="5000" selected>5s</option>
+        <option value="10000">10s</option>
+        <option value="30000">30s</option>
+      </select>
+      <div class="timeline" id="timeline" style="flex:1 1 100%;display:flex;gap:4px;overflow-x:auto;align-items:flex-end;min-width:0;"></div>
     </div>
-    <div class="timeline" id="timeline"></div>
-  </div>
 
   <div class="panel">
     <div class="panel-header">Call Stack <span style="color:#8b949e;font-weight:normal;text-transform:none;font-size:0.95em;">(click a frame to inspect)</span></div>
@@ -421,8 +370,10 @@
 
     // ---- Loading ----
     async function loadInstance() {
-      instanceDir = document.getElementById('instancePath').value.trim().replace(/\/$/, '');
+      const params = new URLSearchParams(window.location.search);
+      instanceDir = (params.get('instance') || '').trim().replace(/\/$/, '');
       if (!instanceDir) return;
+      document.getElementById('topInstanceName').textContent = instanceDir.replace(/^instances\//, '');
 
       // Discover history snapshots: any subdirectory of history/ starting with 4 digits.
       const histEntries = await listDir(`${instanceDir}/history/`);
@@ -443,8 +394,7 @@
       // Live state — the instance root.
       liveCycle = await loadCycleSnapshot(instanceDir, -1, 'live', 'live');
 
-      document.getElementById('totalCycles').textContent = cycles.length;
-      document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+      document.getElementById('topCycles').textContent = cycles.length;
 
       renderTimeline();
       await loadLatestLog();
@@ -556,23 +506,19 @@
       const cycle = getSelectedCycle();
       renderTimeline();
       if (!cycle) {
-        document.getElementById('cycleLabel').textContent = '-';
-        document.getElementById('currentState').textContent = '-';
-        document.getElementById('stackDepth').textContent = '-';
+        document.getElementById('topState').textContent = '-';
+        document.getElementById('topDepth').textContent = '-';
         document.getElementById('stackGraph').innerHTML = '<text x="20" y="60" fill="#8b949e">No cycle data.</text>';
         renderFilePanel();
         renderEvents();
         return;
       }
 
-      document.getElementById('cycleLabel').textContent =
-        cycle.num === -1 ? 'live' : (cycle.num + (cycle.hash ? ` (${cycle.hash})` : ''));
-
       const stack = cycle.callStack.stack;
       const top = stack[stack.length - 1];
       const topState = top ? cycle.frames[top.frameDir]?.state ?? '?' : '?';
-      document.getElementById('currentState').textContent = topState;
-      document.getElementById('stackDepth').textContent = stack.length;
+      document.getElementById('topState').textContent = topState;
+      document.getElementById('topDepth').textContent = stack.length;
 
       // Default selected frame: active (top) frame.
       if (!selectedFrameDir || !cycle.frames[selectedFrameDir]) {
@@ -911,7 +857,6 @@
       if (inst) {
         document.getElementById('homePage').hidden = true;
         document.getElementById('instancePage').hidden = false;
-        document.getElementById('instancePath').value = inst;
         loadInstance();
       } else {
         document.getElementById('instancePage').hidden = true;

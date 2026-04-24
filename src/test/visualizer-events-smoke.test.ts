@@ -57,4 +57,14 @@ describe("visualizer.html events panel scaffold", () => {
     // Legacy fallback (R5)
     assert.match(html, /\(legacy\)/);
   });
+
+  test("instance view top row consolidates controls + status + timeline (R8, R9)", () => {
+    const html = readFileSync(resolve(process.cwd(), "visualizer.html"), "utf-8");
+    // ← Home link
+    assert.match(html, /←\s*Home/);
+    // The standalone .status-bar div is gone (its fields moved into the top row).
+    assert.equal(/<div class=["']status-bar["']/.test(html), false);
+    // The timeline div ID is still present (it just moved into the top row).
+    assert.match(html, /id=["']timeline["']/);
+  });
 });
