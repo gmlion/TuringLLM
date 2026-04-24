@@ -1,0 +1,9 @@
+{
+  "slug": "2026-04-24-better-logging",
+  "feature": "better-logging",
+  "phase": "tasks",
+  "awaiting_approval": true,
+  "phases_complete": ["requirements", "design"],
+  "created_at": "2026-04-24T06:45:06Z",
+  "updated_at": "2026-04-24T07:50:34Z"
+}
