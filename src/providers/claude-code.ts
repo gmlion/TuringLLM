@@ -3,7 +3,7 @@ import { resolve } from "path";
 import { getSystemPrompt, getUserPrompt } from "../prompt.js";
 import { log, logRaw } from "../logger.js";
 import { QuotaExceededError } from "../errors.js";
-import { readFile, checkCycleCompleteness, MAX_RETRIES, type CycleResult } from "./shared.js";
+import { readFile, checkCycleCompleteness, MAX_RETRIES, type CycleResult, type ProviderEvent } from "./shared.js";
 
 const QUOTA_PATTERNS = [
   /quota/i,
@@ -27,6 +27,7 @@ export async function runCycle(
   const cwd = resolve(memoryPath, "..");
 
   const filesBefore: [string, string] = [readFile(memoryPath), readFile(instructionsPath)];
+  const events: ProviderEvent[] = [];
 
   let retryContext = "";
 
@@ -36,6 +37,9 @@ export async function runCycle(
     let exitCode = 0;
 
     const prompt = retryContext ? `${userPrompt}\n\n${retryContext}` : userPrompt;
+
+    const t0Llm = Date.now();
+    events.push({ type: "llm_request", provider: "claude-code", model: process.env.CC_MODEL || "haiku", prompt: `${systemPrompt}\n\n${prompt}` });
 
     try {
       const args = [
@@ -77,6 +81,7 @@ export async function runCycle(
 
     // Parse JSON output for logging
     let resultText = "";
+    let durationMs = Date.now() - t0Llm;
     try {
       const parsed = JSON.parse(stdout);
       resultText = parsed.result || "";
@@ -86,11 +91,14 @@ export async function runCycle(
         log(`  [cost] $${parsed.cost_usd.toFixed(4)}`);
       }
       if (parsed.duration_ms) {
+        durationMs = parsed.duration_ms;
         log(`  [duration] ${(parsed.duration_ms / 1000).toFixed(1)}s`);
       }
     } catch {
       resultText = stdout;
     }
+
+    events.push({ type: "llm_response", output: resultText, durationMs });
 
     // Console summary
     if (resultText) {
@@ -105,21 +113,22 @@ export async function runCycle(
     const completeness = checkCycleCompleteness(memoryPath, instructionsPath, filesBefore);
 
     if (completeness.halt) {
-      return { halt: true, haltMessage: completeness.haltMessage, summary: resultText };
+      return { halt: true, haltMessage: completeness.haltMessage, summary: resultText, events };
     }
 
     if (completeness.noMatch) {
-      return { halt: false, noMatch: true, summary: resultText };
+      return { halt: false, noMatch: true, summary: resultText, events };
     }
 
     if (completeness.complete) {
-      return { halt: false, summary: resultText };
+      return { halt: false, summary: resultText, events };
     }
 
     retryContext = `RETRY: Previous attempt failed. ${completeness.problem} You MUST update MEMORY.md with the new ## State before stopping.`;
+    events.push({ type: "retry", attempt: attempt + 1, reason: completeness.problem });
     log(`  [retry ${attempt + 1}] ${completeness.problem}`);
   }
 
   log(`  [warn] cycle incomplete after ${MAX_RETRIES} retries`);
-  return { halt: false };
+  return { halt: false, events };
 }

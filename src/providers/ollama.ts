@@ -4,7 +4,7 @@ import { getTools, executeTool } from "../tools.js";
 import { getSystemPrompt, getUserPrompt } from "../prompt.js";
 import { log, logRaw } from "../logger.js";
 import { getWorkspacePath } from "../git.js";
-import { readFile, logToolCall, checkCycleCompleteness, MAX_RETRIES, type CycleResult } from "./shared.js";
+import { readFile, logToolCall, checkCycleCompleteness, MAX_RETRIES, type CycleResult, type ProviderEvent } from "./shared.js";
 import type Anthropic from "@anthropic-ai/sdk";
 
 const BASE_URL = process.env.OLLAMA_BASE_URL || "http://localhost:11434";
@@ -148,6 +148,7 @@ export async function runCycle(
   const stateful = process.env.TURING_STATEFUL === "1";
   const systemPrompt = getSystemPrompt("ollama");
   const userPrompt = getUserPrompt(memoryPath, instructionsPath, "ollama");
+  const events: ProviderEvent[] = [];
 
   // Stateful mode: no tools, LLM outputs MEMORY.md + SYSCALLS.md
   if (stateful) {
@@ -156,6 +157,8 @@ export async function runCycle(
       { role: "user", content: userPrompt },
     ];
 
+    const t0Llm = Date.now();
+    events.push({ type: "llm_request", provider: "ollama", model: MODEL, prompt: `${systemPrompt}\n\n${userPrompt}` });
     const result = await ollamaChat(messages, []);
     let content = result.message.content.trim();
 
@@ -167,6 +170,8 @@ export async function runCycle(
     const memoryContent = (parts[0] || "").trim();
     const syscallsContent = (parts[1] || "").trim();
 
+    events.push({ type: "llm_response", output: result.message.content, durationMs: Date.now() - t0Llm });
+
     if (memoryContent) {
       logRaw(`  [memory-write] ${memoryContent}`);
       writeFileSync(memoryPath, memoryContent + "\n", "utf-8");
@@ -176,7 +181,7 @@ export async function runCycle(
     // Write new syscalls (empty string if no actions requested)
     writeFileSync(syscallsPath, syscallsContent ? syscallsContent + "\n" : "", "utf-8");
 
-    return { halt: false };
+    return { halt: false, events };
   }
 
   const tools = convertTools(getTools());
@@ -190,6 +195,8 @@ export async function runCycle(
 
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     let result: OllamaChatResult;
+    const t0Llm = Date.now();
+    events.push({ type: "llm_request", provider: "ollama", model: MODEL, prompt: `${systemPrompt}\n\n${userPrompt}` });
     try {
       result = await ollamaChat(messages, tools);
     } catch (err: unknown) {
@@ -207,6 +214,8 @@ export async function runCycle(
       logRaw(`  [thinking] ${assistantMsg.content}`);
     }
 
+    events.push({ type: "llm_response", output: assistantMsg.content || "", durationMs: Date.now() - t0Llm });
+
     if (result.promptEvalCount || result.evalCount) {
       logRaw(`  [usage] prompt=${result.promptEvalCount ?? "?"} completion=${result.evalCount ?? "?"}`);
     }
@@ -217,10 +226,11 @@ export async function runCycle(
     if (toolCalls.length === 0) {
       logRaw("  (no tool calls emitted)");
       if (attempt < MAX_RETRIES - 1) {
+        events.push({ type: "retry", attempt: attempt + 1, reason: "no tool calls" });
         log(`  [retry ${attempt + 1}] no tool calls`);
         continue;
       }
-      return { halt: false };
+      return { halt: false, events };
     }
 
     // Add assistant message to history
@@ -235,12 +245,16 @@ export async function runCycle(
       logRaw(`  [tool_call] ${name}`);
       logRaw(`  [tool_input] ${JSON.stringify(input)}`);
 
+      events.push({ type: "tool_call", tool: name, input: JSON.stringify(input) });
+
       const frameDir = resolve(memoryPath, "..");
       const instanceRoot = resolve(frameDir, "..", "..");
       const toolResult = await executeTool(name, input, instructionsPath, getWorkspacePath(instanceRoot), frameDir);
 
       logRaw(`  [tool_result] ${toolResult.output}`);
       logRaw(`  [tool_error] ${toolResult.error}`);
+
+      events.push({ type: "tool_result", tool: name, output: toolResult.output, isError: toolResult.error });
 
       logToolCall(name, input, toolResult);
 
@@ -255,6 +269,7 @@ export async function runCycle(
     }
 
     if (hasError) {
+      events.push({ type: "retry", attempt: attempt + 1, reason: "tool error, feeding back" });
       log(`  [retry ${attempt + 1}] tool error, feeding back`);
       continue;
     }
@@ -263,18 +278,20 @@ export async function runCycle(
     const completeness = checkCycleCompleteness(memoryPath, instructionsPath, filesBefore);
 
     if (completeness.halt) {
-      return { halt: true, haltMessage: completeness.haltMessage };
+      return { halt: true, haltMessage: completeness.haltMessage, events };
     }
 
     if (completeness.noMatch) {
-      return { halt: false, noMatch: true };
+      return { halt: false, noMatch: true, events };
     }
 
     if (completeness.complete) {
-      return { halt: false };
+      return { halt: false, events };
     }
 
-    log(`  [retry ${attempt + 1}] ${completeness.problem.includes("did not update") ? "no state change" : "orphan state"}`);
+    const retryReason = completeness.problem.includes("did not update") ? "no state change" : "orphan state";
+    events.push({ type: "retry", attempt: attempt + 1, reason: retryReason });
+    log(`  [retry ${attempt + 1}] ${retryReason}`);
     messages.push({
       role: "user",
       content: `Tool calls executed (results above), but: ${completeness.problem} You MUST update both MEMORY.md (via bash) and INSTRUCTIONS.md (via update_instructions).`,
@@ -282,5 +299,5 @@ export async function runCycle(
   }
 
   log(`  [warn] cycle incomplete after ${MAX_RETRIES} retries`);
-  return { halt: false };
+  return { halt: false, events };
 }

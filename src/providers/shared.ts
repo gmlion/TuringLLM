@@ -16,7 +16,7 @@ export type CycleResult = {
   haltMessage?: string;
   noMatch?: boolean;
   summary?: string;
-  events?: ProviderEvent[];
+  events: ProviderEvent[];  // required (B-architecture: every provider must populate)
 };
 
 export function readFile(path: string): string {

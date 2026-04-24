@@ -5,7 +5,7 @@ import { getSystemPrompt, getUserPrompt } from "../prompt.js";
 import { log, logRaw } from "../logger.js";
 import { QuotaExceededError } from "../errors.js";
 import { getWorkspacePath } from "../git.js";
-import { readFile, logToolCall, checkCycleCompleteness, MAX_RETRIES, type CycleResult } from "./shared.js";
+import { readFile, logToolCall, checkCycleCompleteness, MAX_RETRIES, type CycleResult, type ProviderEvent } from "./shared.js";
 
 const client = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -22,6 +22,7 @@ export async function runCycle(
   const tools = getTools();
 
   const filesBefore: [string, string] = [readFile(memoryPath), readFile(instructionsPath)];
+  const events: ProviderEvent[] = [];
 
   const messages: Anthropic.MessageParam[] = [
     { role: "user", content: userPrompt },
@@ -29,6 +30,8 @@ export async function runCycle(
 
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     let response: Anthropic.Message;
+    const t0Llm = Date.now();
+    events.push({ type: "llm_request", provider: "api", model: MODEL, prompt: `${systemPrompt}\n\n${userPrompt}` });
     try {
       response = await client.messages.create({
         model: MODEL,
@@ -50,6 +53,17 @@ export async function runCycle(
       throw err;
     }
 
+    const assistantText = response.content
+      .filter((b): b is Anthropic.TextBlock => b.type === "text")
+      .map((b) => b.text)
+      .join("");
+    events.push({
+      type: "llm_response",
+      output: assistantText,
+      durationMs: Date.now() - t0Llm,
+      usage: response.usage,
+    });
+
     for (const block of response.content) {
       if (block.type === "text" && block.text.trim()) {
         log(`  [thinking] ${block.text}`);
@@ -63,10 +77,11 @@ export async function runCycle(
     if (toolUses.length === 0) {
       logRaw("  (no tool calls emitted)");
       if (attempt < MAX_RETRIES - 1) {
+        events.push({ type: "retry", attempt: attempt + 1, reason: "no tool calls" });
         log(`  [retry ${attempt + 1}] no tool calls`);
         continue;
       }
-      return { halt: false };
+      return { halt: false, events };
     }
 
     const toolResults: Anthropic.ToolResultBlockParam[] = [];
@@ -78,12 +93,16 @@ export async function runCycle(
       logRaw(`  [tool_call] ${toolUse.name}`);
       logRaw(`  [tool_input] ${JSON.stringify(input)}`);
 
+      events.push({ type: "tool_call", tool: toolUse.name, input: JSON.stringify(input) });
+
       const frameDir = resolve(memoryPath, "..");
       const instanceRoot = resolve(frameDir, "..", "..");
       const result = await executeTool(toolUse.name, input, instructionsPath, getWorkspacePath(instanceRoot), frameDir);
 
       logRaw(`  [tool_result] ${result.output}`);
       logRaw(`  [tool_error] ${result.error}`);
+
+      events.push({ type: "tool_result", tool: toolUse.name, output: result.output, isError: result.error });
 
       logToolCall(toolUse.name, input, result);
 
@@ -99,6 +118,7 @@ export async function runCycle(
     }
 
     if (hasError) {
+      events.push({ type: "retry", attempt: attempt + 1, reason: "tool error, feeding back" });
       log(`  [retry ${attempt + 1}] tool error, feeding back`);
       messages.push({ role: "assistant", content: response.content });
       messages.push({ role: "user", content: toolResults });
@@ -109,18 +129,20 @@ export async function runCycle(
     const completeness = checkCycleCompleteness(memoryPath, instructionsPath, filesBefore);
 
     if (completeness.halt) {
-      return { halt: true, haltMessage: completeness.haltMessage };
+      return { halt: true, haltMessage: completeness.haltMessage, events };
     }
 
     if (completeness.noMatch) {
-      return { halt: false, noMatch: true };
+      return { halt: false, noMatch: true, events };
     }
 
     if (completeness.complete) {
-      return { halt: false };
+      return { halt: false, events };
     }
 
-    log(`  [retry ${attempt + 1}] ${completeness.problem.includes("did not update") ? "no state change" : "orphan state"}`);
+    const retryReason = completeness.problem.includes("did not update") ? "no state change" : "orphan state";
+    events.push({ type: "retry", attempt: attempt + 1, reason: retryReason });
+    log(`  [retry ${attempt + 1}] ${retryReason}`);
     messages.push({ role: "assistant", content: response.content });
     messages.push({
       role: "user",
@@ -135,5 +157,5 @@ export async function runCycle(
   }
 
   log(`  [warn] cycle incomplete after ${MAX_RETRIES} retries`);
-  return { halt: false };
+  return { halt: false, events };
 }

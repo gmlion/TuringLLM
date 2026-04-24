@@ -3,7 +3,7 @@ import { getTools, executeTool } from "../tools.js";
 import { getSystemPrompt, getUserPrompt } from "../prompt.js";
 import { log, logRaw } from "../logger.js";
 import { getWorkspacePath } from "../git.js";
-import { readFile, logToolCall, checkCycleCompleteness, MAX_RETRIES, type CycleResult } from "./shared.js";
+import { readFile, logToolCall, checkCycleCompleteness, MAX_RETRIES, type CycleResult, type ProviderEvent } from "./shared.js";
 import {
   getLlama,
   LlamaChatSession,
@@ -57,7 +57,8 @@ function buildFunctions(
   anthropicTools: Anthropic.Tool[],
   instructionsPath: string,
   workspacePath: string | undefined,
-  frameDir: string
+  frameDir: string,
+  events: ProviderEvent[]
 ) {
   const results: { name: string; output: string; error: boolean }[] = [];
 
@@ -78,10 +79,14 @@ function buildFunctions(
         logRaw(`  [tool_call] ${toolName}`);
         logRaw(`  [tool_input] ${JSON.stringify(params)}`);
 
+        events.push({ type: "tool_call", tool: toolName, input: JSON.stringify(params) });
+
         const result = await executeTool(toolName, params, instructionsPath, workspacePath, frameDir);
 
         logRaw(`  [tool_result] ${result.output}`);
         logRaw(`  [tool_error] ${result.error}`);
+
+        events.push({ type: "tool_result", tool: toolName, output: result.output, isError: result.error });
 
         logToolCall(toolName, params, result);
 
@@ -108,13 +113,14 @@ export async function runCycle(
   const tools = getTools();
 
   const filesBefore: [string, string] = [readFile(memoryPath), readFile(instructionsPath)];
+  const events: ProviderEvent[] = [];
 
   const model = await getModel();
   const frameDir = resolve(memoryPath, "..");
   const instanceRoot = resolve(frameDir, "..", "..");
   const workspacePath = getWorkspacePath(instanceRoot);
 
-  const { functions, results } = buildFunctions(tools, instructionsPath, workspacePath, frameDir);
+  const { functions, results } = buildFunctions(tools, instructionsPath, workspacePath, frameDir, events);
 
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     results.length = 0;
@@ -127,6 +133,8 @@ export async function runCycle(
     ]);
 
     let responseText = "";
+    const t0Llm = Date.now();
+    events.push({ type: "llm_request", provider: "local", model: MODEL_PATH || MODEL_URI || "local", prompt: `${systemPrompt}\n\n${userPrompt}` });
     try {
       responseText = await session.prompt(userPrompt, {
         functions,
@@ -139,9 +147,12 @@ export async function runCycle(
       const msg = err instanceof Error ? err.message : String(err);
       log(`  [local-error] ${msg}`);
       await context.dispose();
+      events.push({ type: "retry", attempt: attempt + 1, reason: `inference error: ${msg}` });
       log(`  [retry ${attempt + 1}] inference error`);
       continue;
     }
+
+    events.push({ type: "llm_response", output: responseText, durationMs: Date.now() - t0Llm });
 
     await context.dispose();
 
@@ -151,6 +162,7 @@ export async function runCycle(
 
     if (results.length === 0) {
       logRaw("  (no tool calls)");
+      events.push({ type: "retry", attempt: attempt + 1, reason: "no tool calls" });
       log(`  [retry ${attempt + 1}] no tool calls`);
       continue;
     }
@@ -159,20 +171,22 @@ export async function runCycle(
     const completeness = checkCycleCompleteness(memoryPath, instructionsPath, filesBefore);
 
     if (completeness.halt) {
-      return { halt: true, haltMessage: completeness.haltMessage };
+      return { halt: true, haltMessage: completeness.haltMessage, events };
     }
 
     if (completeness.noMatch) {
-      return { halt: false, noMatch: true };
+      return { halt: false, noMatch: true, events };
     }
 
     if (completeness.complete) {
-      return { halt: false };
+      return { halt: false, events };
     }
 
-    log(`  [retry ${attempt + 1}] ${completeness.problem.includes("did not update") ? "no state change" : "orphan state"}`);
+    const retryReason = completeness.problem.includes("did not update") ? "no state change" : "orphan state";
+    events.push({ type: "retry", attempt: attempt + 1, reason: retryReason });
+    log(`  [retry ${attempt + 1}] ${retryReason}`);
   }
 
   log(`  [warn] cycle incomplete after ${MAX_RETRIES} retries`);
-  return { halt: false };
+  return { halt: false, events };
 }
