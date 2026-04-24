@@ -377,21 +377,31 @@
 
     async function fetchInstanceSummary(name) {
       const dir = `instances/${name}`;
-      const stack = await readJson(`${dir}/.call-stack.json`);
+      let stack = null;
+      try { stack = await readJson(`${dir}/.call-stack.json`); } catch {}
       if (!stack || !Array.isArray(stack.stack) || stack.stack.length === 0) {
-        return { name, state: '(legacy)', cycles: null, lastUpdate: null };  // R5
+        return { name, state: '(legacy)', cycles: null, lastUpdate: null };
       }
       const top = stack.stack[stack.stack.length - 1];
-      const memory = await readFile(`${dir}/${top.frameDir}/MEMORY.md`);
-      const state = getState(memory);
-      const histEntries = await listDir(`${dir}/history/`);
-      const cycles = histEntries.filter(e => /^\d{4}/.test(e)).length;
-      // Last update: HEAD response on .call-stack.json (Last-Modified header).
+
+      let state = '?';
+      try {
+        const memory = await readFile(`${dir}/${top.frameDir}/MEMORY.md`);
+        state = getState(memory);
+      } catch {}
+
+      let cycles = null;
+      try {
+        const histEntries = await listDir(`${dir}/history/`);
+        cycles = histEntries.filter(e => /^\d{4}/.test(e)).length;
+      } catch {}
+
       let lastUpdate = null;
       try {
         const r = await fetch(`${dir}/.call-stack.json`, { method: 'HEAD' });
         lastUpdate = r.headers.get('last-modified');
       } catch {}
+
       return { name, state, cycles, lastUpdate };
     }
 
