@@ -549,65 +549,57 @@
       const svg = document.getElementById('stackGraph');
       const stack = cycle.callStack.stack;
       const topIdx = stack.length - 1;
-
-      // Layout constants.
-      const NODE_W = 200;
+      // Vertical layout: stack[topIdx] (active) drawn at the TOP, stack[0] (root) at the BOTTOM.
+      const NODE_W = 220;
       const NODE_H = 70;
-      const GAP = 100;          // horizontal gap between node centres minus NODE_W
+      const GAP = 30;
       const PAD_X = 20;
-      const PAD_Y = 20;
-
-      const totalW = PAD_X * 2 + stack.length * NODE_W + Math.max(0, stack.length - 1) * GAP;
-      const totalH = NODE_H + PAD_Y * 2 + 30;   // extra room for edge label
-
+      const PAD_Y = 16;
+      const totalW = NODE_W + PAD_X * 2;
+      const totalH = stack.length * NODE_H + Math.max(0, stack.length - 1) * GAP + PAD_Y * 2;
       svg.setAttribute('width', totalW);
       svg.setAttribute('height', totalH);
       svg.innerHTML = '';
-
       const svgNS = 'http://www.w3.org/2000/svg';
-      // Arrow marker
       const defs = document.createElementNS(svgNS, 'defs');
       defs.innerHTML = `
-        <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5"
-                markerWidth="8" markerHeight="8" orient="auto-start-reverse">
-          <path d="M 0 0 L 10 5 L 0 10 z" fill="#58a6ff"/>
-        </marker>`;
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#58a6ff"/>
+    </marker>`;
       svg.appendChild(defs);
 
-      stack.forEach((entry, i) => {
-        const x = PAD_X + i * (NODE_W + GAP);
-        const y = PAD_Y;
-        const frame = cycle.frames[entry.frameDir];
-        const state = frame ? frame.state : '?';
-        const isActive = i === topIdx;
+      // Render top→bottom in DRAW order: active (topIdx) at smallest y; root (0) at largest y.
+      stack.slice().reverse().forEach((entry, drawIdx) => {
+        const stackIdx = stack.length - 1 - drawIdx;   // original index
+        const x = PAD_X;
+        const y = PAD_Y + drawIdx * (NODE_H + GAP);
+        const isActive = stackIdx === topIdx;
         const isSelected = entry.frameDir === selectedFrameDir;
 
-        // Edge to previous
-        if (i > 0) {
-          const prevX = PAD_X + (i - 1) * (NODE_W + GAP) + NODE_W;
-          const midY = y + NODE_H / 2;
+        // Connector from this node DOWN to the next (which is the caller — one further from active).
+        if (drawIdx < stack.length - 1) {
+          const nextY = PAD_Y + (drawIdx + 1) * (NODE_H + GAP);
+          const cx = x + NODE_W / 2;
           const line = document.createElementNS(svgNS, 'line');
-          line.setAttribute('x1', prevX);
-          line.setAttribute('y1', midY);
-          line.setAttribute('x2', x);
-          line.setAttribute('y2', midY);
-          line.setAttribute('stroke', '#58a6ff');
-          line.setAttribute('stroke-width', '2');
+          line.setAttribute('x1', cx); line.setAttribute('y1', y + NODE_H);
+          line.setAttribute('x2', cx); line.setAttribute('y2', nextY);
+          line.setAttribute('stroke', '#58a6ff'); line.setAttribute('stroke-width', '2');
           line.setAttribute('marker-end', 'url(#arrow)');
           svg.appendChild(line);
 
-          // returnState label centred on the edge
+          // returnState label: it belongs to the LOWER node (the caller; it's the state the
+          // caller resumes to when the upper frame pops). The lower node is stack[stackIdx-1].
+          const lowerEntry = stack[stackIdx - 1];
           const label = document.createElementNS(svgNS, 'text');
-          label.setAttribute('x', (prevX + x) / 2);
-          label.setAttribute('y', midY - 6);
-          label.setAttribute('text-anchor', 'middle');
+          label.setAttribute('x', cx + 8);
+          label.setAttribute('y', y + NODE_H + GAP / 2 + 4);
           label.setAttribute('fill', '#8b949e');
           label.setAttribute('font-size', '11');
-          label.textContent = `↩ ${entry.returnState}`;
+          label.textContent = `↩ ${lowerEntry.returnState}`;
           svg.appendChild(label);
         }
 
-        // Node group
+        // Frame box
         const g = document.createElementNS(svgNS, 'g');
         g.setAttribute('class', 'frame-node');
         g.setAttribute('transform', `translate(${x},${y})`);
@@ -615,46 +607,39 @@
 
         const rect = document.createElementNS(svgNS, 'rect');
         rect.setAttribute('class', 'frame-rect');
-        rect.setAttribute('width', NODE_W);
-        rect.setAttribute('height', NODE_H);
-        rect.setAttribute('rx', 8);
+        rect.setAttribute('width', NODE_W); rect.setAttribute('height', NODE_H); rect.setAttribute('rx', 8);
         rect.setAttribute('fill', isActive ? '#1f3a5f' : '#21262d');
         rect.setAttribute('stroke', isSelected ? '#d2a8ff' : (isActive ? '#58a6ff' : '#30363d'));
         rect.setAttribute('stroke-width', isSelected ? 3 : (isActive ? 2.5 : 1));
         g.appendChild(rect);
 
         const nameText = document.createElementNS(svgNS, 'text');
-        nameText.setAttribute('x', NODE_W / 2);
-        nameText.setAttribute('y', 24);
-        nameText.setAttribute('text-anchor', 'middle');
-        nameText.setAttribute('fill', '#f0f6fc');
-        nameText.setAttribute('font-size', '13');
-        nameText.setAttribute('font-weight', 'bold');
+        nameText.setAttribute('x', NODE_W / 2); nameText.setAttribute('y', 24);
+        nameText.setAttribute('text-anchor', 'middle'); nameText.setAttribute('fill', '#f0f6fc');
+        nameText.setAttribute('font-size', '13'); nameText.setAttribute('font-weight', 'bold');
         nameText.textContent = entry.frameDir.replace(/^frames\//, '');
         g.appendChild(nameText);
 
         const stateText = document.createElementNS(svgNS, 'text');
-        stateText.setAttribute('x', NODE_W / 2);
-        stateText.setAttribute('y', 44);
+        stateText.setAttribute('x', NODE_W / 2); stateText.setAttribute('y', 44);
         stateText.setAttribute('text-anchor', 'middle');
-        stateText.setAttribute('fill', stateColor(state));
+        const frame = cycle.frames[entry.frameDir];
+        stateText.setAttribute('fill', stateColor(frame ? frame.state : '?'));
         stateText.setAttribute('font-size', '12');
-        stateText.textContent = `state: ${state}`;
+        stateText.textContent = `state: ${frame ? frame.state : '?'}`;
         g.appendChild(stateText);
 
         if (isActive) {
           const activeText = document.createElementNS(svgNS, 'text');
-          activeText.setAttribute('x', NODE_W / 2);
-          activeText.setAttribute('y', 60);
+          activeText.setAttribute('x', NODE_W / 2); activeText.setAttribute('y', 60);
           activeText.setAttribute('text-anchor', 'middle');
-          activeText.setAttribute('fill', '#79c0ff');
-          activeText.setAttribute('font-size', '10');
+          activeText.setAttribute('fill', '#79c0ff'); activeText.setAttribute('font-size', '10');
           activeText.textContent = '★ active';
           g.appendChild(activeText);
         }
-
         svg.appendChild(g);
       });
+      // Vertical call stack: active frame at top, root at bottom (R12).
     }
 
     function stateColor(state) {

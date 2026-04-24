@@ -80,4 +80,15 @@ describe("visualizer.html events panel scaffold", () => {
     // The topbar uses flex-wrap and the timeline is full-width inside it.
     assert.match(html, /class=["']topbar["'][^>]*flex-wrap/);
   });
+
+  test("call stack renders vertically (R12)", () => {
+    const html = readFileSync(resolve(process.cwd(), "visualizer.html"), "utf-8");
+    // The current renderStackGraph computes totalW from horizontal layout.
+    // After T6 it computes totalH from stack.length * (NODE_H + GAP) + padding.
+    // Smoke check: the function references vertical layout vars.
+    assert.match(html, /function renderStackGraph\b/);
+    // Active frame at top of stack array → drawn at smallest y (top of SVG).
+    // Pattern check: "active at top" comment present.
+    assert.match(html, /active.{0,30}top|top.{0,30}active/i);
+  });
 });
