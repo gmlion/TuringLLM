@@ -4,11 +4,19 @@ import type { ToolResult } from "../tools.js";
 
 export const MAX_RETRIES = 20;
 
+export type ProviderEvent =
+  | { type: "llm_request"; provider: string; model: string; prompt: string }
+  | { type: "llm_response"; output: string; durationMs: number; usage?: object }
+  | { type: "tool_call"; tool: string; input: string }
+  | { type: "tool_result"; tool: string; output: string; isError: boolean }
+  | { type: "retry"; attempt: number; reason: string };
+
 export type CycleResult = {
   halt: boolean;
   haltMessage?: string;
   noMatch?: boolean;
   summary?: string;
+  events?: ProviderEvent[];
 };
 
 export function readFile(path: string): string {
