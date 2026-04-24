@@ -214,6 +214,14 @@
     <div class="panel-body" id="filePanel"><span class="empty-hint">Select a cycle and a frame.</span></div>
   </div>
 
+  <div class="panel">
+    <div class="panel-header">
+      <span>Events</span>
+      <span id="eventsScopeLabel" style="color:#8b949e;font-weight:normal;text-transform:none;font-size:0.95em;"></span>
+    </div>
+    <div class="panel-body" id="eventsPanel"><span class="empty-hint">Load an instance to see events.</span></div>
+  </div>
+
   <div class="panel log-panel">
     <div class="panel-header">Latest Log (tail)</div>
     <div class="panel-body" id="logPanel">No log loaded</div>
@@ -229,6 +237,7 @@
     let selectedCycleNum = null;   // null until first selection; -1 means "live"
     let selectedFrameDir = null;
     let selectedFilePath = null;
+    let allEvents = [];   // every event for this instance, in seq order
 
     // ---- Fetch helpers ----
     async function readFile(path) {
@@ -334,6 +343,7 @@
 
       renderTimeline();
       await loadLatestLog();
+      await loadEvents();
 
       // If nothing was selected before, default to live (or last cycle if no live).
       if (selectedCycleNum === null) {
@@ -341,6 +351,15 @@
         else if (cycles.length > 0) selectedCycleNum = cycles[cycles.length - 1].num;
       }
       renderSelectedCycle();
+    }
+
+    async function loadEvents() {
+      const text = await readFile(`${instanceDir}/logs/events.jsonl`);
+      if (!text) { allEvents = []; return; }
+      allEvents = text.trim().split("\n").map(l => {
+        try { return JSON.parse(l); } catch { return null; }
+      }).filter(e => e !== null);
+      allEvents.sort((a, b) => a.seq - b.seq);   // R28: chronological by seq
     }
 
     async function loadLatestLog() {
@@ -436,6 +455,7 @@
         document.getElementById('stackDepth').textContent = '-';
         document.getElementById('stackGraph').innerHTML = '<text x="20" y="60" fill="#8b949e">No cycle data.</text>';
         renderFilePanel();
+        renderEvents();
         return;
       }
 
@@ -456,6 +476,7 @@
 
       renderStackGraph(cycle);
       renderFilePanel();
+      renderEvents();
     }
 
     function renderStackGraph(cycle) {
@@ -614,6 +635,78 @@
 
       const file = frame.files.find(f => f.path === target);
       panel.innerHTML = file ? renderMarkdown(file.content) : '<em>empty</em>';
+    }
+
+    function renderEvents() {
+      const panel = document.getElementById('eventsPanel');
+      const scopeLabel = document.getElementById('eventsScopeLabel');
+      if (allEvents.length === 0) {
+        panel.innerHTML = '<span class="empty-hint">No events.jsonl found — instance predates better-logging.</span>';
+        scopeLabel.textContent = '';
+        return;
+      }
+
+      const cycle = getSelectedCycle();
+      const cycleNum = cycle ? cycle.num : null;
+
+      // R24: scope by current selection. Live = show everything (no cycle filter).
+      let filtered = allEvents;
+      if (cycleNum !== null && cycleNum !== -1) {
+        filtered = filtered.filter(e => e.cycle === cycleNum);
+      }
+      if (selectedFrameDir) {
+        filtered = filtered.filter(e => e.frame === selectedFrameDir || e.frame === null);
+      }
+
+      scopeLabel.textContent = `— cycle ${cycleNum === -1 ? 'live' : cycleNum ?? '(all)'} / frame ${selectedFrameDir ?? '(any)'} — ${filtered.length} events`;
+
+      if (filtered.length === 0) {
+        panel.innerHTML = '<span class="empty-hint">No events match the current selection.</span>';
+        return;
+      }
+
+      panel.innerHTML = filtered.map(e =>
+        `<div style="margin-bottom:6px;padding:4px 8px;border-left:2px solid ${eventColor(e.type)};">
+          <span style="color:#8b949e;font-size:0.78em;">#${e.seq} ${(e.ts || '').slice(11,19)}</span>
+          <span style="color:${eventColor(e.type)};font-weight:bold;">  ${e.type}</span>
+          <span style="color:#c9d1d9;">  ${escapeHtml(eventSummary(e))}</span>
+        </div>`
+      ).join("");
+    }
+
+    function escapeHtml(s) {
+      return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+
+    function eventColor(type) {
+      const map = {
+        cycle_start: '#79c0ff', cycle_end: '#79c0ff',
+        push: '#3fb950', pop: '#d29922', splice: '#d2a8ff',
+        tool_call: '#58a6ff', tool_result: '#58a6ff',
+        llm_request: '#f0f6fc', llm_response: '#f0f6fc',
+        machine_git_commit: '#8b949e', instructions_changed: '#8b949e',
+        retry: '#d29922', error: '#f85149', halt: '#f85149',
+      };
+      return map[type] || '#c9d1d9';
+    }
+
+    function eventSummary(e) {
+      switch (e.type) {
+        case 'cycle_end': return `${e.state} (${e.duration_ms}ms)`;
+        case 'push': return `${e.target} → ${e.frameDir} depth ${e.depth}`;
+        case 'pop': return `${e.frameDir} → ${e.returnState} depth ${e.depth}`;
+        case 'splice': return `[${(e.splicedKeys||[]).join(', ')}] → ${e.targetFrame}`;
+        case 'tool_call': return `${e.tool} → ${e.payload_ref || '(no payload)'}`;
+        case 'tool_result': return `${e.tool} ${e.error ? '✗' : '✓'} → ${e.payload_ref || '(no payload)'}`;
+        case 'machine_git_commit': return `${e.hash} — ${e.subject}`;
+        case 'llm_request': return `${e.provider}/${e.model} (${(e.prompt||'').length}B)`;
+        case 'llm_response': return `(${(e.output||'').length}B, ${e.duration_ms}ms)`;
+        case 'instructions_changed': return `${e.bytes_before}B → ${e.bytes_after}B`;
+        case 'retry': return `attempt ${e.attempt} — ${e.reason}`;
+        case 'error': return e.message;
+        case 'halt': return e.reason;
+        default: return JSON.stringify(e).slice(0, 100);
+      }
     }
 
     function onFilePicked() {
