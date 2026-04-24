@@ -131,4 +131,17 @@ describe("visualizer.html events panel scaffold", () => {
     // renderEvents wires LLM events to openInlinePayload
     assert.match(html, /llm_request[^}]*openInlinePayload|openInlinePayload[^}]*llm_request/);
   });
+
+  test("clicking a frame node selects it and rescopes events (R18)", () => {
+    const html = readFileSync(resolve(process.cwd(), "visualizer.html"), "utf-8");
+    // The frame-node onclick must set selectedFrameDir AND call renderSelectedCycle.
+    assert.match(html, /selectedFrameDir\s*=\s*entry\.frameDir/);
+    assert.match(html, /renderSelectedCycle\(\)/);
+  });
+
+  test("clicking a cycle dot selects it and rescopes events (R19)", () => {
+    const html = readFileSync(resolve(process.cwd(), "visualizer.html"), "utf-8");
+    // The renderTimeline onclick must set selectedCycleNum AND call renderSelectedCycle.
+    assert.match(html, /selectedCycleNum\s*=\s*cycle\.num/);
+  });
 });
