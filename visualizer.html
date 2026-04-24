@@ -39,7 +39,7 @@
     .status-bar {
       display: flex;
       gap: 20px;
-      margin-bottom: 20px;
+      margin-bottom: 16px;
       padding: 10px 16px;
       background: #161b22;
       border: 1px solid #30363d;
@@ -49,17 +49,13 @@
     .status-bar .label { color: #8b949e; }
     .status-bar .value { color: #58a6ff; font-weight: bold; }
     .status-bar .state { color: #3fb950; }
-    .panels {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-      margin-bottom: 16px;
-    }
+
     .panel {
       background: #161b22;
       border: 1px solid #30363d;
       border-radius: 8px;
       overflow: hidden;
+      margin-bottom: 16px;
     }
     .panel-header {
       padding: 8px 16px;
@@ -70,10 +66,24 @@
       font-weight: bold;
       text-transform: uppercase;
       letter-spacing: 0.05em;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .panel-header select {
+      background: #0d1117;
+      border: 1px solid #30363d;
+      color: #c9d1d9;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-family: inherit;
+      font-size: 0.95em;
+      text-transform: none;
+      letter-spacing: 0;
     }
     .panel-body {
       padding: 16px;
-      max-height: 500px;
+      max-height: 600px;
       overflow-y: auto;
       white-space: pre-wrap;
       word-wrap: break-word;
@@ -88,7 +98,8 @@
     .panel-body h2 { font-size: 1em; color: #d2a8ff; }
     .panel-body h3 { font-size: 0.9em; color: #79c0ff; }
     .panel-body strong { color: #f0f6fc; }
-    .full-width { grid-column: 1 / -1; }
+
+    /* Cycle timeline */
     .timeline {
       display: flex;
       gap: 4px;
@@ -113,8 +124,6 @@
     .cycle-dot.state-changed { background: #238636; color: #fff; }
     .cycle-dot.no-change { background: #30363d; color: #8b949e; }
     .cycle-dot.current { background: #1f6feb; color: #fff; }
-    .diff-added { color: #3fb950; }
-    .diff-removed { color: #f85149; }
     .legend {
       display: flex;
       gap: 16px;
@@ -122,19 +131,25 @@
       font-size: 0.75em;
       color: #8b949e;
     }
-    .legend span {
-      display: flex;
-      align-items: center;
-      gap: 4px;
+    .legend span { display: flex; align-items: center; gap: 4px; }
+    .legend-dot { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+
+    /* Stack graph */
+    .stack-graph-wrap {
+      padding: 20px;
+      overflow-x: auto;
     }
-    .legend-dot {
-      width: 12px;
-      height: 12px;
-      border-radius: 3px;
-      display: inline-block;
+    #stackGraph {
+      display: block;
+      min-width: 100%;
     }
+    /* SVG node styling is set inline via attributes; selectors below are for hover/active */
+    .frame-node { cursor: pointer; }
+    .frame-node:hover .frame-rect { stroke: #58a6ff; }
+
+    /* Log panel */
     .log-panel .panel-body {
-      max-height: 300px;
+      max-height: 240px;
       font-size: 0.78em;
       color: #8b949e;
     }
@@ -142,14 +157,16 @@
     .log-panel .panel-body .log-tool { color: #58a6ff; }
     .log-panel .panel-body .log-error { color: #f85149; }
     .log-panel .panel-body .log-retry { color: #d29922; }
+
     #instancePath { width: 300px; }
+    .empty-hint { color: #8b949e; font-style: italic; }
   </style>
 </head>
 <body>
   <h1>Turing Machine Visualizer</h1>
   <div class="controls">
     <label>Instance path:</label>
-    <input type="text" id="instancePath" placeholder="instances/test-drive-3" />
+    <input type="text" id="instancePath" placeholder="instances/p2b-d" />
     <button id="loadBtn" onclick="loadInstance()">Load</button>
     <button id="autoBtn" onclick="toggleAuto()">Auto-refresh</button>
     <label>Interval:</label>
@@ -163,42 +180,57 @@
 
   <div class="status-bar">
     <div><span class="label">Cycles: </span><span class="value" id="totalCycles">-</span></div>
+    <div><span class="label">Cycle: </span><span class="value" id="cycleLabel">-</span></div>
     <div><span class="label">State: </span><span class="state" id="currentState">-</span></div>
+    <div><span class="label">Stack depth: </span><span class="value" id="stackDepth">-</span></div>
     <div><span class="label">Last update: </span><span class="value" id="lastUpdate">-</span></div>
   </div>
 
-  <div class="panel full-width" style="margin-bottom: 16px;">
+  <div class="panel">
     <div class="panel-header">Cycle Timeline</div>
     <div class="legend">
       <span><span class="legend-dot" style="background:#238636"></span> State changed</span>
       <span><span class="legend-dot" style="background:#30363d"></span> No change</span>
-      <span><span class="legend-dot" style="background:#1f6feb"></span> Current</span>
+      <span><span class="legend-dot" style="background:#1f6feb"></span> Current (live)</span>
     </div>
     <div class="timeline" id="timeline"></div>
   </div>
 
-  <div class="panels">
-    <div class="panel">
-      <div class="panel-header">Memory.md</div>
-      <div class="panel-body" id="memoryPanel">Select a cycle or load an instance</div>
-    </div>
-    <div class="panel">
-      <div class="panel-header">Instructions.md</div>
-      <div class="panel-body" id="instructionsPanel">Select a cycle or load an instance</div>
+  <div class="panel">
+    <div class="panel-header">Call Stack <span style="color:#8b949e;font-weight:normal;text-transform:none;font-size:0.95em;">(click a frame to inspect)</span></div>
+    <div class="stack-graph-wrap">
+      <svg id="stackGraph" height="120"><text x="20" y="60" fill="#8b949e">Load an instance to see the call stack.</text></svg>
     </div>
   </div>
 
-  <div class="panel full-width log-panel">
-    <div class="panel-header">Latest Log</div>
+  <div class="panel">
+    <div class="panel-header">
+      <span>Frame Files</span>
+      <select id="filePicker" onchange="onFilePicked()" disabled>
+        <option>(no frame selected)</option>
+      </select>
+      <span id="frameLabel" style="color:#8b949e;font-weight:normal;text-transform:none;font-size:0.95em;"></span>
+    </div>
+    <div class="panel-body" id="filePanel"><span class="empty-hint">Select a cycle and a frame.</span></div>
+  </div>
+
+  <div class="panel log-panel">
+    <div class="panel-header">Latest Log (tail)</div>
     <div class="panel-body" id="logPanel">No log loaded</div>
   </div>
 
   <script>
+    // ---- State ----
     let autoInterval = null;
     let instanceDir = '';
+    // cycles[i] = { num, hash, dir, callStack: {stack:[{returnState,frameDir}], nextCounter}, frames: { <frameDir>: { state, files: [{path, content}] } } }
     let cycles = [];
-    let selectedCycle = -1;
+    let liveCycle = null;     // pseudo-cycle for the current instance state, num = -1
+    let selectedCycleNum = null;   // null until first selection; -1 means "live"
+    let selectedFrameDir = null;
+    let selectedFilePath = null;
 
+    // ---- Fetch helpers ----
     async function readFile(path) {
       try {
         const resp = await fetch(path);
@@ -206,20 +238,127 @@
         return await resp.text();
       } catch { return null; }
     }
-
-    // Since we can't read the filesystem from a browser, we use a local server approach.
-    // This visualizer expects to be served from the project root.
-    // It reads files via fetch from a simple file server.
-
-    // For direct file:// usage, we load data from a JSON export.
-    // The recommended approach: run `python3 -m http.server 8080` from the project root.
-
-    function getState(memoryContent) {
-      if (!memoryContent) return '?';
-      const match = memoryContent.match(/^## State\n(.+)/m);
-      return match ? match[1].trim() : '?';
+    async function readJson(path) {
+      const t = await readFile(path);
+      if (!t) return null;
+      try { return JSON.parse(t); } catch { return null; }
+    }
+    async function listDir(path) {
+      // Server returns an HTML directory listing with <a href="entry">entry</a>
+      // (or "entry/" for subdirs). Parse them.
+      const resp = await fetch(path);
+      if (!resp.ok) return [];
+      const html = await resp.text();
+      const matches = [...html.matchAll(/href="([^"?#][^"]*)"/g)].map(m => m[1]);
+      // Drop "../" / parent links and dedupe.
+      return [...new Set(matches.filter(e => e && e !== '../' && e !== '/'))];
     }
 
+    // ---- Memory parsing ----
+    function getState(memoryContent) {
+      if (!memoryContent) return '?';
+      const m = memoryContent.match(/^## State\s*\n([^\n#]+)/m);
+      return m ? m[1].trim() : '?';
+    }
+
+    // ---- Frame discovery ----
+    // Given a base path like `${instanceDir}` or `${instanceDir}/history/0005-abc`,
+    // and a frameDir like `frames/f001-verify`, list all files under that frame
+    // (MEMORY.md, INSTRUCTIONS.md, then everything under scoped/).
+    async function loadFrame(basePath, frameDirRel) {
+      const frameUrl = `${basePath}/${frameDirRel}`;
+      const files = [];
+
+      const memory = await readFile(`${frameUrl}/MEMORY.md`);
+      const instructions = await readFile(`${frameUrl}/INSTRUCTIONS.md`);
+
+      if (memory !== null) files.push({ path: 'MEMORY.md', content: memory });
+      if (instructions !== null) files.push({ path: 'INSTRUCTIONS.md', content: instructions });
+
+      // List scoped/, recursively (one level is enough for current usage; recurse defensively).
+      async function walk(relDir) {
+        const entries = await listDir(`${frameUrl}/${relDir}/`);
+        for (const e of entries) {
+          if (e.endsWith('/')) {
+            await walk(`${relDir}/${e.replace(/\/$/, '')}`);
+          } else {
+            const content = await readFile(`${frameUrl}/${relDir}/${e}`);
+            if (content !== null) files.push({ path: `${relDir}/${e}`, content });
+          }
+        }
+      }
+      // Probe scoped/ — if it doesn't exist, listDir returns [].
+      await walk('scoped');
+
+      const state = getState(memory);
+      return { state, files };
+    }
+
+    async function loadCycleSnapshot(basePath, num, hash, dir) {
+      const callStack = await readJson(`${basePath}/.call-stack.json`);
+      if (!callStack || !Array.isArray(callStack.stack)) return null;
+      const frames = {};
+      for (const entry of callStack.stack) {
+        const f = await loadFrame(basePath, entry.frameDir);
+        if (f) frames[entry.frameDir] = f;
+      }
+      return { num, hash, dir, callStack, frames };
+    }
+
+    // ---- Loading ----
+    async function loadInstance() {
+      instanceDir = document.getElementById('instancePath').value.trim().replace(/\/$/, '');
+      if (!instanceDir) return;
+
+      // Discover history snapshots: any subdirectory of history/ starting with 4 digits.
+      const histEntries = await listDir(`${instanceDir}/history/`);
+      const histDirs = histEntries
+        .filter(e => /^\d{4}/.test(e))
+        .map(e => e.replace(/\/$/, ''))
+        .sort();
+
+      const newCycles = [];
+      for (const dir of histDirs) {
+        const num = parseInt(dir.slice(0, 4), 10);
+        const hash = dir.length > 4 ? dir.slice(5) : '';
+        const snap = await loadCycleSnapshot(`${instanceDir}/history/${dir}`, num, hash, dir);
+        if (snap) newCycles.push(snap);
+      }
+      cycles = newCycles;
+
+      // Live state — the instance root.
+      liveCycle = await loadCycleSnapshot(instanceDir, -1, 'live', 'live');
+
+      document.getElementById('totalCycles').textContent = cycles.length;
+      document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+
+      renderTimeline();
+      await loadLatestLog();
+
+      // If nothing was selected before, default to live (or last cycle if no live).
+      if (selectedCycleNum === null) {
+        if (liveCycle) selectedCycleNum = -1;
+        else if (cycles.length > 0) selectedCycleNum = cycles[cycles.length - 1].num;
+      }
+      renderSelectedCycle();
+    }
+
+    async function loadLatestLog() {
+      const logPanel = document.getElementById('logPanel');
+      const entries = await listDir(`${instanceDir}/logs/`);
+      const logs = entries.filter(e => /^run-.*\.log$/.test(e)).sort();
+      if (logs.length === 0) {
+        logPanel.innerHTML = '<em>No log files found.</em>';
+        return;
+      }
+      const content = await readFile(`${instanceDir}/logs/${logs[logs.length - 1]}`);
+      if (!content) { logPanel.innerHTML = '<em>Log read failed.</em>'; return; }
+      const tail = content.split('\n').slice(-200).join('\n');
+      logPanel.innerHTML = colorizeLog(tail);
+      logPanel.scrollTop = logPanel.scrollHeight;
+    }
+
+    // ---- Rendering ----
     function renderMarkdown(text) {
       if (!text) return '<em>empty</em>';
       return text
@@ -239,89 +378,9 @@
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
         .replace(/^(.*\[thinking\].*)$/gm, '<span class="log-thinking">$1</span>')
-        .replace(/^(.*\[(bash|write_file|update_instructions|claude-code|halt)\].*)$/gm, '<span class="log-tool">$1</span>')
+        .replace(/^(.*\[(bash|write_file|update_instructions|claude-code|halt|push|pop)\].*)$/gm, '<span class="log-tool">$1</span>')
         .replace(/^(.*\[error\].*)$/gm, '<span class="log-error">$1</span>')
         .replace(/^(.*\[retry\].*)$/gm, '<span class="log-retry">$1</span>');
-    }
-
-    async function loadInstance() {
-      instanceDir = document.getElementById('instancePath').value.trim();
-      if (!instanceDir) return;
-
-      cycles = [];
-
-      // List history directory to discover cycle folders
-      const histResp = await fetch(`${instanceDir}/history/`);
-      if (histResp.ok) {
-        const html = await histResp.text();
-        // Match any directory starting with 4 digits: 0001/, 0001-abc123/, 0001-pre-plan/
-        const dirMatches = html.match(/(\d{4}[^"<\/]*)\//g);
-        if (dirMatches) {
-          const dirs = [...new Set(dirMatches)].map(d => d.replace(/\/$/, '')).sort();
-          for (const dir of dirs) {
-            const num = parseInt(dir.slice(0, 4), 10);
-            const suffix = dir.length > 4 ? dir.slice(5) : '';
-            const mem = await readFile(`${instanceDir}/history/${dir}/MEMORY.md`);
-            if (mem === null) continue;
-            const inst = await readFile(`${instanceDir}/history/${dir}/INSTRUCTIONS.md`);
-            cycles.push({ num, hash: suffix, dir, memory: mem, instructions: inst, state: getState(mem) });
-          }
-        }
-      }
-
-      // Also load current state
-      const currentMem = await readFile(`${instanceDir}/MEMORY.md`);
-      const currentInst = await readFile(`${instanceDir}/INSTRUCTIONS.md`);
-
-      document.getElementById('totalCycles').textContent = cycles.length;
-      document.getElementById('currentState').textContent = currentMem ? getState(currentMem) : '-';
-      document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
-
-      renderTimeline();
-
-      // Show current state by default
-      document.getElementById('memoryPanel').innerHTML = renderMarkdown(currentMem);
-      document.getElementById('instructionsPanel').innerHTML = renderMarkdown(currentInst);
-
-      // Load latest log
-      await loadLatestLog();
-
-      // Select last cycle
-      if (cycles.length > 0) {
-        selectCycle(cycles[cycles.length - 1].num);
-      }
-    }
-
-    async function loadLatestLog() {
-      // Try to find the most recent log file
-      // Since we can't list directories from browser, we read current files
-      const logPanel = document.getElementById('logPanel');
-
-      // Try a known recent log - this is a best-effort approach
-      // In practice, the log is in instanceDir/logs/
-      let logContent = null;
-
-      // Try fetching log listing via a simple approach
-      const resp = await fetch(`${instanceDir}/logs/`);
-      if (resp.ok) {
-        const html = await resp.text();
-        // Parse directory listing for log files
-        const matches = html.match(/run-[^"<]+\.log/g);
-        if (matches && matches.length > 0) {
-          const latest = matches.sort().pop();
-          logContent = await readFile(`${instanceDir}/logs/${latest}`);
-        }
-      }
-
-      if (logContent) {
-        // Show last 200 lines
-        const lines = logContent.split('\n');
-        const tail = lines.slice(-200).join('\n');
-        logPanel.innerHTML = colorizeLog(tail);
-        logPanel.scrollTop = logPanel.scrollHeight;
-      } else {
-        logPanel.innerHTML = '<em>No log files found. Serve with: python3 -m http.server 8080</em>';
-      }
     }
 
     function renderTimeline() {
@@ -331,44 +390,240 @@
       let prevState = '';
       for (let idx = 0; idx < cycles.length; idx++) {
         const cycle = cycles[idx];
-        const isLast = idx === cycles.length - 1;
+        // Per-cycle state = state of the active (top) frame in that snapshot.
+        const top = cycle.callStack.stack[cycle.callStack.stack.length - 1];
+        const state = top ? cycle.frames[top.frameDir]?.state ?? '?' : '?';
+
         const dot = document.createElement('div');
         dot.className = 'cycle-dot';
         dot.textContent = cycle.num;
-        dot.onclick = () => selectCycle(cycle.num);
+        dot.onclick = () => { selectedCycleNum = cycle.num; selectedFrameDir = null; renderSelectedCycle(); };
+        if (state !== prevState) dot.classList.add('state-changed');
+        else dot.classList.add('no-change');
+        if (cycle.num === selectedCycleNum) dot.classList.add('selected');
 
-        if (isLast) {
-          dot.classList.add('current');
-        } else if (cycle.state !== prevState) {
-          dot.classList.add('state-changed');
-        } else {
-          dot.classList.add('no-change');
-        }
-
-        if (cycle.num === selectedCycle) {
-          dot.classList.add('selected');
-        }
-
-        const hashLabel = cycle.hash ? ` (${cycle.hash})` : '';
-        dot.title = `Cycle ${cycle.num}${hashLabel}: ${cycle.state}`;
+        dot.title = `Cycle ${cycle.num}${cycle.hash ? ` (${cycle.hash})` : ''}: ${state} | depth ${cycle.callStack.stack.length}`;
         container.appendChild(dot);
-        prevState = cycle.state;
+        prevState = state;
       }
 
-      // Scroll to end
+      if (liveCycle) {
+        const dot = document.createElement('div');
+        dot.className = 'cycle-dot current';
+        dot.textContent = 'live';
+        dot.onclick = () => { selectedCycleNum = -1; selectedFrameDir = null; renderSelectedCycle(); };
+        if (selectedCycleNum === -1) dot.classList.add('selected');
+        const top = liveCycle.callStack.stack[liveCycle.callStack.stack.length - 1];
+        const state = top ? liveCycle.frames[top.frameDir]?.state ?? '?' : '?';
+        dot.title = `Live: ${state} | depth ${liveCycle.callStack.stack.length}`;
+        container.appendChild(dot);
+      }
+
       container.scrollLeft = container.scrollWidth;
     }
 
-    function selectCycle(num) {
-      selectedCycle = num;
-      const cycle = cycles.find(c => c.num === num);
-      if (!cycle) return;
+    function getSelectedCycle() {
+      if (selectedCycleNum === -1) return liveCycle;
+      return cycles.find(c => c.num === selectedCycleNum) || null;
+    }
 
-      document.getElementById('memoryPanel').innerHTML = renderMarkdown(cycle.memory);
-      document.getElementById('instructionsPanel').innerHTML = renderMarkdown(cycle.instructions);
-      document.getElementById('currentState').textContent = cycle.state + (cycle.hash ? ` (${cycle.hash})` : '');
-
+    function renderSelectedCycle() {
+      const cycle = getSelectedCycle();
       renderTimeline();
+      if (!cycle) {
+        document.getElementById('cycleLabel').textContent = '-';
+        document.getElementById('currentState').textContent = '-';
+        document.getElementById('stackDepth').textContent = '-';
+        document.getElementById('stackGraph').innerHTML = '<text x="20" y="60" fill="#8b949e">No cycle data.</text>';
+        renderFilePanel();
+        return;
+      }
+
+      document.getElementById('cycleLabel').textContent =
+        cycle.num === -1 ? 'live' : (cycle.num + (cycle.hash ? ` (${cycle.hash})` : ''));
+
+      const stack = cycle.callStack.stack;
+      const top = stack[stack.length - 1];
+      const topState = top ? cycle.frames[top.frameDir]?.state ?? '?' : '?';
+      document.getElementById('currentState').textContent = topState;
+      document.getElementById('stackDepth').textContent = stack.length;
+
+      // Default selected frame: active (top) frame.
+      if (!selectedFrameDir || !cycle.frames[selectedFrameDir]) {
+        selectedFrameDir = top ? top.frameDir : null;
+        selectedFilePath = null;
+      }
+
+      renderStackGraph(cycle);
+      renderFilePanel();
+    }
+
+    function renderStackGraph(cycle) {
+      const svg = document.getElementById('stackGraph');
+      const stack = cycle.callStack.stack;
+      const topIdx = stack.length - 1;
+
+      // Layout constants.
+      const NODE_W = 200;
+      const NODE_H = 70;
+      const GAP = 100;          // horizontal gap between node centres minus NODE_W
+      const PAD_X = 20;
+      const PAD_Y = 20;
+
+      const totalW = PAD_X * 2 + stack.length * NODE_W + Math.max(0, stack.length - 1) * GAP;
+      const totalH = NODE_H + PAD_Y * 2 + 30;   // extra room for edge label
+
+      svg.setAttribute('width', totalW);
+      svg.setAttribute('height', totalH);
+      svg.innerHTML = '';
+
+      const svgNS = 'http://www.w3.org/2000/svg';
+      // Arrow marker
+      const defs = document.createElementNS(svgNS, 'defs');
+      defs.innerHTML = `
+        <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5"
+                markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#58a6ff"/>
+        </marker>`;
+      svg.appendChild(defs);
+
+      stack.forEach((entry, i) => {
+        const x = PAD_X + i * (NODE_W + GAP);
+        const y = PAD_Y;
+        const frame = cycle.frames[entry.frameDir];
+        const state = frame ? frame.state : '?';
+        const isActive = i === topIdx;
+        const isSelected = entry.frameDir === selectedFrameDir;
+
+        // Edge to previous
+        if (i > 0) {
+          const prevX = PAD_X + (i - 1) * (NODE_W + GAP) + NODE_W;
+          const midY = y + NODE_H / 2;
+          const line = document.createElementNS(svgNS, 'line');
+          line.setAttribute('x1', prevX);
+          line.setAttribute('y1', midY);
+          line.setAttribute('x2', x);
+          line.setAttribute('y2', midY);
+          line.setAttribute('stroke', '#58a6ff');
+          line.setAttribute('stroke-width', '2');
+          line.setAttribute('marker-end', 'url(#arrow)');
+          svg.appendChild(line);
+
+          // returnState label centred on the edge
+          const label = document.createElementNS(svgNS, 'text');
+          label.setAttribute('x', (prevX + x) / 2);
+          label.setAttribute('y', midY - 6);
+          label.setAttribute('text-anchor', 'middle');
+          label.setAttribute('fill', '#8b949e');
+          label.setAttribute('font-size', '11');
+          label.textContent = `↩ ${entry.returnState}`;
+          svg.appendChild(label);
+        }
+
+        // Node group
+        const g = document.createElementNS(svgNS, 'g');
+        g.setAttribute('class', 'frame-node');
+        g.setAttribute('transform', `translate(${x},${y})`);
+        g.onclick = () => { selectedFrameDir = entry.frameDir; selectedFilePath = null; renderSelectedCycle(); };
+
+        const rect = document.createElementNS(svgNS, 'rect');
+        rect.setAttribute('class', 'frame-rect');
+        rect.setAttribute('width', NODE_W);
+        rect.setAttribute('height', NODE_H);
+        rect.setAttribute('rx', 8);
+        rect.setAttribute('fill', isActive ? '#1f3a5f' : '#21262d');
+        rect.setAttribute('stroke', isSelected ? '#d2a8ff' : (isActive ? '#58a6ff' : '#30363d'));
+        rect.setAttribute('stroke-width', isSelected ? 3 : (isActive ? 2.5 : 1));
+        g.appendChild(rect);
+
+        const nameText = document.createElementNS(svgNS, 'text');
+        nameText.setAttribute('x', NODE_W / 2);
+        nameText.setAttribute('y', 24);
+        nameText.setAttribute('text-anchor', 'middle');
+        nameText.setAttribute('fill', '#f0f6fc');
+        nameText.setAttribute('font-size', '13');
+        nameText.setAttribute('font-weight', 'bold');
+        nameText.textContent = entry.frameDir.replace(/^frames\//, '');
+        g.appendChild(nameText);
+
+        const stateText = document.createElementNS(svgNS, 'text');
+        stateText.setAttribute('x', NODE_W / 2);
+        stateText.setAttribute('y', 44);
+        stateText.setAttribute('text-anchor', 'middle');
+        stateText.setAttribute('fill', stateColor(state));
+        stateText.setAttribute('font-size', '12');
+        stateText.textContent = `state: ${state}`;
+        g.appendChild(stateText);
+
+        if (isActive) {
+          const activeText = document.createElementNS(svgNS, 'text');
+          activeText.setAttribute('x', NODE_W / 2);
+          activeText.setAttribute('y', 60);
+          activeText.setAttribute('text-anchor', 'middle');
+          activeText.setAttribute('fill', '#79c0ff');
+          activeText.setAttribute('font-size', '10');
+          activeText.textContent = '★ active';
+          g.appendChild(activeText);
+        }
+
+        svg.appendChild(g);
+      });
+    }
+
+    function stateColor(state) {
+      if (state === 'done') return '#3fb950';
+      if (state === 'empty') return '#8b949e';
+      if (state === '?' ) return '#f85149';
+      return '#d2a8ff';
+    }
+
+    function renderFilePanel() {
+      const cycle = getSelectedCycle();
+      const picker = document.getElementById('filePicker');
+      const panel = document.getElementById('filePanel');
+      const frameLabel = document.getElementById('frameLabel');
+
+      if (!cycle || !selectedFrameDir || !cycle.frames[selectedFrameDir]) {
+        picker.innerHTML = '<option>(no frame selected)</option>';
+        picker.disabled = true;
+        panel.innerHTML = '<span class="empty-hint">Select a cycle and a frame.</span>';
+        frameLabel.textContent = '';
+        return;
+      }
+
+      const frame = cycle.frames[selectedFrameDir];
+      frameLabel.textContent = `— ${selectedFrameDir} (state: ${frame.state})`;
+
+      picker.disabled = false;
+      picker.innerHTML = '';
+      for (const f of frame.files) {
+        const opt = document.createElement('option');
+        opt.value = f.path;
+        opt.textContent = `${selectedFrameDir}/${f.path}`;
+        picker.appendChild(opt);
+      }
+
+      // Default: keep current selection if still present, else MEMORY.md, else first file.
+      let target = selectedFilePath;
+      if (!target || !frame.files.find(f => f.path === target)) {
+        target = frame.files.find(f => f.path === 'MEMORY.md')?.path
+              ?? (frame.files[0]?.path ?? null);
+      }
+      selectedFilePath = target;
+      picker.value = target;
+
+      const file = frame.files.find(f => f.path === target);
+      panel.innerHTML = file ? renderMarkdown(file.content) : '<em>empty</em>';
+    }
+
+    function onFilePicked() {
+      selectedFilePath = document.getElementById('filePicker').value;
+      const cycle = getSelectedCycle();
+      if (!cycle || !selectedFrameDir) return;
+      const frame = cycle.frames[selectedFrameDir];
+      const file = frame.files.find(f => f.path === selectedFilePath);
+      document.getElementById('filePanel').innerHTML =
+        file ? renderMarkdown(file.content) : '<em>empty</em>';
     }
 
     function toggleAuto() {
