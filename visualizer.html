@@ -124,6 +124,18 @@
     .log-panel .panel-body .log-retry { color: #d29922; }
 
     .empty-hint { color: #8b949e; font-style: italic; }
+
+    .grid-3col {
+      display: grid;
+      grid-template-columns: 260px 1fr 1fr;
+      gap: 16px;
+      /* Each column owns its own scroll. Height calc keeps the grid in one viewport. */
+    }
+    .grid-3col > .panel { margin-bottom: 0; max-height: calc(100vh - 200px); overflow-y: auto; }
+    @media (max-width: 1099px) {
+      .grid-3col { grid-template-columns: 1fr; }
+      .grid-3col > .panel { max-height: 600px; }
+    }
   </style>
 </head>
 <body>
@@ -161,31 +173,33 @@
       <div class="timeline" id="timeline" style="flex:1 1 100%;display:flex;gap:4px;overflow-x:auto;align-items:flex-end;min-width:0;"></div>
     </div>
 
-  <div class="panel">
-    <div class="panel-header">Call Stack <span style="color:#8b949e;font-weight:normal;text-transform:none;font-size:0.95em;">(click a frame to inspect)</span></div>
-    <div class="stack-graph-wrap">
-      <svg id="stackGraph" height="120"><text x="20" y="60" fill="#8b949e">Load an instance to see the call stack.</text></svg>
+  <div class="grid-3col">
+    <div class="panel">
+      <div class="panel-header">Call Stack <span style="color:#8b949e;font-weight:normal;text-transform:none;font-size:0.95em;">(click a frame to inspect)</span></div>
+      <div class="stack-graph-wrap">
+        <svg id="stackGraph" height="120"><text x="20" y="60" fill="#8b949e">Load an instance to see the call stack.</text></svg>
+      </div>
     </div>
-  </div>
 
-  <div class="panel">
-    <div class="panel-header">
-      <span>Frame Files</span>
-      <select id="filePicker" onchange="onFilePicked()" disabled>
-        <option>(no frame selected)</option>
-      </select>
-      <span id="frameLabel" style="color:#8b949e;font-weight:normal;text-transform:none;font-size:0.95em;"></span>
+    <div class="panel">
+      <div class="panel-header">
+        <span>Events</span>
+        <span id="eventsScopeLabel" style="color:#8b949e;font-weight:normal;text-transform:none;font-size:0.95em;"></span>
+        <div id="eventTypeFilters" style="display:flex;gap:6px;flex-wrap:wrap;font-weight:normal;text-transform:none;letter-spacing:0;font-size:0.85em;"></div>
+      </div>
+      <div class="panel-body" id="eventsPanel"><span class="empty-hint">Load an instance to see events.</span></div>
     </div>
-    <div class="panel-body" id="filePanel"><span class="empty-hint">Select a cycle and a frame.</span></div>
-  </div>
 
-  <div class="panel">
-    <div class="panel-header">
-      <span>Events</span>
-      <span id="eventsScopeLabel" style="color:#8b949e;font-weight:normal;text-transform:none;font-size:0.95em;"></span>
-      <div id="eventTypeFilters" style="display:flex;gap:6px;flex-wrap:wrap;font-weight:normal;text-transform:none;letter-spacing:0;font-size:0.85em;"></div>
+    <div class="panel">
+      <div class="panel-header">
+        <span>Frame Files</span>
+        <select id="filePicker" onchange="onFilePicked()" disabled>
+          <option>(no frame selected)</option>
+        </select>
+        <span id="frameLabel" style="color:#8b949e;font-weight:normal;text-transform:none;font-size:0.95em;"></span>
+      </div>
+      <div class="panel-body" id="filePanel"><span class="empty-hint">Select a cycle and a frame.</span></div>
     </div>
-    <div class="panel-body" id="eventsPanel"><span class="empty-hint">Load an instance to see events.</span></div>
   </div>
 
   <div class="panel" id="payloadPanel" style="display:none;">

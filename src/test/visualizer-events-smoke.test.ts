@@ -67,4 +67,17 @@ describe("visualizer.html events panel scaffold", () => {
     // The timeline div ID is still present (it just moved into the top row).
     assert.match(html, /id=["']timeline["']/);
   });
+
+  test("instance body uses 3-column grid with single-column fallback (R11, R14)", () => {
+    const html = readFileSync(resolve(process.cwd(), "visualizer.html"), "utf-8");
+    assert.match(html, /grid-template-columns:\s*[^;]*1fr[^;]*1fr/);  // 3-col grid: e.g. 260px 1fr 1fr
+    assert.match(html, /@media\s*\(max-width:\s*1099px\)/);             // single-column breakpoint
+    assert.match(html, /class=["']grid-3col["']/);
+  });
+
+  test("top-row timeline wraps when narrow (R15)", () => {
+    const html = readFileSync(resolve(process.cwd(), "visualizer.html"), "utf-8");
+    // The topbar uses flex-wrap and the timeline is full-width inside it.
+    assert.match(html, /class=["']topbar["'][^>]*flex-wrap/);
+  });
 });
