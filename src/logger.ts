@@ -1,38 +1,23 @@
-import { mkdirSync, appendFileSync } from "fs";
-import { resolve } from "path";
+// src/logger.ts — stdout-only after better-logging.
+// The structured event stream lives in src/events.ts; this module no longer
+// mirrors stdout to a file (R23). Kept as thin pass-throughs so the many
+// existing log() call sites need no edit (R22).
 
-let logFilePath: string | null = null;
-
-export function initLog(baseDir: string) {
-  const logDir = resolve(baseDir, "logs");
-  mkdirSync(logDir, { recursive: true });
-  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-  logFilePath = resolve(logDir, `run-${timestamp}.log`);
-
-  // Capture stderr to log file
-  const origError = console.error;
-  console.error = (...args: unknown[]) => {
-    origError(...args);
-    if (logFilePath) {
-      appendFileSync(logFilePath, args.map(String).join(" ") + "\n", "utf-8");
-    }
-  };
+export function initLog(_baseDir: string): void {
+  // No-op. Retained so call sites that called initLog() pre-better-logging
+  // don't need to be edited. Future: remove call site and delete this fn.
 }
 
-export function log(message: string) {
+export function log(message: string): void {
   console.log(message);
-  if (logFilePath) {
-    appendFileSync(logFilePath, message + "\n", "utf-8");
-  }
 }
 
-export function logRaw(message: string) {
-  // Write to log file only (no console), for verbose tool output
-  if (logFilePath) {
-    appendFileSync(logFilePath, message + "\n", "utf-8");
-  }
+export function logRaw(_message: string): void {
+  // Pre-better-logging this wrote diagnostic detail to the file mirror.
+  // The file mirror is gone; structured detail lives in events.jsonl.
+  // Kept as a no-op so existing call sites compile until they're audited.
 }
 
 export function getLogPath(): string | null {
-  return logFilePath;
+  return null;
 }

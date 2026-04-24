@@ -492,7 +492,6 @@ async function main() {
   log("Turing machine starting");
   log(`  Provider:     ${PROVIDER}`);
   log(`  Instance:     ${BASE_DIR}`);
-  log(`  Log:          ${getLogPath()}`);
   if (USE_TELEGRAM) log(`  Telegram:     enabled (chat ${TELEGRAM_CHAT_ID})`);
 
   mkdirSync(HISTORY_DIR, { recursive: true });
