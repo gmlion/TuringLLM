@@ -112,17 +112,6 @@
     .frame-node { cursor: pointer; }
     .frame-node:hover .frame-rect { stroke: #58a6ff; }
 
-    /* Log panel */
-    .log-panel .panel-body {
-      max-height: 240px;
-      font-size: 0.78em;
-      color: #8b949e;
-    }
-    .log-panel .panel-body .log-thinking { color: #d2a8ff; }
-    .log-panel .panel-body .log-tool { color: #58a6ff; }
-    .log-panel .panel-body .log-error { color: #f85149; }
-    .log-panel .panel-body .log-retry { color: #d29922; }
-
     .empty-hint { color: #8b949e; font-style: italic; }
 
     .grid-3col {
@@ -211,10 +200,6 @@
     <div class="panel-body" id="payloadBody"></div>
   </div>
 
-  <div class="panel log-panel">
-    <div class="panel-header">Latest Log (tail)</div>
-    <div class="panel-body" id="logPanel">No log loaded</div>
-  </div>
   </div>
 
   <script>
@@ -411,7 +396,6 @@
       document.getElementById('topCycles').textContent = cycles.length;
 
       renderTimeline();
-      await loadLatestLog();
       await loadEvents();
       renderEventTypeFilters();
 
@@ -432,21 +416,6 @@
       allEvents.sort((a, b) => a.seq - b.seq);   // R28: chronological by seq
     }
 
-    async function loadLatestLog() {
-      const logPanel = document.getElementById('logPanel');
-      const entries = await listDir(`${instanceDir}/logs/`);
-      const logs = entries.filter(e => /^run-.*\.log$/.test(e)).sort();
-      if (logs.length === 0) {
-        logPanel.innerHTML = '<em>No log files found.</em>';
-        return;
-      }
-      const content = await readFile(`${instanceDir}/logs/${logs[logs.length - 1]}`);
-      if (!content) { logPanel.innerHTML = '<em>Log read failed.</em>'; return; }
-      const tail = content.split('\n').slice(-200).join('\n');
-      logPanel.innerHTML = colorizeLog(tail);
-      logPanel.scrollTop = logPanel.scrollHeight;
-    }
-
     // ---- Rendering ----
     function renderMarkdown(text) {
       if (!text) return '<em>empty</em>';
@@ -458,18 +427,6 @@
         .replace(/^## (.+)$/gm, '<h2>$1</h2>')
         .replace(/^# (.+)$/gm, '<h1>$1</h1>')
         .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-    }
-
-    function colorizeLog(text) {
-      if (!text) return '<em>No log available</em>';
-      return text
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/^(.*\[thinking\].*)$/gm, '<span class="log-thinking">$1</span>')
-        .replace(/^(.*\[(bash|write_file|update_instructions|claude-code|halt|push|pop)\].*)$/gm, '<span class="log-tool">$1</span>')
-        .replace(/^(.*\[error\].*)$/gm, '<span class="log-error">$1</span>')
-        .replace(/^(.*\[retry\].*)$/gm, '<span class="log-retry">$1</span>');
     }
 
     function renderTimeline() {

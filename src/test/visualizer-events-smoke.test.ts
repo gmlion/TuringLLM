@@ -91,4 +91,11 @@ describe("visualizer.html events panel scaffold", () => {
     // Pattern check: "active at top" comment present.
     assert.match(html, /active.{0,30}top|top.{0,30}active/i);
   });
+
+  test("Latest Log (tail) panel removed (R16)", () => {
+    const html = readFileSync(resolve(process.cwd(), "visualizer.html"), "utf-8");
+    assert.equal(/Latest Log/.test(html), false);
+    assert.equal(/id=["']logPanel["']/.test(html), false);
+    assert.equal(/loadLatestLog/.test(html), false);
+  });
 });
