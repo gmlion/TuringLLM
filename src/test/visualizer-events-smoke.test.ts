@@ -42,4 +42,19 @@ describe("visualizer.html events panel scaffold", () => {
     // inside #homePage is fine; the prohibition is on a top-level one always rendered.
     assert.equal(/<body>\s*<h1>/.test(html), false, "no top-of-body <h1> outside the routed pages");
   });
+
+  test("home page table scaffold present (R2, R3)", () => {
+    const html = readFileSync(resolve(process.cwd(), "visualizer.html"), "utf-8");
+    assert.match(html, /id=["']homeBody["']/);
+    assert.match(html, /function loadHomeInstances\s*\(/);
+    assert.match(html, /function fetchInstanceSummary\s*\(/);
+    assert.match(html, /function renderHomeTable\s*\(/);
+    assert.match(html, /function updateHomeRow\s*\(/);
+    // Header columns (R2)
+    assert.match(html, /Instance/);
+    assert.match(html, /Cycles/);
+    assert.match(html, /Last update/);
+    // Legacy fallback (R5)
+    assert.match(html, /\(legacy\)/);
+  });
 });
