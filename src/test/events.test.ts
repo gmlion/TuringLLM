@@ -184,3 +184,44 @@ describe("events.ts structural emitters", () => {
     assert.equal(ev.reason, "done");
   });
 });
+
+import { emitLlmRequest, emitLlmResponse } from "../events.js";
+
+describe("events.ts LLM emitters", () => {
+  let dir: string;
+  let eventsFile: string;
+  beforeEach(() => {
+    dir = mkdtempSync(resolve(tmpdir(), "turing-events-llm-"));
+    initEvents(dir);
+    eventsFile = resolve(dir, "logs", "events.jsonl");
+  });
+  afterEach(() => { rmSync(dir, { recursive: true, force: true }); });
+
+  test("emitLlmRequest carries provider/model/full prompt inline (R11)", () => {
+    setCycleContext(1, "frames/f000-strategy");
+    const prompt = "## State\nempty\n\n[long prompt body]";
+    emitLlmRequest("api", "claude-haiku-4-5-20251001", prompt);
+    const ev = JSON.parse(readFileSync(eventsFile, "utf-8").trim());
+    assert.equal(ev.type, "llm_request");
+    assert.equal(ev.provider, "api");
+    assert.equal(ev.model, "claude-haiku-4-5-20251001");
+    assert.equal(ev.prompt, prompt);
+  });
+
+  test("emitLlmResponse carries output, duration_ms, optional usage (R12)", () => {
+    setCycleContext(1, "frames/f000-strategy");
+    emitLlmResponse("OK", 1500, { input_tokens: 200, output_tokens: 50 });
+    const ev = JSON.parse(readFileSync(eventsFile, "utf-8").trim());
+    assert.equal(ev.type, "llm_response");
+    assert.equal(ev.output, "OK");
+    assert.equal(ev.duration_ms, 1500);
+    assert.deepEqual(ev.usage, { input_tokens: 200, output_tokens: 50 });
+  });
+
+  test("emitLlmResponse without usage omits the field", () => {
+    setCycleContext(1, "frames/f000-strategy");
+    emitLlmResponse("OK", 1500);
+    const ev = JSON.parse(readFileSync(eventsFile, "utf-8").trim());
+    assert.equal("usage" in ev, false);
+  });
+});

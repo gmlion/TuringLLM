@@ -81,3 +81,13 @@ export function emitError(err: Error): void {
 export function emitHalt(reason: string): void {
   emit("halt", { reason });
 }
+
+export function emitLlmRequest(provider: string, model: string, prompt: string): void {
+  emit("llm_request", { provider, model, prompt });
+}
+
+export function emitLlmResponse(output: string, durationMs: number, usage?: object): void {
+  const fields: Record<string, unknown> = { output, duration_ms: durationMs };
+  if (usage !== undefined) fields.usage = usage;
+  emit("llm_response", fields);
+}
