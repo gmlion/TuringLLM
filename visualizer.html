@@ -802,15 +802,11 @@
     function showPayloadModal(label, body) {
       document.getElementById('payloadLabel').textContent = label;
       document.getElementById('payloadBody').textContent = body;
-      const modal = document.getElementById('payloadModal');
-      modal.dataset.open = 'true';
-      modal.style.display = 'flex';
+      document.getElementById('payloadModal').dataset.open = 'true';
     }
 
     function closePayload() {
-      const modal = document.getElementById('payloadModal');
-      modal.dataset.open = 'false';
-      modal.style.display = 'none';
+      document.getElementById('payloadModal').dataset.open = 'false';
     }
 
     function onPayloadBackdropClick(e) {
@@ -854,7 +850,7 @@
     bootstrap();
   </script>
 
-<div id="payloadModal" class="modal-backdrop" style="display:none;" onclick="onPayloadBackdropClick(event)">
+<div id="payloadModal" class="modal-backdrop" onclick="onPayloadBackdropClick(event)">
   <div class="modal" onclick="event.stopPropagation()">
     <div class="panel-header">
       <span>Payload</span>
