@@ -10,7 +10,7 @@ import { execSync } from "child_process";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
 import { createInterface } from "readline";
-import { initLog, log, getLogPath } from "./logger.js";
+import { initLog, log } from "./logger.js";
 import { ensureMachineRepo, ensureProjectRepo, commitCycle, getWorkspacePath } from "./git.js";
 import {
   initEvents, setCycleContext, clearCycleContext,

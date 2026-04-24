@@ -3,7 +3,7 @@ import { strict as assert } from "node:assert";
 import { mkdtempSync, readdirSync, rmSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { tmpdir } from "node:os";
-import { initLog, log, getLogPath } from "../logger.js";
+import { initLog, log, logRaw, getLogPath } from "../logger.js";
 
 describe("logger.ts (post-better-logging)", () => {
   let dir: string;
@@ -41,5 +41,11 @@ describe("logger.ts (post-better-logging)", () => {
     initLog(dir);
     log("hello world");
     assert.match(captured, /hello world/);
+  });
+
+  test("logRaw() is silent (payload now in events.jsonl, not stdout)", () => {
+    initLog(dir);
+    logRaw("large diagnostic detail");
+    assert.equal(captured, "");
   });
 });
