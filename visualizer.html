@@ -649,7 +649,9 @@
       const cycle = getSelectedCycle();
       const cycleNum = cycle ? cycle.num : null;
 
-      // R24: scope by current selection. Live = show everything (no cycle filter).
+      // R24: scope by current selection.
+      // Live cycle (-1) intentionally shows ALL events from the run for post-mortem
+      // inspection — not just the latest cycle. Click a historical cycle dot to narrow.
       let filtered = allEvents;
       if (cycleNum !== null && cycleNum !== -1) {
         filtered = filtered.filter(e => e.cycle === cycleNum);
@@ -691,21 +693,22 @@
     }
 
     function eventSummary(e) {
+      const esc = (s) => escapeHtml(String(s ?? ''));
       switch (e.type) {
-        case 'cycle_end': return `${e.state} (${e.duration_ms}ms)`;
-        case 'push': return `${e.target} → ${e.frameDir} depth ${e.depth}`;
-        case 'pop': return `${e.frameDir} → ${e.returnState} depth ${e.depth}`;
-        case 'splice': return `[${(e.splicedKeys||[]).join(', ')}] → ${e.targetFrame}`;
-        case 'tool_call': return `${e.tool} → ${e.payload_ref || '(no payload)'}`;
-        case 'tool_result': return `${e.tool} ${e.error ? '✗' : '✓'} → ${e.payload_ref || '(no payload)'}`;
-        case 'machine_git_commit': return `${e.hash} — ${e.subject}`;
-        case 'llm_request': return `${e.provider}/${e.model} (${(e.prompt||'').length}B)`;
+        case 'cycle_end': return `${esc(e.state)} (${e.duration_ms}ms)`;
+        case 'push': return `${esc(e.target)} → ${esc(e.frameDir)} depth ${e.depth}`;
+        case 'pop': return `${esc(e.frameDir)} → ${esc(e.returnState)} depth ${e.depth}`;
+        case 'splice': return `[${(e.splicedKeys||[]).map(esc).join(', ')}] → ${esc(e.targetFrame)}`;
+        case 'tool_call': return `${esc(e.tool)} → ${esc(e.payload_ref || '(no payload)')}`;
+        case 'tool_result': return `${esc(e.tool)} ${e.error ? '✗' : '✓'} → ${esc(e.payload_ref || '(no payload)')}`;
+        case 'machine_git_commit': return `${esc(e.hash)} — ${esc(e.subject)}`;
+        case 'llm_request': return `${esc(e.provider)}/${esc(e.model)} (${(e.prompt||'').length}B)`;
         case 'llm_response': return `(${(e.output||'').length}B, ${e.duration_ms}ms)`;
         case 'instructions_changed': return `${e.bytes_before}B → ${e.bytes_after}B`;
-        case 'retry': return `attempt ${e.attempt} — ${e.reason}`;
-        case 'error': return e.message;
-        case 'halt': return e.reason;
-        default: return JSON.stringify(e).slice(0, 100);
+        case 'retry': return `attempt ${e.attempt} — ${esc(e.reason)}`;
+        case 'error': return esc(e.message);
+        case 'halt': return esc(e.reason);
+        default: return esc(JSON.stringify(e).slice(0, 100));
       }
     }
 
