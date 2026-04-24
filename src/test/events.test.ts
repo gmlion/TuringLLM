@@ -74,3 +74,113 @@ describe("events.ts skeleton", () => {
     assert.equal(readFileSync(resolve(dir, "logs", ".events-seq"), "utf-8").trim(), "2");
   });
 });
+
+import {
+  emitCycleStart, emitCycleEnd, emitPush, emitPop, emitSplice,
+  emitMachineGitCommit, emitInstructionsChanged, emitRetry, emitError, emitHalt,
+} from "../events.js";
+
+describe("events.ts structural emitters", () => {
+  let dir: string;
+  let eventsFile: string;
+  beforeEach(() => {
+    dir = mkdtempSync(resolve(tmpdir(), "turing-events-struct-"));
+    initEvents(dir);
+    eventsFile = resolve(dir, "logs", "events.jsonl");
+  });
+  afterEach(() => { rmSync(dir, { recursive: true, force: true }); });
+
+  function lastEvent() {
+    const lines = readFileSync(eventsFile, "utf-8").trim().split("\n");
+    return JSON.parse(lines[lines.length - 1]);
+  }
+
+  test("emitCycleStart writes type=cycle_start (R6)", () => {
+    setCycleContext(3, "frames/f000-strategy");
+    emitCycleStart();
+    assert.equal(lastEvent().type, "cycle_start");
+  });
+
+  test("emitCycleEnd carries state and duration_ms (R7)", () => {
+    setCycleContext(3, "frames/f000-strategy");
+    emitCycleEnd("drafted", 1234);
+    const ev = lastEvent();
+    assert.equal(ev.type, "cycle_end");
+    assert.equal(ev.state, "drafted");
+    assert.equal(ev.duration_ms, 1234);
+  });
+
+  test("emitPush carries target/frameDir/depth (R8)", () => {
+    setCycleContext(2, "frames/f000-strategy");
+    emitPush("dynamics/verify.md", "frames/f001-verify", 1);
+    const ev = lastEvent();
+    assert.equal(ev.type, "push");
+    assert.equal(ev.target, "dynamics/verify.md");
+    assert.equal(ev.frameDir, "frames/f001-verify");
+    assert.equal(ev.depth, 1);
+  });
+
+  test("emitPop carries frameDir/returnState/depth (R9)", () => {
+    setCycleContext(5, "frames/f000-strategy");
+    emitPop("frames/f001-verify", "drafted", 0);
+    const ev = lastEvent();
+    assert.equal(ev.type, "pop");
+    assert.equal(ev.frameDir, "frames/f001-verify");
+    assert.equal(ev.returnState, "drafted");
+    assert.equal(ev.depth, 0);
+  });
+
+  test("emitSplice carries splicedKeys + targetFrame (R10)", () => {
+    setCycleContext(5, "frames/f000-strategy");
+    emitSplice("frames/f000-strategy", ["revised", "verdict"]);
+    const ev = lastEvent();
+    assert.equal(ev.type, "splice");
+    assert.deepEqual(ev.splicedKeys, ["revised", "verdict"]);
+    assert.equal(ev.targetFrame, "frames/f000-strategy");
+  });
+
+  test("emitMachineGitCommit carries hash + subject (R13)", () => {
+    setCycleContext(3, "frames/f000-strategy");
+    emitMachineGitCommit("a3f1b2c", "cycle 3: drafted");
+    const ev = lastEvent();
+    assert.equal(ev.type, "machine_git_commit");
+    assert.equal(ev.hash, "a3f1b2c");
+    assert.equal(ev.subject, "cycle 3: drafted");
+  });
+
+  test("emitInstructionsChanged carries bytes_before/after (R14)", () => {
+    setCycleContext(4, "frames/f000-strategy");
+    emitInstructionsChanged(2400, 2700);
+    const ev = lastEvent();
+    assert.equal(ev.type, "instructions_changed");
+    assert.equal(ev.bytes_before, 2400);
+    assert.equal(ev.bytes_after, 2700);
+  });
+
+  test("emitRetry carries attempt + reason (R15)", () => {
+    setCycleContext(6, "frames/f000-strategy");
+    emitRetry(2, "no state change");
+    const ev = lastEvent();
+    assert.equal(ev.type, "retry");
+    assert.equal(ev.attempt, 2);
+    assert.equal(ev.reason, "no state change");
+  });
+
+  test("emitError carries message + stack (R16)", () => {
+    setCycleContext(7, "frames/f000-strategy");
+    const err = new Error("boom");
+    emitError(err);
+    const ev = lastEvent();
+    assert.equal(ev.type, "error");
+    assert.equal(ev.message, "boom");
+    assert.match(ev.stack, /boom/);
+  });
+
+  test("emitHalt carries reason (R17)", () => {
+    clearCycleContext();
+    emitHalt("done");
+    const ev = lastEvent();
+    assert.equal(ev.type, "halt");
+    assert.equal(ev.reason, "done");
+  });
+});

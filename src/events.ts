@@ -50,3 +50,34 @@ function emit(type: string, fields: Record<string, unknown>): void {
 
 // Test-only export — production code uses the typed helpers added in T2/T3/T4.
 export const _emitForTest = emit;
+
+export function emitCycleStart(): void {
+  emit("cycle_start", {});
+}
+export function emitCycleEnd(state: string, durationMs: number): void {
+  emit("cycle_end", { state, duration_ms: durationMs });
+}
+export function emitPush(target: string, frameDir: string, depth: number): void {
+  emit("push", { target, frameDir, depth });
+}
+export function emitPop(frameDir: string, returnState: string, depth: number): void {
+  emit("pop", { frameDir, returnState, depth });
+}
+export function emitSplice(targetFrame: string, splicedKeys: string[]): void {
+  emit("splice", { targetFrame, splicedKeys });
+}
+export function emitMachineGitCommit(hash: string, subject: string): void {
+  emit("machine_git_commit", { hash, subject });
+}
+export function emitInstructionsChanged(bytesBefore: number, bytesAfter: number): void {
+  emit("instructions_changed", { bytes_before: bytesBefore, bytes_after: bytesAfter });
+}
+export function emitRetry(attempt: number, reason: string): void {
+  emit("retry", { attempt, reason });
+}
+export function emitError(err: Error): void {
+  emit("error", { message: err.message, stack: err.stack ?? "" });
+}
+export function emitHalt(reason: string): void {
+  emit("halt", { reason });
+}
