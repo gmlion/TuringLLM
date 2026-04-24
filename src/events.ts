@@ -91,3 +91,39 @@ export function emitLlmResponse(output: string, durationMs: number, usage?: obje
   if (usage !== undefined) fields.usage = usage;
   emit("llm_response", fields);
 }
+
+function sanitizeTool(name: string): string {
+  return name.replace(/[^a-z0-9_]/gi, "_").toLowerCase();
+}
+
+function writePayload(seq: number, tool: string, kind: "input" | "output", body: string): { ref: string | null; err?: string } {
+  if (!logsDir) throw new Error("events.ts: initEvents not called");
+  const safeName = sanitizeTool(tool);
+  const refRel = `payloads/${seq}-${safeName}-${kind}.txt`;
+  const abs = resolve(logsDir, refRel);
+  try {
+    mkdirSync(resolve(logsDir, "payloads"), { recursive: true });
+    writeFileSync(abs, body, "utf-8");
+    return { ref: refRel };
+  } catch (e) {
+    return { ref: null, err: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+export function emitToolCall(tool: string, input: string): string | null {
+  const seq = nextSeq;
+  const w = writePayload(seq, tool, "input", input);
+  const fields: Record<string, unknown> = { tool, payload_ref: w.ref };
+  if (w.err) fields.payload_error = w.err;
+  emit("tool_call", fields);
+  return w.ref;
+}
+
+export function emitToolResult(tool: string, output: string, isError: boolean): string | null {
+  const seq = nextSeq;
+  const w = writePayload(seq, tool, "output", output);
+  const fields: Record<string, unknown> = { tool, payload_ref: w.ref, error: isError };
+  if (w.err) fields.payload_error = w.err;
+  emit("tool_result", fields);
+  return w.ref;
+}

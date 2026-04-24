@@ -225,3 +225,65 @@ describe("events.ts LLM emitters", () => {
     assert.equal("usage" in ev, false);
   });
 });
+
+import { emitToolCall, emitToolResult } from "../events.js";
+
+describe("events.ts tool emitters with payload externalization", () => {
+  let dir: string;
+  let eventsFile: string;
+  let payloadsDir: string;
+  beforeEach(() => {
+    dir = mkdtempSync(resolve(tmpdir(), "turing-events-tool-"));
+    initEvents(dir);
+    eventsFile = resolve(dir, "logs", "events.jsonl");
+    payloadsDir = resolve(dir, "logs", "payloads");
+    setCycleContext(4, "frames/f000-strategy");
+  });
+  afterEach(() => { rmSync(dir, { recursive: true, force: true }); });
+
+  test("emitToolCall externalizes input to payloads/<seq>-<tool>-input.txt (R18, R20)", () => {
+    const ref = emitToolCall("bash", "ls -la");
+    const ev = JSON.parse(readFileSync(eventsFile, "utf-8").trim());
+    assert.equal(ev.type, "tool_call");
+    assert.equal(ev.tool, "bash");
+    assert.equal(ev.payload_ref, ref);
+    assert.equal(ev.payload_ref, `payloads/${ev.seq}-bash-input.txt`);
+    const payloadFile = resolve(dir, "logs", ev.payload_ref);
+    assert.equal(readFileSync(payloadFile, "utf-8"), "ls -la");
+  });
+
+  test("emitToolResult externalizes output and carries error flag (R19, R20)", () => {
+    const ref = emitToolResult("bash", "exit code 1\nstderr: boom", true);
+    const ev = JSON.parse(readFileSync(eventsFile, "utf-8").trim());
+    assert.equal(ev.type, "tool_result");
+    assert.equal(ev.tool, "bash");
+    assert.equal(ev.error, true);
+    assert.equal(ev.payload_ref, ref);
+    assert.equal(ev.payload_ref, `payloads/${ev.seq}-bash-output.txt`);
+    const payloadFile = resolve(dir, "logs", ev.payload_ref);
+    assert.equal(readFileSync(payloadFile, "utf-8"), "exit code 1\nstderr: boom");
+  });
+
+  test("payload write failure → event still emitted with payload_ref:null + payload_error (R21)", () => {
+    const targetTool = "writefile";
+    mkdirSync(payloadsDir, { recursive: true });
+    // Force the writePayload failure: create a directory at the path the file would take.
+    // Seq is currently 1 (first emit in this fresh dir), tool "writefile", kind "input".
+    mkdirSync(resolve(payloadsDir, "1-writefile-input.txt"));
+    const ref = emitToolCall(targetTool, "x");
+    const ev = JSON.parse(readFileSync(eventsFile, "utf-8").trim());
+    assert.equal(ev.type, "tool_call");
+    assert.equal(ev.tool, targetTool);
+    assert.equal(ev.payload_ref, null);
+    assert.match(ev.payload_error, /EISDIR|directory|illegal|exists/i);
+    assert.equal(ref, null);
+  });
+
+  test("unknown event type round-trips verbatim (R28)", () => {
+    _emitForTest("future_event_type", { custom_field: 42 });
+    const lines = readFileSync(eventsFile, "utf-8").trim().split("\n");
+    const last = JSON.parse(lines[lines.length - 1]);
+    assert.equal(last.type, "future_event_type");
+    assert.equal(last.custom_field, 42);
+  });
+});
