@@ -3,7 +3,12 @@
     "allow": [
       "Bash(npx tsc *)",
       "Read(//c/Users/gianm/.claude/plugins/local/plugins/kiro-flow/**)",
-      "Read(//c/Users/gianm/.claude/plugins/local/plugins/kiro-flow/.claude-plugin/**)"
+      "Read(//c/Users/gianm/.claude/plugins/local/plugins/kiro-flow/.claude-plugin/**)",
+      "Bash(git push *)",
+      "Bash(curl -s \"http://localhost:8090/instances/p2b-d/history/0005-54c63ff/frames/f001-verify/scoped/\")",
+      "Bash(curl -s \"http://localhost:8090/instances/p2b-d/history/0005-54c63ff/frames/f000-strategy/MEMORY.md\")",
+      "Bash(curl -s \"http://localhost:8090/visualizer.html\")",
+      "Bash(xargs grep *)"
     ]
   },
   "enabledPlugins": {
