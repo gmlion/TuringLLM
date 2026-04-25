@@ -45,11 +45,12 @@ Acceptance per leaf:
 
 R16, R32, and R34 therefore require manual confirmation against the
 above commands before this spec can be considered live-validated. The
-scripted integration tests (`src/test/phase-3-*-integration.test.ts`,
-`src/test/phase-4-*.test.ts`) and the four-way evaluate-identity test
-(`src/test/phase-4-evaluate-identity.test.ts`) cover the structural
-guarantees on every `npm test` run; what the live demos add is end-to-
-end LLM-driven traversal of the state machine without scripting.
+scripted integration tests (`src/test/phase-3-{plan-execute,orchestrator-workers,deep-research}.test.ts`,
+`src/test/phase-4-{metagpt,chatdev,shell-features}.test.ts`) and the
+four-way evaluate-identity test (`src/test/phase-dynamics-identity.test.ts`)
+cover the structural guarantees on every `npm test` run; what the live
+demos add is end-to-end LLM-driven traversal of the state machine
+without scripting.
 
 ## Plan dynamics-table sync (R50) — drifts found
 
@@ -117,13 +118,13 @@ required:
 
 The collapse rationale ("four named patterns, one implementation")
 held up cleanly across the three leaves. The byte-equal invariant is
-asserted by `src/test/phase-3-byte-equality.test.ts` and held without
-any ad-hoc fixup once T6 lifted the canonical files into
+asserted by `src/test/phase-3-dynamics-identity.test.ts` and held
+without any ad-hoc fixup once T6 lifted the canonical files into
 `a-plan-execute/`. No accidental drift between the three trees during
 this spec.
 
 The `b-orchestrator-workers` demo PROGRAM ships **five inputs**
-(`workspace/notes/note-{1..5}.md`), and the strategy's planner is
+(`workspace/inputs/input-{1..5}.md`), and the strategy's planner is
 expected to emit exactly five `S<N>` steps — one per note. The
 exactly-5-steps invariant is checked structurally by
 `src/test/phase-3-orchestrator-workers.test.ts` via the synthesised
@@ -141,11 +142,12 @@ frame, captured in `history/`) requires the manual run.
 
 R22 mandates that `b-chatdev/PROGRAM.md` is a byte-equal copy of
 `a-metagpt/PROGRAM.md` so that the two outputs are directly
-comparable. The byte-equal invariant for the shared PROGRAM and for
-the four-way `evaluate.md` is enforced by
-`src/test/phase-4-evaluate-identity.test.ts` and
-`src/test/phase-4-program-identity.test.ts`. No drift observed during
-T8 / T9 / T10.
+comparable. The PROGRAM byte-equal invariant is enforced by
+`src/test/phase-4-chatdev.test.ts` (the `cmp` against the a-metagpt
+copy). The four-way `evaluate.md` byte-equal invariant
+(b-evaluator-optimizer / c-reflexion / a-metagpt / b-chatdev) is
+enforced by `src/test/phase-dynamics-identity.test.ts`. No drift
+observed during T8 / T9 / T10.
 
 ## Phase 4 — dialogue turn cap
 

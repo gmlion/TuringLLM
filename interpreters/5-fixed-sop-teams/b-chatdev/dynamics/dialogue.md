@@ -1,6 +1,6 @@
 # Dynamic: Dialogue
 
-Consumes: `{{participants}}` (comma-separated role names matching files under `../roles/`); `{{topic}}`; `{{input}}` (optional — prior-phase output); `{{acceptance}}` (optional — `true` or `false`; when `true`, push `evaluate.md` before returning).
+Consumes: `{{participants}}` (comma-separated role names matching files under `../../roles/`); `{{topic}}`; `{{input}}` (optional — prior-phase output); `{{acceptance}}` (optional — `true` or `false`; when `true`, push `evaluate.md` before returning).
 Produces: `## Return` with key `dialogue_output`.
 State flow: `empty` → `turning` → (`decide_accept` → possibly `awaiting_verdict_completed`) → `done`.
 Scoped files: `./scoped/transcript.md` (surgical `echo >>` append only), `./scoped/turns.md` (turn counter).
@@ -13,7 +13,7 @@ Scoped files: `./scoped/transcript.md` (surgical `echo >>` append only), `./scop
     Topic:        {{topic}}
     Prior input:  {{input}}
 
-For each participant, `bash cat ../roles/<name>.md` to load their persona. Pick `participants[0]` as the first speaker. Produce one short turn (2–5 sentences) speaking *as* that role on the topic, incorporating the prior input. Append it surgically:
+For each participant, `bash cat ../../roles/<name>.md` to load their persona. Pick `participants[0]` as the first speaker. Produce one short turn (2–5 sentences) speaking *as* that role on the topic, incorporating the prior input. Append it surgically:
 
     echo "### Turn 1 — <speaker>" >> ./scoped/transcript.md
     echo "<speaker's turn body>"   >> ./scoped/transcript.md

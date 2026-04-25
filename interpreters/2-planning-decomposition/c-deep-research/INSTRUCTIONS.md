@@ -16,8 +16,10 @@ This interpreter implements the Plan-and-Execute pattern (patterns.md Group 2), 
     ## Push-Args
     goal: |
       <verbatim PROGRAM.md body, every line indented two spaces>
+    results_so_far: |
+      (no prior results)
 
-Do not change state — the shell will set it to "empty" when it pushes the dynamic. After the push returns, this frame's state becomes "planning_completed" and `## Plan` is spliced into MEMORY.
+Both `goal` and `results_so_far` are required by `dynamics/plan.md`'s `{{...}}` placeholders; the literal `(no prior results)` value is the convention for "first plan, nothing executed yet". Do not change state — the shell will set it to "empty" when it pushes the dynamic. After the push returns, this frame's state becomes "planning_completed" and `## Plan` is spliced into MEMORY.
 
 ## Instruction: Absorb plan
 **Condition:** MEMORY state is "planning_completed" and `## Plan` is present

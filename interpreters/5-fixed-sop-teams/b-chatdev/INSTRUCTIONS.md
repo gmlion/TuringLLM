@@ -18,6 +18,8 @@ Scoped files:
       ceo,cto
     topic: |
       <verbatim PROGRAM.md body, every line indented two spaces>
+    input: |
+      (none — first phase)
     acceptance: |
       false
 
@@ -35,6 +37,8 @@ Do not change state.
     topic: |
       Implement the following design:
       <verbatim ## Design Doc body, indented two spaces under this line>
+    input: |
+      <verbatim ## Design Doc body, indented two spaces>
     acceptance: |
       true
 
@@ -52,6 +56,8 @@ Do not change state.
     topic: |
       Write and run tests for the following code:
       <verbatim ## Code body, indented two spaces>
+    input: |
+      <verbatim ## Code body, indented two spaces>
     acceptance: |
       true
 
@@ -68,6 +74,8 @@ Do not change state.
       writer,reviewer
     topic: |
       Write user-facing documentation for the following code:
+      <verbatim ## Code body, indented two spaces>
+    input: |
       <verbatim ## Code body, indented two spaces>
     acceptance: |
       true

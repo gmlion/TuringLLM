@@ -10,7 +10,7 @@ if [ -z "${1:-}" ]; then
   echo ""
   echo "Examples:"
   echo "  ./new-instance.sh my-project"
-  echo "  ./new-instance.sh my-game interpreters/game-team"
+  echo "  ./new-instance.sh my-a interpreters/2-planning-decomposition/a-plan-execute"
   exit 1
 fi
 
@@ -48,6 +48,14 @@ if [ -n "$INTERPRETER" ]; then
   # Dynamics — shared across all frames, at instance root.
   if [ -d "$INTERP_DIR/dynamics" ]; then
     cp -r "$INTERP_DIR/dynamics" "$DIR/dynamics"
+  fi
+
+  # Roles (or other interpreter-shared subdirectories the dynamics reference) —
+  # copied to the instance root so dynamics can `cat ../../roles/<name>.md` from
+  # any frame. Used by b-chatdev for its CEO/CTO/coder/reviewer/tester/writer
+  # personas; harmless when absent.
+  if [ -d "$INTERP_DIR/roles" ]; then
+    cp -r "$INTERP_DIR/roles" "$DIR/roles"
   fi
 
   # PROGRAM.md — instance root. Use interpreter's demo if present; else template.
