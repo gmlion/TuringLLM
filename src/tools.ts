@@ -81,6 +81,36 @@ export function getTools(): Anthropic.Tool[] {
         required: ["args"],
       },
     },
+    {
+      name: "web_search",
+      description:
+        "Search the web for <query>. Returns a JSON-encoded list of up to 10 results {title, url, snippet}. Non-deterministic across runs. On failure (backend timeout, empty result set, unknown backend) the JSON contains an empty results array plus a 'note' describing the condition.",
+      input_schema: {
+        type: "object" as const,
+        properties: {
+          query: {
+            type: "string",
+            description: "Search query string",
+          },
+        },
+        required: ["query"],
+      },
+    },
+    {
+      name: "web_fetch",
+      description:
+        "Fetch <url> and return its visible text (HTML stripped to plain text). Non-HTML content types (e.g. PDF, images) return a diagnostic rather than binary content.",
+      input_schema: {
+        type: "object" as const,
+        properties: {
+          url: {
+            type: "string",
+            description: "Absolute HTTP(S) URL to fetch",
+          },
+        },
+        required: ["url"],
+      },
+    },
   ];
 }
 
@@ -164,6 +194,16 @@ export async function executeTool(
     case "update_instructions": {
       writeFileSync(instructionsPath, String(input.content ?? ""), "utf-8");
       return { output: "OK", error: false };
+    }
+    case "web_search": {
+      const { webSearch } = await import("./web-tools.js");
+      const out = await webSearch(String(input.query ?? ""));
+      return { output: JSON.stringify(out), error: false };
+    }
+    case "web_fetch": {
+      const { webFetch } = await import("./web-tools.js");
+      const out = await webFetch(String(input.url ?? ""));
+      return { output: JSON.stringify(out), error: false };
     }
     default:
       return { output: `Unknown tool: ${name}`, error: true };

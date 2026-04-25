@@ -94,3 +94,30 @@ describe("web_search (custom, non-CC)", () => {
     assert.match(out.note ?? "", /unknown backend|nonesuch/i);
   });
 });
+
+// appended to src/test/web-tools-search.test.ts
+import { getTools, executeTool } from "../tools.js";
+
+describe("tools.ts exposes web_search + web_fetch", () => {
+  test("getTools() lists both web_search and web_fetch", () => {
+    const names = getTools().map((t) => t.name);
+    assert.ok(names.includes("web_search"), "web_search missing from getTools()");
+    assert.ok(names.includes("web_fetch"),  "web_fetch missing from getTools()");
+  });
+
+  test("executeTool('web_search', …) returns JSON string", async () => {
+    const origFetch = globalThis.fetch;
+    globalThis.fetch = (async () => new Response(
+      `<html><body><div class="result"><h2 class="result__title"><a href="https://x">T</a></h2><a class="result__url" href="https://x">x</a><div class="result__snippet">s</div></div></body></html>`,
+      { status: 200, headers: { "content-type": "text/html" } },
+    )) as unknown as typeof globalThis.fetch;
+    try {
+      const out = await executeTool("web_search", { query: "q" }, "/tmp/dummy", undefined, undefined);
+      assert.equal(out.error, false);
+      const parsed = JSON.parse(out.output);
+      assert.ok(Array.isArray(parsed.results));
+    } finally {
+      globalThis.fetch = origFetch;
+    }
+  });
+});

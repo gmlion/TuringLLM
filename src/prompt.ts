@@ -105,6 +105,8 @@ const API_TOOLS_SECTION = `
 - **write_file**: Write content to a file. Use for authoring files (HTML, CSS, scripts, config). Never use bash heredocs for this.
 - **update_instructions**: Rewrite INSTRUCTIONS.md. Use whenever the instruction set needs to change.
 - **git**: Run a git command (branch, diff, log, checkout, etc.). The machine auto-commits after each cycle — do NOT commit yourself. Use git for branching to explore alternatives, diffing to inspect changes, and checking out previous states.
+- **web_search**: Search the web for <query>. Returns up to 10 results {title, url, snippet} as JSON. Use for grounding research-style questions in current web sources.
+- **web_fetch**: Fetch <url> and return its visible text (HTML stripped to plain text). Non-HTML content returns a diagnostic.
 To halt: set MEMORY state to "done". The shell will stop the machine.
 
 Call multiple tools together in one response.
@@ -167,7 +169,7 @@ Write MEMORY.md via bash to capture command output:
   MEMEOF
   echo "$RESULT (exit code: $EXIT_CODE)" >> MEMORY.md
 
-Include ## Matched Instruction (brief description of which instruction matched, or "none"). Write project files via write_file. Rewrite INSTRUCTIONS.md via update_instructions. Run git commands via bash in workspace/. To halt: set MEMORY state to "done".
+Include ## Matched Instruction (brief description of which instruction matched, or "none"). Write project files via write_file. Rewrite INSTRUCTIONS.md via update_instructions. Run git commands via bash in workspace/. To halt: set MEMORY state to "done". For research tasks, use \`web_search\` to find pages and \`web_fetch\` to read a specific URL. Both return diagnostics on failure rather than throwing.
 
 # Mutating other files
 

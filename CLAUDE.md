@@ -49,6 +49,23 @@ After TypeScript changes, always `npm run build` before running instances. A `no
 - `src/server.ts` — Static file server for the visualizer
 - `src/test/` — `node:test` suite for memory, call-stack, prompt, and stack integration scenarios
 
+## Web tools
+
+Two tools in `src/tools.ts` give LLMs research capability under
+non-Claude-Code providers:
+
+- `web_search` — query → JSON of up to 10 `{title, url, snippet}`
+  results. Backend chosen via `WEB_SEARCH_BACKEND` (default
+  `duckduckgo`). Failures return `{ results: [], note: "..." }`.
+- `web_fetch` — URL → plain text extracted via `cheerio`. Non-HTML
+  or non-2xx responses return `{ url, error: "..." }`.
+
+Per-call timeout is `WEB_TIMEOUT` seconds (default 15). The
+custom implementation lives in `src/web-tools.ts`; the first
+backend under `src/web-backends/duckduckgo.ts`. Under the Claude
+Code provider, the LLM sees Claude Code's native `WebSearch` /
+`WebFetch` instead (see "Claude Code provider" below).
+
 ## Two Git Repos Per Instance
 
 - **Machine git** (instance root) — Hardwired. Each instance gets its own `.git` repo (never inherits from a parent project repo). Auto-commits all files after each cycle. Commit message: `cycle N: <state>`. History dirs include the short hash: `history/0042-a3f1b2c/`. Tracks MEMORY, INSTRUCTIONS, and workspace changes.
@@ -88,6 +105,8 @@ All providers except Claude Code use the same custom tools (bash, write_file, gi
 - `BASH_TIMEOUT` — timeout in seconds for bash tool commands (default: 300 / 5 minutes). Set to 0 to disable.
 - `TELEGRAM_BOT_TOKEN` — Telegram bot token (from @BotFather). When set with `TELEGRAM_CHAT_ID`, user questions are sent via Telegram instead of stdin.
 - `TELEGRAM_CHAT_ID` — Telegram chat ID for the user. Run `./setup-telegram.sh <TOKEN>` to detect automatically.
+- `WEB_SEARCH_BACKEND` — Backend for `web_search` (default `duckduckgo`). Affects the custom implementation only — Claude Code's native WebSearch is unaffected.
+- `WEB_TIMEOUT` — Per-call timeout in seconds for `web_search` and `web_fetch` (default `15`). `0` aborts immediately (test use only).
 
 ## Condition Matching
 
