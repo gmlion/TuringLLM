@@ -1,7 +1,13 @@
 import { test, describe } from "node:test";
 import { strict as assert } from "node:assert";
+import { existsSync as existsSyncGT } from "fs";
+import { resolve as resolveGT, dirname as dirnameGT } from "path";
+import { fileURLToPath as fileURLToPathGT } from "url";
 import { applyPop, applyPush, type CallStack } from "../call-stack.js";
 import { parseState, setState } from "../memory.js";
+
+const __filenameGT = fileURLToPathGT(import.meta.url);
+const __dirnameGT = dirnameGT(__filenameGT);
 
 /**
  * In-memory frame store simulating on-disk frame directories.
@@ -386,4 +392,13 @@ describe("applyPop", () => {
     assert.equal(popped.callStack.stack.length, 2);
     assert.match(popped.callerMemoryAfter, /## State\nframe2state_completed/);
   });
+});
+
+// ---------------------------------------------------------------------------
+// Phase-4 retirement: game-team directory must be deleted (R35)
+// ---------------------------------------------------------------------------
+
+test("game-team directory is removed (R35 — Phase-4 retirement)", () => {
+  const p = resolveGT(__dirnameGT, "../../interpreters/game-team");
+  assert.equal(existsSyncGT(p), false, "interpreters/game-team should be deleted in Phase-4 retirement");
 });

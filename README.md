@@ -83,7 +83,7 @@ npm run build
 
 # Or with a specific interpreter
 ./new-instance.sh my-a interpreters/1-iterative-refinement/a-self-refine
-./new-instance.sh my-game interpreters/game-team
+./new-instance.sh foo interpreters/2-planning-decomposition/a-plan-execute
 
 # Edit the program
 vim instances/my-project/PROGRAM.md
@@ -122,10 +122,21 @@ indicating a recommended exploration order, not strict prerequisites.
     explicit `## Criterion`.
   - `c-reflexion` — `b` plus distilled lessons accumulated in
     `## Lessons` across retries.
-- **`interpreters/game-team`** — Game-dev team simulation with six
-  roles (lead, architect, designer, developer, 2D artist, UI/UX).
-  Scheduled for deletion in Phase 4 of the agent-workflows roadmap;
-  exempt from the directory layout convention above.
+- **`interpreters/2-planning-decomposition/`** — Plan-and-Execute family
+  ([patterns.md Group 2](docs/agent-workflows/patterns.md)). Three
+  leaves with byte-equal `INSTRUCTIONS.md` and `dynamics/` differing
+  only in their demo `PROGRAM.md`:
+  - `a-plan-execute` — d1: TypeScript project setup.
+  - `b-orchestrator-workers` — d2: summarise N technical notes.
+  - `c-deep-research` — d3: open research prompt; exercises stack
+    depth 2 via recursive `plan.md` push.
+- **`interpreters/5-fixed-sop-teams/`** — Fixed-SOP teams
+  ([patterns.md Group 5](docs/agent-workflows/patterns.md)).
+  - `a-metagpt` — document hand-off SOP (PM → Architect → Engineer →
+    QA).
+  - `b-chatdev` — phase-dialogue SOP (design → coding → testing →
+    documenting). Shares its demo `PROGRAM.md` with `a-metagpt` so
+    outputs are directly comparable.
 
 The agent-workflows roadmap
 ([`docs/agent-workflows/requirements.md`](docs/agent-workflows/requirements.md))

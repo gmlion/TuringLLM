@@ -11,7 +11,7 @@ An LLM-powered universal Turing machine. A cycle loop invokes an LLM once per cy
 ```bash
 npm run build          # tsc → dist/
 ./new-instance.sh foo                          # default interpreter
-./new-instance.sh foo interpreters/game-team   # custom interpreter
+./new-instance.sh foo interpreters/2-planning-decomposition/a-plan-execute   # custom interpreter
 # edit instances/foo/PROGRAM.md
 # configure instances/foo/.env (provider, model, keys)
 instances/foo/run.sh                           # run
@@ -299,11 +299,15 @@ Interpreters live in `interpreters/<name>/`. Each has an `INSTRUCTIONS.md` and o
 ### Existing interpreters
 
 - **default** (no argument to new-instance.sh) — Step-by-step executor. Reads PROGRAM.md steps, decomposes each into sub-instructions with verification.
-- **`interpreters/game-team`** — Game dev team simulation with fuzzy natural-language conditions. Six roles (team lead, architect, game designer, developer, 2D artist, UI/UX). Scheduled for deletion in Phase 4 of the agent-workflows plan; exempt from the Phase-1 directory layout convention.
 - **`interpreters/1-iterative-refinement/a-self-refine`** — Self-Refine (patterns.md Group 1). Single role drafts, critiques its own output via `self-critique.md`, iterates until accepted. Uses `./scoped/draft.md` for the current draft; returns `## Refined` via `## Return`.
 - **`interpreters/1-iterative-refinement/b-evaluator-optimizer`** — Evaluator–Optimizer (patterns.md Group 1). Generator produces attempts; external evaluator (`evaluate.md`) judges against an explicit `## Criterion` and returns pass/fail with feedback. `./scoped/attempt.md` and `./scoped/criterion.md` live in the strategy frame's scoped dir (the dynamic is a one-shot evaluator with no scoped state of its own); returns `## Verdict` + `## Feedback` via `## Return`.
 - **`interpreters/1-iterative-refinement/c-reflexion`** — Reflexion (patterns.md Group 1). Evaluator–Optimizer plus a `reflect.md` step that distils each failed attempt into a verbal lesson accumulated via surgical appends to `./scoped/lessons.md`. `./scoped/attempt.md`, `./scoped/criterion.md`, and `./scoped/lessons.md` live in the strategy frame's scoped dir. Returns `## Verdict` + `## Feedback` + `## Lesson` via `## Return`.
 - **`interpreters/1-iterative-refinement/d-cove`** — Chain-of-Verification (patterns.md Group 1, nested). Drafter pushes `verify.md`; verifier decomposes the draft into atomic claims and pushes `answer-independently.md` per claim (stack depth 2). Uses `./scoped/draft.md`; verifier uses its own `./scoped/verifications.md` with surgical `sed -i` updates; returns `## Revised` via `## Return`.
+- **`interpreters/2-planning-decomposition/a-plan-execute`** — Plan-and-Execute (patterns.md Group 2). Demo d1: minimal TypeScript Node.js project setup. INSTRUCTIONS + dynamics byte-equal across the three leaves in this group.
+- **`interpreters/2-planning-decomposition/b-orchestrator-workers`** — Orchestrator–Workers (Anthropic, Building Effective Agents). Demo d2: summarise 5 technical notes.
+- **`interpreters/2-planning-decomposition/c-deep-research`** — Deep Research (product pattern; Self-Ask ancestry). Demo d3: Raft/Paxos/Multi-Paxos comparison; exercises stack depth 2 via recursive plan.md push.
+- **`interpreters/5-fixed-sop-teams/a-metagpt`** — MetaGPT (Hong et al., ICLR 2024). Document hand-off SOP (PM → Architect → Engineer → QA). Shared PROGRAM.md with b-chatdev for comparison.
+- **`interpreters/5-fixed-sop-teams/b-chatdev`** — ChatDev (Qian et al., 2023). Phase-dialogue SOP (design → coding → testing → documenting). Shared PROGRAM.md with a-metagpt.
 
 ### Creating a new interpreter
 

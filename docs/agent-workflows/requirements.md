@@ -19,8 +19,11 @@ reuse by later groups.
 2. **Group-first, phase-second.** Build an entire conceptual group before
    moving to the next one. Within a group, start with the variant that needs
    the fewest new dynamics.
-3. **Retire `interpreters/game-team` deliberately** in Phase 4. That phase
-   exists for this purpose.
+3. **Phase 4 retired `interpreters/game-team`** per spec
+   `docs/specs/2026-04-24-implement-phase-3-and-4/`. The directory has
+   been deleted; its shell-level features (fuzzy NL conditions,
+   non-blocking `## Pending Questions`, strategy-level `## Push`) are
+   exercised by Phase 4's MetaGPT and ChatDev leaves.
 4. **Every interpreter ships with a demo `PROGRAM.md`** so a user can run it
    via `./new-instance.sh foo interpreters/<name>`.
 5. **No speculative dynamics.** If something would only be used by one
@@ -31,8 +34,7 @@ reuse by later groups.
    and known behaviour. Each conceptual group directory (e.g.
    `interpreters/1-iterative-refinement/`) **also ships a group-level
    `README.md`** framing the family, listing variants with a short
-   comparison table, and pointing at shared dynamics. `interpreters/game-team/`
-   is exempt because it is scheduled for deletion in Phase 4.
+   comparison table, and pointing at shared dynamics.
    **When a single implementation subsumes two or more named patterns
    from `patterns.md` (a "collapsed pattern" — e.g. Phase 3a's strategy
    covers Plan-and-Execute, Orchestrator–Workers, Deep Research, and
@@ -51,8 +53,7 @@ reuse by later groups.
    preface is intentionally not represented in the filesystem) and
    `<exploration-letter>` is the recommended exploration order within the
    group (`a`, `b`, `c`, …). Implementation order sorts lexically and the
-   taxonomy is visible in the filesystem. `interpreters/game-team/` is
-   again exempt.
+   taxonomy is visible in the filesystem.
 
 ## Cross-cutting building blocks
 
@@ -131,7 +132,7 @@ system prompt.
 |---|---|---|
 | 1 — Iterative refinement | Phase 1, Phase 2 | — |
 | 2 — Planning & decomposition | Phase 3 (plan-execute baseline with 3 demos + optional ReWOO variant; parallel Orchestrator–Workers deferred) | `evaluate.md` from Phase 1 |
-| 5 — Fixed-SOP teams | Phase 4 (game-team retirement) | `evaluate.md` |
+| 5 — Fixed-SOP teams | Phase 4 (game-team retired; fixed-SOP teams delivered) | `evaluate.md` |
 | 4 — Peer collaboration | Phase 5 (Debate), Phase 5b (MoA) | `reflect.md` from Phase 1 |
 | 3 — Search | Phase 6 (ToT, optional GoT variant) | `evaluate.md` |
 | 3 + 1 + 7 crossover | Phase 6b (LATS) | Phases 1c, 6, MCTS harness from Phase 7 |
@@ -256,11 +257,16 @@ Spec: `docs/specs/2026-04-23-agent-workflows-phase-2b-push-returns/`.
 
 ---
 
-## Phase 3 — Planning & decomposition (patterns.md Group 2)
+## Phase 3 — Planning & decomposition (patterns.md Group 2) — **shipped**
 
-One baseline interpreter with three demos, plus an optional ReWOO variant.
-Parallel Orchestrator–Workers is deferred until the shell supports parallel
-frames (see Open questions).
+Shipped per spec `docs/specs/2026-04-24-implement-phase-3-and-4/` as
+three sibling leaves under `interpreters/2-planning-decomposition/`
+sharing byte-equal `INSTRUCTIONS.md` and `dynamics/`, distinguished
+only by their `PROGRAM.md` demo (the canonical framings that the
+original plan called "demos d1/d2/d3" became three separate leaves
+because each demo wants its own runnable instance directory).
+Parallel Orchestrator–Workers and the ReWOO variant remain deferred
+(see Open questions).
 
 **Why one interpreter and not four.** Plan-and-Execute, Orchestrator–
 Workers, Deep Research, and XAgent collapse to the same state machine
@@ -275,10 +281,11 @@ cycle. Four named patterns, one implementation — violating "no speculative
 dynamics" would mean shipping four interpreters that do the same thing.
 The canonical framings live as distinct **demos** on the same strategy.
 
-### 3a. `interpreters/2-planning-decomposition/a-plan-execute/`
+### 3a. `interpreters/2-planning-decomposition/a-plan-execute/`, `.../b-orchestrator-workers/`, `.../c-deep-research/`
 
 Baseline decomposition: plan, execute steps sequentially, optionally
-synthesise.
+synthesise. The three leaves share byte-equal `INSTRUCTIONS.md` and
+`dynamics/`; only their `PROGRAM.md` differs.
 
 - Strategy: planner/replanner holding `## Plan` and accumulated `## Results`.
 - New dynamics:
@@ -290,25 +297,25 @@ synthesise.
     `## Results` into a final artefact (e.g. `workspace/report.md`).
     Omitted for demos whose output already lives in `workspace/`.
 - **Reuse:** `evaluate.md` from 1b.
-- **Three demos** (one strategy, three `PROGRAM.md` variants shipped under
-  `demos/d1/`, `demos/d2/`, `demos/d3/`):
-  - **d1 — Plan-and-Execute** (Wang et al. framing). Set up a TypeScript
-    project with tests and CI config. Output lives in `workspace/`; no
-    `synthesize.md`. **Validation:** log shows at least one replan
-    triggered by a step failure.
-  - **d2 — Orchestrator–Workers** (Anthropic framing, sequential). Analyse
-    five files in `workspace/inputs/` and produce a unified summary.
-    `plan.md` emits one subtask per file; `execute-step.md` processes
-    each; `synthesize.md` aggregates. Demonstrates that sequential
-    fan-out is the same shape as Plan-and-Execute — the distinction
-    only shows up once frames run in parallel (deferred below).
-  - **d3 — Deep Research** (product framing, Self-Ask ancestry). An open
-    research prompt ("compare approaches X, Y, Z for problem P").
-    `plan.md` emits sub-questions; `execute-step.md` answers each and
-    may recursively re-push `plan.md` when a sub-question is still too
-    broad; `synthesize.md` writes `workspace/report.md`. **Validation:**
-    log shows at least one recursive re-push of `plan.md` from inside
-    `execute-step.md`.
+- **Three leaves**, one canonical framing each:
+  - **`a-plan-execute` — Plan-and-Execute** (Wang et al. framing). Demo
+    d1: minimal TypeScript Node.js project setup. Output lives in
+    `workspace/`; no `synthesize.md`. **Validation:** log shows at
+    least one replan triggered by a step failure.
+  - **`b-orchestrator-workers` — Orchestrator–Workers** (Anthropic,
+    Building Effective Agents — sequential framing). Demo d2:
+    summarise five technical notes. `plan.md` emits one subtask per
+    note; `execute-step.md` processes each; `synthesize.md`
+    aggregates. Demonstrates that sequential fan-out is the same
+    shape as Plan-and-Execute — the distinction only shows up once
+    frames run in parallel (deferred below).
+  - **`c-deep-research` — Deep Research** (product framing, Self-Ask
+    ancestry). Demo d3: Raft/Paxos/Multi-Paxos comparison. `plan.md`
+    emits sub-questions; `execute-step.md` answers each and may
+    recursively re-push `plan.md` when a sub-question is still too
+    broad; `synthesize.md` writes `workspace/report.md`.
+    **Validation:** log shows at least one recursive re-push of
+    `plan.md` from inside `execute-step.md`.
 
 ### 3b. `interpreters/2-planning-decomposition/b-rewoo/` (optional)
 
@@ -342,26 +349,27 @@ Orchestrator–Workers is demo d2 on 3a and is not a separate interpreter.
 
 ---
 
-## Phase 4 — Fixed-SOP teams (patterns.md Group 5) — **replaces game-team**
+## Phase 4 — Fixed-SOP teams (patterns.md Group 5) — **shipped; game-team retired**
 
-Two interpreters, one task. The same demo `PROGRAM.md` should run on both so
-outputs are comparable. This phase exists specifically to retire
-`interpreters/game-team`.
+Shipped per spec `docs/specs/2026-04-24-implement-phase-3-and-4/`.
+Two interpreters share a single demo `PROGRAM.md` so outputs are
+directly comparable. `interpreters/game-team/` was deleted as part
+of this phase.
 
-### 4a. `interpreters/metagpt/`
+### 4a. `interpreters/5-fixed-sop-teams/a-metagpt/`
 
-Document hand-off between roles.
+Document hand-off between roles (MetaGPT — Hong et al., ICLR 2024).
 
 - Strategy: SOP sequencer walking PM → Architect → Engineer → QA.
 - New dynamics: `role-pm.md`, `role-architect.md`, `role-engineer.md`,
   `role-qa.md` — each reads the prior role's MEMORY section, writes its own.
 - Typed hand-off sections: `## PRD`, `## Design`, `## Tasks`, `## Code Review`.
 - **Reuse:** QA role pushes `evaluate.md` from 1b.
-- Demo `PROGRAM.md`: build a small CLI tool.
+- Demo `PROGRAM.md`: build a small CLI tool. Shared with 4b.
 
-### 4b. `interpreters/chatdev/`
+### 4b. `interpreters/5-fixed-sop-teams/b-chatdev/`
 
-Phase-dialogue between role pairs.
+Phase-dialogue between role pairs (ChatDev — Qian et al., 2023).
 
 - Strategy: phase sequencer (design, coding, testing, documenting).
 - New dynamic: `dialogue.md` — parameterised by `## Participants` and
@@ -370,18 +378,18 @@ Phase-dialogue between role pairs.
 - **Reuse:** reviewer pairs push `evaluate.md`.
 - Demo `PROGRAM.md`: the **same** CLI tool as 4a.
 
-### Retirement checklist
+### Retirement (completed)
 
-1. Run both 4a and 4b end-to-end on their shared demo.
-2. Delete `interpreters/game-team/`.
-3. Update `CLAUDE.md` "Existing interpreters": remove game-team, add entries
-   for `metagpt` and `chatdev` describing the document-hand-off vs.
-   phase-dialogue distinction.
-4. Update `README.md` examples that reference game-team.
-5. Confirm the shell-level features game-team exercised — fuzzy NL
-   conditions, non-blocking `## Pending Questions`, `## Push` from
-   strategy — are still exercised by 4a/4b. These belong to the shell, not
-   to any interpreter, and must not regress.
+1. 4a and 4b shipped against their shared demo.
+2. `interpreters/game-team/` has been deleted from the repo.
+3. `CLAUDE.md` "Existing interpreters" lists `a-metagpt` and `b-chatdev`
+   in place of `game-team`.
+4. `README.md` examples no longer reference `game-team`.
+5. Shell features previously exercised by game-team — fuzzy NL
+   conditions, non-blocking `## Pending Questions`, strategy-level
+   `## Push` — are exercised by 4a/4b and pinned by
+   `src/test/phase-4-shell-features.test.ts` (R40). These belong to
+   the shell, not to any interpreter, and must not regress.
 
 ---
 
