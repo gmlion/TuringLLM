@@ -157,8 +157,8 @@ is copied wholesale by `new-instance.sh`. Names and contracts are normative.
 | `execute-step.md` | 3a | `## Current Step`, `## Context` | `## Step Result` (via `## Return`) | 1+ (may re-push plan) |
 | `synthesize.md` | 3a (demo d3) | `## Results` | `## Report` | 1 |
 | `execute-batch.md` | 3b (ReWOO) | `## Plan` with `#E` placeholders | `## Resolved Plan` | 1 |
-| `role-<name>.md` | 4a | prior role's section | this role's section | 1 |
-| `dialogue.md` | 4b | `## Topic`, `## Participants` | `## Conclusion` | 1 |
+| `role-<name>.md` | 4a | prior role's section | this role's section | 1 (qa: 2) |
+| `dialogue.md` | 4b | `## Topic`, `## Participants` | `## Dialogue Output` | 1 (acceptance=true: 2) |
 | `opine.md` | 5 | `## Question`, `## Round` | `## Opinion` (appended) | 1 |
 | `propose.md` | 5b | `## Prompt`, `## Persona` | `## Proposal` (appended) | 1 |
 | `expand-node.md` | 6 | `## Parent Thought` | `## Children`, `## Value` | N |
