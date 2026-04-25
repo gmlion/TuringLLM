@@ -5,7 +5,9 @@ IMPORTANT: Everything between "# Strategy" and "# Sub-instructions" is the strat
 This interpreter implements the ChatDev pattern (patterns.md Group 5): four phases — design, coding, testing, documenting — each phase a dialogue between a role pair. Design uses CEO↔CTO without an acceptance gate; coding / testing / documenting pair a specialist with the reviewer and use `evaluate.md` as an acceptance gate.
 
 Scoped files:
-- `./scoped/phase.md` — current phase name (wholesale overwrite at each phase transition).
+- `./scoped/phase.md` — current phase name (wholesale overwrite at each phase transition; kept as a debug aid even though state-name disambiguation is what conditions actually match on).
+
+Each transition sets the caller's state to a phase-active label (`design_active`, `coding_active`, `testing_active`, `doc_active`) BEFORE the push. The shell preserves that as the returnState; on pop, the caller's state becomes `<label>_completed`, which the next phase's instruction matches. This avoids `empty_completed` aliasing across the four push sites.
 
 ## Instruction: Initialize
 **Condition:** MEMORY state is "empty"
@@ -23,10 +25,10 @@ Scoped files:
     acceptance: |
       false
 
-Do not change state.
+**Set state to "design_active"** (post-pop state will be "design_active_completed").
 
 ## Instruction: Design done — enter coding
-**Condition:** MEMORY state is "empty_completed" and `## Dialogue Output` is present and `./scoped/phase.md` contains the word `design`
+**Condition:** MEMORY state is "design_active_completed" and `## Dialogue Output` is present
 **Action:** Rename the returned `## Dialogue Output` section to `## Design Doc` (bash: `sed -i 's/^## Dialogue Output$/## Design Doc/' ./MEMORY.md`). Overwrite `./scoped/phase.md` with the single word `coding`. Append to `./MEMORY.md`:
 
     ## Push
@@ -42,10 +44,10 @@ Do not change state.
     acceptance: |
       true
 
-Do not change state.
+**Set state to "coding_active"**.
 
 ## Instruction: Coding done — enter testing
-**Condition:** MEMORY state is "empty_completed" and `## Dialogue Output` is present and `./scoped/phase.md` contains the word `coding`
+**Condition:** MEMORY state is "coding_active_completed" and `## Dialogue Output` is present
 **Action:** Rename `## Dialogue Output` to `## Code` (`sed -i 's/^## Dialogue Output$/## Code/' ./MEMORY.md`). Overwrite `./scoped/phase.md` with the single word `testing`. Append to `./MEMORY.md`:
 
     ## Push
@@ -61,10 +63,10 @@ Do not change state.
     acceptance: |
       true
 
-Do not change state.
+**Set state to "testing_active"**.
 
 ## Instruction: Testing done — enter documenting
-**Condition:** MEMORY state is "empty_completed" and `## Dialogue Output` is present and `./scoped/phase.md` contains the word `testing`
+**Condition:** MEMORY state is "testing_active_completed" and `## Dialogue Output` is present
 **Action:** Rename `## Dialogue Output` to `## Test Report` (`sed -i 's/^## Dialogue Output$/## Test Report/' ./MEMORY.md`). Overwrite `./scoped/phase.md` with the single word `documenting`. Append to `./MEMORY.md`:
 
     ## Push
@@ -80,10 +82,10 @@ Do not change state.
     acceptance: |
       true
 
-Do not change state.
+**Set state to "doc_active"**.
 
 ## Instruction: Finish
-**Condition:** MEMORY state is "empty_completed" and `## Dialogue Output` is present and `./scoped/phase.md` contains the word `documenting`
+**Condition:** MEMORY state is "doc_active_completed" and `## Dialogue Output` is present
 **Action:** Rename `## Dialogue Output` to `## Documentation` (`sed -i 's/^## Dialogue Output$/## Documentation/' ./MEMORY.md`). Set state to "done".
 
 # Sub-instructions

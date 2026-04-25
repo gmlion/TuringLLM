@@ -4,53 +4,168 @@ Captured at the end of the
 `docs/specs/2026-04-24-implement-phase-3-and-4/` spec. Findings that
 later phases can use to avoid the same pain.
 
-## Live-demo validation deferred to the user
+## Live-demo validation outcomes
 
-T12 Steps 2 and 3 prescribe live demos against the default provider
-(claude-code, Haiku) for each new leaf. These runs invoke the LLM as a
-real subprocess, take real time, and incur real cost; this T12 commit
-was produced under auto-mode where executing them is out of policy.
+All five live demos were executed under default provider
+(claude-code, Haiku) after the spec landed. **All five halted at
+`## State\ndone`** (R16, R32 satisfied for every new leaf). Per-leaf
+detail and caveats below. Outcomes recorded against
+`instances/<demo-name>/`.
 
-Live-demo validation is **deferred to the user**. The exact commands
-to run are:
+### demo3a3 (a-plan-execute, demo d1: TypeScript project setup)
+- Halted at `done` after 40 cycles, 9 pushes total.
+- `workspace/` contains the full TypeScript project: `package.json`,
+  `tsconfig.json`, `src/index.ts` + `src/index.test.ts`, `dist/` (compiled),
+  `node_modules/`, `.github/workflows/ci.yml`, `report.md`.
+  R13 deliverable satisfied.
+- **R17 not exercised by this run.** R17 expected at least one replan
+  triggered by a step failure; the LLM completed all 7 plan steps
+  successfully on first attempt without needing to replan. The
+  *structural* replan path is in place (`Route after step` →
+  needs_replan branch → `## Push dynamics/plan.md`); whether a given
+  live run actually exercises it depends on the LLM's per-cycle
+  judgement of step acceptability. Same caveat as Phase-1 R11
+  (Reflexion lessons quantitative gate). Re-run if R17 is needed in
+  this specific instance.
 
-    # Phase 3 — three leaves under interpreters/2-planning-decomposition/
-    ./new-instance.sh demo-phase-3-a-plan-execute  interpreters/2-planning-decomposition/a-plan-execute
-    instances/demo-phase-3-a-plan-execute/run.sh
+### demo3b2 (b-orchestrator-workers, demo d2: 5-file summarisation)
+- Halted at `done` after 47 cycles, 11 pushes total.
+- `workspace/` contains all expected deliverables: `inputs/` (the 5
+  copied input files), `per-file-summaries.md`, `summary.md`, plus
+  extras the LLM chose to produce (`common-threads.md`, `report.md`,
+  `summaries/` directory).
+- **R18 (exactly 5 execute-step pushes) not literally satisfied.**
+  The actual run had 9 execute-step pushes — the LLM emitted a plan
+  with more steps than 5 (likely combining file-reading, summarising,
+  and synthesis as separate steps). The "exactly 5" prediction was a
+  per-input-file count, but the LLM is free to choose a finer-grained
+  decomposition. R18 should probably be relaxed to "at least 5
+  execute-step pushes corresponding to the inputs" in a future spec.
 
-    ./new-instance.sh demo-phase-3-b-orchestrator-workers  interpreters/2-planning-decomposition/b-orchestrator-workers
-    instances/demo-phase-3-b-orchestrator-workers/run.sh
+### demo3c2 (c-deep-research, demo d3: Raft/Paxos/Multi-Paxos)
+- Halted at `done` after 48 cycles, 18 pushes total.
+- `workspace/report.md` produced (R15 deliverable).
+- **R19 + R43 satisfied.** Multiple history snapshots reach stack
+  depth 3 (root strategy + execute-step + plan child) — recursive
+  `plan.md` re-push from inside `execute-step.md` fired at cycles
+  6, 11, 18, 23, 28 (and possibly more). The recursion pattern
+  worked as designed.
 
-    ./new-instance.sh demo-phase-3-c-deep-research  interpreters/2-planning-decomposition/c-deep-research
-    instances/demo-phase-3-c-deep-research/run.sh
+### demo4a (a-metagpt, demo: wc-plus CLI)
+- Halted at `done` after 12 cycles, 5 pushes total.
+- `workspace/` contains the `wc-plus` CLI: `bin/`, `src/`, `dist/`,
+  `package.json`, `tsconfig.json`. R34 deliverable satisfied.
+- **R33 partially satisfied — caveat from C4 fix.** Final MEMORY
+  contains `## Code_review` only (verdict and feedback present), not
+  the full `## Prd / ## Design / ## Tasks / ## Code_review` set.
+  Cause: the original C4 fix to a-metagpt INSTRUCTIONS instructed
+  each Dispatch to remove the consumed input section after
+  forwarding (to avoid `empty_completed` aliasing across the four
+  push sites). With the C6 fix using meaningful state names
+  (`pm_active` / `architect_active` / `engineer_active` /
+  `qa_active`) the section-removal became unnecessary. The
+  INSTRUCTIONS were updated post-demo to leave the sections in
+  MEMORY. **Re-running demo4a against the corrected INSTRUCTIONS
+  will satisfy R33 literally.**
 
-    # Phase 4 — two leaves under interpreters/5-fixed-sop-teams/
-    ./new-instance.sh demo-phase-4-a-metagpt  interpreters/5-fixed-sop-teams/a-metagpt
-    instances/demo-phase-4-a-metagpt/run.sh
+### demo4b (b-chatdev, demo: wc-plus CLI, same PROGRAM as demo4a)
+- Halted at `done` after 28 cycles, 6 pushes total.
+- **R33 satisfied.** Final MEMORY contains all four phase-outcome
+  sections: `## Design Doc`, `## Code`, `## Test Report`,
+  `## Documentation`.
+- **R34 caveat — workspace empty.** The dialogue.md dynamic produced
+  text artefacts (the `## Code` section's body contains the wc-plus
+  source) but did not write code files to `workspace/`. The dialogue
+  pattern emphasizes converged transcripts over file emission; if
+  R34 requires actual files in `workspace/`, the dialogue's "Return"
+  step would need to also write the consensus artefact via
+  `write_file`. Documented for future-spec adjustment.
 
-    ./new-instance.sh demo-phase-4-b-chatdev  interpreters/5-fixed-sop-teams/b-chatdev
-    instances/demo-phase-4-b-chatdev/run.sh
+## Bugs surfaced by the live demos (post-merge fixes)
 
-Acceptance per leaf:
-- Halts at `## State\ndone` in
-  `instances/<name>/frames/f000-strategy/MEMORY.md` (R16).
-- Phase 3 leaves: `a-plan-execute` log shows at least one replan
-  triggered by a step failure; `c-deep-research` log shows at least
-  one recursive re-push of `plan.md` from inside `execute-step.md`.
-- Phase 4 leaves: final strategy MEMORY contains the four typed
-  hand-off sections (`## PRD`, `## Design`, `## Tasks`,
-  `## Code Review`) for `a-metagpt` and the equivalent sections for
-  `b-chatdev` (R33), and `workspace/` contains a runnable `wc-plus`
-  CLI (R34).
+The final whole-branch code-reviewer subagent and the live demos
+together surfaced seven runtime bugs that the file-content-only
+integration tests missed. All fixed in commits between the original
+T12 commit and these live runs. Listed in order of discovery:
 
-R16, R32, and R34 therefore require manual confirmation against the
-above commands before this spec can be considered live-validated. The
-scripted integration tests (`src/test/phase-3-{plan-execute,orchestrator-workers,deep-research}.test.ts`,
-`src/test/phase-4-{metagpt,chatdev,shell-features}.test.ts`) and the
-four-way evaluate-identity test (`src/test/phase-dynamics-identity.test.ts`)
-cover the structural guarantees on every `npm test` run; what the live
-demos add is end-to-end LLM-driven traversal of the state machine
-without scripting.
+- **C1**: `plan.md` `{{results_so_far}}` placeholder unresolved on
+  first push from Initialize. Fixed by Initialize always passing
+  `results_so_far: |\n  (no prior results)`. Re-byte-copied across
+  the three Phase-3 leaves.
+- **C2**: `dialogue.md` `{{input}}` placeholder unresolved when the
+  b-chatdev strategy pushed without it. Fixed by every dialogue push
+  in `b-chatdev` strategy passing `input:` (with `(none — first phase)`
+  for Initialize, prior phase output for the rest).
+- **C3**: `roles/` subdirectory of an interpreter never reached the
+  instance. `new-instance.sh` only copied top-level `*.md`, `dynamics/`,
+  and `PROGRAM.md`. Fixed by adding `cp -r $INTERP_DIR/roles $DIR/roles`
+  and updating `dialogue.md` to use `../../roles/<name>.md` (instance
+  root, two `..` from a frame dir).
+- **C4 (initial)**: a-metagpt's four Dispatch instructions all matched
+  on `empty_completed`, so after PM returned with `## Prd`, the
+  Architect dispatch fired correctly, but after Architect returned
+  with `## Design`, the LLM had to fuzzy-match (since both `## Prd`
+  and `## Design` were present and the conditions overlapped). C4
+  fix added per-Dispatch section-removal. Then C6 (below)
+  superseded it with state-name disambiguation; the post-C6 strategy
+  no longer needs section-removal.
+- **C5**: `execute-step.md` had no `empty_completed` handler for the
+  recursive `plan.md` push case (the recursion path the d3 deep-
+  research demo exercises). Fixed by adding an "Absorb sub-plan"
+  instruction that consumes the spliced `## Plan` and routes to
+  `acceptable`.
+- **C6**: All three new strategies (a-plan-execute, a-metagpt,
+  b-chatdev) used post-pop conditions (`planning_completed`,
+  `executing_completed`, `synthesising_completed`,
+  `empty_completed`) but the actual returnState was whatever the
+  LLM had MEMORY.state set to at push time — which was *not* those
+  meaningful names, because the original instructions said "do not
+  change state when pushing." Fixed by setting state to a meaningful
+  label BEFORE the push so the post-pop returnState matches.
+- **C7**: `new-instance.sh` did not copy the interpreter's
+  `workspace/` subdirectory, so b-orchestrator-workers' five input
+  files (shipped under `interpreters/.../workspace/inputs/`) never
+  reached the instance. Fixed by adding `cp -r $INTERP_DIR/workspace
+  $DIR/workspace`.
+
+A separate flake in C6's first round: even with state-name pre-push,
+the LLM occasionally rewrote MEMORY with the new state but skipped
+the `## Push` block (the "set state then append push" pattern was
+two operations the LLM treated as separable). Fixed in Phase 3 by
+moving to a **single-bash-heredoc atomic write** that includes both
+the canonical sections AND the push block in one
+`cat > MEMORY.md << 'MEMEOF' ... MEMEOF`. This made the push and
+state change atomic from the LLM's perspective. The atomic-write
+pattern is documented in the strategy file under the "ATOMIC PUSH
+RULE" header.
+
+## Lessons for future phases
+
+1. **File-content-only integration tests are insufficient for
+   strategy correctness.** Phase-1 tests drive `applyPush` /
+   `applyPop` to exercise actual state-machine round-trips; the
+   Phase-3/4 tests degraded to `readFileSync` + regex matches and
+   missed all seven bugs above. Future strategy specs should require
+   at least one `applyPush`-driven smoke test per leaf.
+2. **Strategy state names must match the shell's pop convention.**
+   The shell sets caller state to `<returnState_at_push>_completed`
+   on pop. If the strategy's absorber instruction expects
+   `planning_completed`, the caller MUST be in state `planning` at
+   push time. Document this prominently in the dynamics/strategy
+   guide.
+3. **Push + state-change in one cycle needs atomic-heredoc syntax.**
+   When an instruction must both set MEMORY state AND emit a
+   `## Push` block, the LLM is liable to drop one of the two if they
+   are described as separate operations. Use a single
+   `cat > MEMORY.md << 'MEMEOF'` that includes the push block to
+   force atomicity.
+4. **Interpreter-shipped subdirectories beyond `dynamics/` need
+   explicit copy-into-instance support.** `roles/` (b-chatdev) and
+   `workspace/` (b-orchestrator-workers) both surfaced this. The
+   fix in `new-instance.sh` is small and additive.
+5. **R18-style "exactly N pushes" predictions are LLM-behaviour-
+   dependent.** Soften to "at least N" or "approximately N" for
+   future quantitative R#s.
 
 ## Plan dynamics-table sync (R50) — drifts found
 

@@ -58,6 +58,13 @@ if [ -n "$INTERPRETER" ]; then
     cp -r "$INTERP_DIR/roles" "$DIR/roles"
   fi
 
+  # Workspace seed (interpreter-shipped input files, fixtures, etc.) — copied
+  # into the instance's workspace/ which the LLM operates on. Used by
+  # b-orchestrator-workers for its 5 input notes; harmless when absent.
+  if [ -d "$INTERP_DIR/workspace" ]; then
+    cp -r "$INTERP_DIR/workspace" "$DIR/workspace"
+  fi
+
   # PROGRAM.md — instance root. Use interpreter's demo if present; else template.
   if [ -f "$INTERP_DIR/PROGRAM.md" ]; then
     cp "$INTERP_DIR/PROGRAM.md" "$DIR/PROGRAM.md"
