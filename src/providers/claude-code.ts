@@ -50,7 +50,7 @@ export async function runCycle(
         "--system-prompt", systemPrompt,
         "--model", process.env.CC_MODEL || "haiku",
         "--output-format", "json",
-        "--allowedTools", "Bash(*)", "Write(*)", "Edit(*)",
+        "--allowedTools", "Bash(*)", "Write(*)", "Edit(*)", "WebSearch", "WebFetch",
         "--dangerously-skip-permissions",
       ];
 

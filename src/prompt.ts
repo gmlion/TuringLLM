@@ -120,6 +120,8 @@ You have Bash, Write, and Edit tools. Use them as follows:
 - **Bash**: Run shell commands. Use for writing MEMORY.md (to capture real command output), running tests, and any shell operation. Run git commands via Bash in the workspace/ directory.
 - **Write**: Create new files (HTML, CSS, JS, config). To rewrite INSTRUCTIONS.md, use Write to overwrite it.
 - **Edit**: Modify existing files.
+- **WebSearch**: Claude Code's built-in web search. Use for grounding research-style questions in current web sources.
+- **WebFetch**: Claude Code's built-in URL fetcher. Use to read a specific page found via WebSearch.
 - The machine auto-commits after each cycle — do NOT commit yourself.
 - To halt: write "done" as the state in MEMORY.md.
 

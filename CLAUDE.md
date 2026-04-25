@@ -87,6 +87,8 @@ All providers except Claude Code use the same custom tools (bash, write_file, gi
 **Claude Code provider** (`TURING_PROVIDER=claude-code`, default): Invokes `claude -p` as a subprocess with its native tools (Bash, Write, Edit). CC manages its own tool loop internally. The shell checks file changes after each invocation and retries if no progress. Note: CC's autonomy training can cause it to do too much per cycle or skip verification.
 - `CC_MODEL` — model name passed to `claude --model` (default: haiku)
 
+When running under this provider, the LLM has access to Claude Code's native `WebSearch` and `WebFetch` tools in addition to Bash / Write / Edit (see `--allowedTools` in `src/providers/claude-code.ts`). These are CC's built-in implementations, not the custom `web_search` / `web_fetch` tools in `src/web-tools.ts` (which serve every other provider). `WEB_SEARCH_BACKEND` and `WEB_TIMEOUT` env vars do NOT affect CC's native implementation.
+
 **OpenAI provider** (`TURING_PROVIDER=openai`): OpenAI-compatible API with function calling.
 - `OPENAI_API_KEY` — API key (required)
 - `OPENAI_BASE_URL` — custom endpoint (optional, for compatible APIs)
