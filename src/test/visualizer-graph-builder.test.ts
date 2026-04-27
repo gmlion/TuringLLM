@@ -117,3 +117,29 @@ describe("buildPerFrameGraph edges (R8)", () => {
     assert.equal(g.edges.filter((e) => e.type === "pop").length, 2);
   });
 });
+
+import { buildPerCycleGraph } from "../visualizer/graph-builder.js";
+
+describe("buildPerCycleGraph (R6, R10)", () => {
+  test("one node per cycle_start; label is `slug #N`", () => {
+    const events: EventRecord[] = [
+      { seq: 1, ts: "", cycle: 1, frame: "frames/f000-strategy", type: "cycle_start" },
+      { seq: 2, ts: "", cycle: 2, frame: "frames/f001-dialogue", type: "cycle_start" },
+      { seq: 3, ts: "", cycle: 3, frame: "frames/f001-dialogue", type: "cycle_start" },
+    ];
+    const g = buildPerCycleGraph(events, null);
+    assert.equal(g.nodes.length, 3);
+    assert.equal(g.nodes[0].id, "frames/f000-strategy@1");
+    assert.equal(g.nodes[0].label, "strategy #1");
+    assert.equal(g.nodes[1].id, "frames/f001-dialogue@2");
+    assert.equal(g.nodes[1].label, "dialogue #2");
+    assert.equal(g.nodes[2].label, "dialogue #3");
+  });
+
+  test("returns empty graph for empty events (R20)", () => {
+    assert.deepEqual(
+      buildPerCycleGraph([], null),
+      { nodes: [], edges: [], slugRowOrder: [] },
+    );
+  });
+});

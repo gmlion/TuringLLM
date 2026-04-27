@@ -150,3 +150,25 @@ export function buildPerFrameGraph(
   }
   return { nodes, edges, slugRowOrder };
 }
+
+/** Build the per-cycle (dense) graph. R6, R10, R20. Edges added in T6. */
+export function buildPerCycleGraph(
+  events: EventRecord[],
+  _liveStack: CallStack | null,
+): Graph {
+  const slugRowOrder = computeSlugRowOrder(events);
+  if (events.length === 0) return { nodes: [], edges: [], slugRowOrder };
+  const nodes: GraphNode[] = [];
+  for (const e of events) {
+    if (e.type !== "cycle_start" || !e.frame) continue;
+    const slug = parseSlug(e.frame);
+    nodes.push({
+      id: `${e.frame}@${e.cycle}`,
+      label: `${slug} #${e.cycle}`,
+      slug,
+      cycle: e.cycle,
+      frameDir: e.frame,
+    });
+  }
+  return { nodes, edges: [], slugRowOrder };
+}
