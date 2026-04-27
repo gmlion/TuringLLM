@@ -204,7 +204,7 @@
 
   <div id="instancePage" hidden>
     <div class="topbar" style="display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-bottom:16px;padding:10px 16px;background:#161b22;border:1px solid #30363d;border-radius:8px;font-size:0.85em;">
-      <a id="backToGraphLink" href="#" onclick="backToGraph(); return false;" hidden style="color:#58a6ff;text-decoration:none;">← Graph</a>
+      <a id="backToGraphLink" href="?" onclick="backToGraph(); return false;" hidden style="color:#58a6ff;text-decoration:none;">← Graph</a>
       <span id="backToGraphSep" hidden style="color:#30363d;">|</span>
       <a href="?" style="color:#58a6ff;text-decoration:none;">← Home</a>
       <span style="color:#30363d;">|</span>
@@ -974,6 +974,7 @@
       loadInstanceForGraph();
     }
 
+    window.bootstrap = bootstrap;   // explicit assignment so the module-script <script type="module"> tail can reliably re-invoke
     function bootstrap() {
       if (!window.UrlRouter) return; // module not yet loaded; the module's <script type="module"> will call bootstrap() once it's ready
       const route = UrlRouter.parseRoute(window.location.search);
@@ -1008,7 +1009,11 @@
         graph.hidden = true;
         cycle.hidden = false;
         if (timeline) timeline.style.display = '';
-        document.getElementById('backToGraphLink').hidden = false;
+        const backLink = document.getElementById('backToGraphLink');
+        backLink.hidden = false;
+        // Set href so middle-click / "open in new tab" / "copy link" work naturally;
+        // the onclick handler still wins for normal left-clicks (no full reload).
+        backLink.href = UrlRouter.formatRoute({ kind: 'graph', instance: instanceDir, mode: currentGraphMode });
         document.getElementById('backToGraphSep').hidden = false;
         // Seed selected cycle/frame so the existing cycle-view code uses them
         selectedCycleNum = route.cycle;
@@ -1087,6 +1092,9 @@
       });
       cy.on('tap', 'node', (evt) => {
         const data = evt.target.data();
+        // Defensive: every graph node populated by buildPer{Frame,Cycle}Graph carries
+        // both fields, but a future synthetic node (legend, etc.) might not.
+        if (data.cycle == null || !data.frameDir) return;
         const route = {
           kind: 'cycle',
           instance: instanceDir,
