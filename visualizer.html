@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Turing Machine Visualizer</title>
+  <script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/cytoscape@3/dist/cytoscape.min.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -146,6 +149,40 @@
       overflow: hidden;
     }
     .modal .panel-body { max-height: calc(92vh - 50px); overflow-y: auto; }
+
+    /* Rich markdown rendering, used by the PROGRAM.md / README popups. */
+    .markdown-body { white-space: normal; line-height: 1.6; }
+    .markdown-body h1 { font-size: 1.5em; margin: 16px 0 10px 0; color: #58a6ff; }
+    .markdown-body h2 { font-size: 1.25em; margin: 14px 0 8px 0; color: #d2a8ff; }
+    .markdown-body h3 { font-size: 1.05em; margin: 12px 0 6px 0; color: #79c0ff; }
+    .markdown-body p { margin: 8px 0; }
+    .markdown-body ul, .markdown-body ol { margin: 8px 0 8px 24px; padding: 0; }
+    .markdown-body li { margin: 4px 0; }
+    .markdown-body code {
+      background: #21262d; padding: 1px 5px; border-radius: 3px; font-size: 0.9em;
+    }
+    .markdown-body pre {
+      background: #0d1117; border: 1px solid #30363d; border-radius: 6px;
+      padding: 12px; overflow-x: auto; margin: 12px 0;
+    }
+    .markdown-body pre code { background: transparent; padding: 0; font-size: 0.85em; }
+    .markdown-body table { border-collapse: collapse; margin: 12px 0; font-size: 0.9em; }
+    .markdown-body th, .markdown-body td {
+      border: 1px solid #30363d; padding: 6px 10px; text-align: left; vertical-align: top;
+    }
+    .markdown-body th { background: #21262d; }
+    .markdown-body a { color: #58a6ff; text-decoration: none; }
+    .markdown-body a:hover { text-decoration: underline; }
+    .markdown-body hr { border: none; border-top: 1px solid #30363d; margin: 16px 0; }
+    .markdown-body em { font-style: italic; }
+    .markdown-body strong { color: #f0f6fc; }
+    .markdown-body blockquote {
+      margin: 8px 0; padding: 4px 12px; border-left: 3px solid #30363d; color: #8b949e;
+    }
+    .markdown-body .mermaid {
+      background: #0d1117; border: 1px solid #30363d; border-radius: 6px;
+      padding: 16px; margin: 12px 0; text-align: center; overflow-x: auto;
+    }
   </style>
 </head>
 <body>
@@ -173,6 +210,8 @@
       <span><span style="color:#8b949e;">State: </span><span id="topState" style="color:#3fb950;">-</span></span>
       <span><span style="color:#8b949e;">Cycles: </span><span id="topCycles" style="color:#58a6ff;">-</span></span>
       <span><span style="color:#8b949e;">Depth: </span><span id="topDepth" style="color:#58a6ff;">-</span></span>
+      <button id="programBtn" onclick="showProgram()" style="background:#21262d;border:1px solid #30363d;color:#c9d1d9;padding:4px 10px;border-radius:6px;cursor:pointer;font-family:inherit;font-size:0.95em;">PROGRAM.md</button>
+      <button id="readmeBtn" onclick="showReadme()" hidden style="background:#21262d;border:1px solid #30363d;color:#c9d1d9;padding:4px 10px;border-radius:6px;cursor:pointer;font-family:inherit;font-size:0.95em;">Interpreter README</button>
       <button id="autoBtn" onclick="toggleAuto()" style="background:#21262d;border:1px solid #30363d;color:#c9d1d9;padding:4px 10px;border-radius:6px;cursor:pointer;font-family:inherit;font-size:0.95em;">Auto-refresh</button>
       <select id="refreshInterval" style="background:#0d1117;border:1px solid #30363d;color:#c9d1d9;padding:4px 8px;border-radius:4px;font-family:inherit;">
         <option value="2000">2s</option>
@@ -180,9 +219,15 @@
         <option value="10000">10s</option>
         <option value="30000">30s</option>
       </select>
+      <button id="graphModeBtn" onclick="toggleGraphMode()" style="background:#21262d;border:1px solid #30363d;color:#c9d1d9;padding:4px 10px;border-radius:6px;cursor:pointer;font-family:inherit;font-size:0.95em;">Mode: per-frame</button>
       <div class="timeline" id="timeline" style="flex:1 1 100%;display:flex;gap:4px;overflow-x:auto;align-items:flex-end;min-width:0;"></div>
     </div>
 
+    <div id="graphView">
+      <div id="cyGraph" style="height: calc(100vh - 140px); background: #0d1117; border: 1px solid #30363d; border-radius: 8px;"></div>
+      <div id="cyEmpty" hidden style="text-align:center; color:#8b949e; padding: 40px;">Instance has no cycles yet.</div>
+    </div>
+    <div id="cycleView" hidden>
   <div class="grid-3col">
     <div class="panel">
       <div class="panel-header">Call Stack <span style="color:#8b949e;font-weight:normal;text-transform:none;font-size:0.95em;">(click a frame to inspect)</span></div>
@@ -211,6 +256,7 @@
       <div class="panel-body" id="filePanel"><span class="empty-hint">Select a cycle and a frame.</span></div>
     </div>
   </div>
+    </div>
 
 
   </div>
@@ -392,6 +438,13 @@
       instanceDir = (params.get('instance') || '').trim().replace(/\/$/, '');
       if (!instanceDir) return;
       document.getElementById('topInstanceName').textContent = instanceDir.replace(/^instances\//, '');
+
+      // Probe for the interpreter README; hide the header button when absent
+      // (instances created without an interpreter have no README to show).
+      try {
+        const readmeProbe = await fetch(`${instanceDir}/frames/f000-strategy/README.md`, { method: 'HEAD' });
+        document.getElementById('readmeBtn').hidden = !readmeProbe.ok;
+      } catch { document.getElementById('readmeBtn').hidden = true; }
 
       // Discover history snapshots: any subdirectory of history/ starting with 4 digits.
       const histEntries = await listDir(`${instanceDir}/history/`);
@@ -832,10 +885,54 @@
       if (e.target === e.currentTarget) closePayload();
     }
 
+    async function showProgram() {
+      const text = await readFile(`${instanceDir}/PROGRAM.md`);
+      showDocModal('PROGRAM.md', text);
+    }
+
+    async function showReadme() {
+      const text = await readFile(`${instanceDir}/frames/f000-strategy/README.md`);
+      showDocModal('Interpreter README', text);
+    }
+
+    function showDocModal(label, body) {
+      document.getElementById('docLabel').textContent = label;
+      const container = document.getElementById('docBody');
+      const text = body || '(not found)';
+      if (window.marked && typeof marked.parse === 'function') {
+        // Replace fenced ```mermaid blocks with raw <div class="mermaid"> so
+        // marked passes them through verbatim and mermaid.run can render
+        // them after we attach to the DOM.
+        const pre = text.replace(/```mermaid\n([\s\S]*?)\n?```/g,
+          (_, code) => `\n<div class="mermaid">${code}</div>\n`);
+        container.innerHTML = marked.parse(pre);
+        if (window.mermaid) {
+          const nodes = container.querySelectorAll('.mermaid');
+          if (nodes.length) {
+            mermaid.run({ nodes }).catch(e => console.error('mermaid render error', e));
+          }
+        }
+      } else {
+        // CDN unreachable — fall back to the lite renderer.
+        container.innerHTML = renderMarkdown(text);
+      }
+      document.getElementById('docModal').dataset.open = 'true';
+    }
+
+    function closeDoc() {
+      document.getElementById('docModal').dataset.open = 'false';
+    }
+
+    function onDocBackdropClick(e) {
+      if (e.target === e.currentTarget) closeDoc();
+    }
+
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
-        const modal = document.getElementById('payloadModal');
-        if (modal && modal.dataset.open === 'true') closePayload();
+        const payload = document.getElementById('payloadModal');
+        if (payload && payload.dataset.open === 'true') closePayload();
+        const doc = document.getElementById('docModal');
+        if (doc && doc.dataset.open === 'true') closeDoc();
       }
     });
 
@@ -852,6 +949,10 @@
         btn.classList.add('active');
         btn.textContent = 'Stop';
       }
+    }
+
+    if (window.mermaid) {
+      mermaid.initialize({ startOnLoad: false, theme: 'dark', securityLevel: 'loose' });
     }
 
     function bootstrap() {
@@ -881,5 +982,24 @@
     <div class="panel-body" id="payloadBody"></div>
   </div>
 </div>
+
+<div id="docModal" class="modal-backdrop" onclick="onDocBackdropClick(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="panel-header">
+      <span id="docLabel" style="color:#c9d1d9;font-weight:bold;text-transform:none;font-size:1em;"></span>
+      <button onclick="closeDoc()" style="margin-left:auto;background:#21262d;border:1px solid #30363d;color:#c9d1d9;padding:2px 10px;border-radius:4px;cursor:pointer;font-family:inherit;font-size:0.8em;">Close</button>
+    </div>
+    <div class="panel-body markdown-body" id="docBody"></div>
+  </div>
+</div>
+
+<script type="module">
+  import { parseSlug, computeSlugRowOrder, buildPerFrameGraph, buildPerCycleGraph } from './dist/visualizer/graph-builder.js';
+  import { parseRoute, formatRoute } from './dist/visualizer/url-router.js';
+  window.GraphBuilder = { parseSlug, computeSlugRowOrder, buildPerFrameGraph, buildPerCycleGraph };
+  window.UrlRouter = { parseRoute, formatRoute };
+  // Re-trigger bootstrap once the modules are available, in case the inline bootstrap() ran before the module loaded.
+  if (typeof window.bootstrap === 'function') window.bootstrap();
+</script>
 </body>
 </html>
