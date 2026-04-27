@@ -26,18 +26,21 @@ See also the group README at `../README.md` for the full collapse story.
 
 ## State machine
 
-```
-empty ─► (Initialize → push plan.md) ─► planning ─► planning_completed ─(absorb)─► ready
-                                                                                    │
-                                                ┌─(cursor < len: push execute-step.md)
-ready ─►──┤
-          └─ cursor == len ─► (push synthesize.md) ─► synthesising ─► synthesising_completed ─► done
-                                                                                    │
-                                       executing_completed ─(route)─ success ─► ready (cursor++)
-                                                                    │
-                                                               needs_replan ─► (push plan.md) ─► planning
-                                                                    │
-                                                               malformed ─► non-blocking Q; ready (cursor++)
+```mermaid
+stateDiagram-v2
+    [*] --> empty
+    empty --> planning: Initialize / push plan.md
+    planning --> planning_completed: pop
+    planning_completed --> ready: Absorb plan
+    ready --> executing: cursor < len / push execute-step.md
+    ready --> synthesising: cursor == len / push synthesize.md
+    executing --> executing_completed: pop
+    executing_completed --> ready: success (cursor++)
+    executing_completed --> planning: needs_replan / push plan.md
+    executing_completed --> ready: malformed (cursor++; non-blocking Q)
+    synthesising --> synthesising_completed: pop
+    synthesising_completed --> done
+    done --> [*]
 ```
 
 Six strategy instructions: `Initialize`, `Absorb plan`, `Dispatch

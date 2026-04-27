@@ -59,6 +59,6 @@ describe("phase-4 a-metagpt: layout, roles, evaluate reuse", () => {
     assert.match(pm, /## Return[\s\S]*prd:/);
     assert.match(ar, /## Return[\s\S]*design:/);
     assert.match(en, /## Return[\s\S]*tasks:/);
-    assert.match(qa, /## Return[\s\S]*code_review:/);
+    assert.match(qa, /## Return[\s\S]*review:/);
   });
 });

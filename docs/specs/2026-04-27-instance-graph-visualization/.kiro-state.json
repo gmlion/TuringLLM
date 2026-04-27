@@ -1,0 +1,10 @@
+{
+  "slug": "2026-04-27-instance-graph-visualization",
+  "feature": "instance-graph-visualization",
+  "phase": "done",
+  "awaiting_approval": false,
+  "phases_complete": ["requirements", "design", "tasks", "execute"],
+  "created_at": "2026-04-27T07:50:53Z",
+  "updated_at": "2026-04-27T15:30:00Z",
+  "completed_at": "2026-04-27T15:30:00Z"
+}

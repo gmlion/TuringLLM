@@ -1,7 +1,7 @@
 # Dynamic: Role — QA
 
 Consumes: `{{tasks}}`, `{{code_location}}`.
-Produces: `## Return` with key `code_review`.
+Produces: `## Return` with key `review` (the shell splices it into the caller's MEMORY as `## Review`).
 State flow: `empty` → `reviewing` → `awaiting_verdict` → `done`.
 Stack: pushes `evaluate.md` at depth 2.
 
@@ -29,12 +29,22 @@ Set state to "awaiting_verdict". (Note: "awaiting_verdict" is a local label; the
 
 ## Instruction: Return verdict
 **Condition:** MEMORY state is "awaiting_verdict_completed" and `## Verdict` is present
-**Action:** Read `## Verdict` (literal `pass` or `fail`) and `## Feedback` from MEMORY. Append to `./MEMORY.md`:
+**Action:** Read `## Verdict` (literal `pass` or `fail`) and `## Feedback` from MEMORY. Write `./MEMORY.md` with this EXACT single-heredoc shape (the `## Return` block MUST be in the same heredoc as the state change — the system prompt's canonical recipe shows only the four canonical sections, so following it literally would clobber the `## Return`, leaving the shell with nothing to splice on pop):
 
-    ## Return
-    code_review: |
-      verdict: <pass|fail>
-      feedback: |
-        <verbatim feedback body, indented two more spaces>
-
-Remove `## Verdict` and `## Feedback` from MEMORY. Set state to "done".
+```
+cat > ./MEMORY.md << 'MEMEOF'
+## State
+done
+## Matched Instruction
+Return verdict
+## Last Action
+Wrote QA review (verdict + feedback) to ## Return; popping back to strategy.
+## Result
+QA review complete.
+## Return
+review: |
+  verdict: <pass|fail, copy literal value of ## Verdict>
+  feedback: |
+    <verbatim ## Feedback body, indented two more spaces>
+MEMEOF
+```

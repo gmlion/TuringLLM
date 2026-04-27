@@ -34,8 +34,8 @@ describe("1a self-refine", () => {
     const dyn = readFileSync(resolve(INTERP, "dynamics/self-critique.md"), "utf-8");
     assert.match(dyn, /state is "empty"/);
     assert.match(dyn, /state is "critiqued"/);
-    // The Refine instruction writes state=done (as a MEMORY value, not prose "Set state to").
-    assert.match(dyn, /state=done/);
+    // The Refine instruction writes state=done (as a MEMORY value via the canonical heredoc).
+    assert.match(dyn, /^done$/m);
   });
 
   test("strategy uses scoped draft file and ## Return splicing", () => {

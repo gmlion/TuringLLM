@@ -10,12 +10,13 @@ hand-off is the contract; there is no dialogue between roles.
 
 ## State machine
 
-```
-empty ─(push role-pm)─► empty_completed & ## PRD present ─(push role-architect)─► empty_completed & ## Design present
-                                                                                             │
-                                        ─(push role-engineer)─► empty_completed & ## Tasks present
-                                                                                             │
-                                        ─(push role-qa)─► empty_completed & ## Code Review present ─► done
+```mermaid
+flowchart TD
+    Init([Initialize]) --> PM[push role-pm.md]
+    PM -->|## PRD present| Arch[push role-architect.md]
+    Arch -->|## Design present| Eng[push role-engineer.md]
+    Eng -->|## Tasks present| QA[push role-qa.md]
+    QA -->|## Code Review present| Done([done])
 ```
 
 Five strategy instructions: `Initialize`, `Dispatch Architect`,

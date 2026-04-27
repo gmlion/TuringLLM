@@ -15,10 +15,20 @@ If `{{results}}` contains multiple distinct information blocks (e.g. per-questio
 
 If `{{results}}` is thin — a single outcome or a sequence of state-change-style entries (e.g. "built X", "verified Y") — produce only a short one-paragraph summary of what was built and do NOT write `../../workspace/report.md`.
 
-Append the summary or full report body to `./MEMORY.md` as:
+Write `./MEMORY.md` with this EXACT single-heredoc shape (the `## Return` block MUST be in the same heredoc as the state change — without it the shell pops with no return value, breaking the strategy's "Finish" instruction which expects `## Report` to be present):
 
-    ## Return
-    report: |
-      <report body or short summary>
-
-Then set state to "done".
+```
+cat > ./MEMORY.md << 'MEMEOF'
+## State
+done
+## Matched Instruction
+Produce report
+## Last Action
+Produced report; popping back to strategy.
+## Result
+Report produced.
+## Return
+report: |
+  <report body or short summary, indented two spaces under the `report: |` key>
+MEMEOF
+```

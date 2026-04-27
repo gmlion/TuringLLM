@@ -83,13 +83,13 @@ MEMEOF
 The state value `executing` is what the shell stores as the returnState; on pop it becomes `executing_completed`, which "Route after step" matches.
 
 ## Instruction: Route after step
-**Condition:** MEMORY state is "executing_completed" and `## Step Result` is present
-**Action:** Parse the `## Step Result` body. The first non-empty key-value line should be `status: <value>`.
+**Condition:** MEMORY state is "executing_completed" and `## Outcome` is present
+**Action:** Parse the `## Outcome` body. The first non-empty key-value line should be `status: <value>`.
 
 **If the status value suggests success** (e.g. the literal word `success`, or the line otherwise indicates acceptable completion):
 1. Read the cursor from `./scoped/cursor.md`; surgically append the output to `./scoped/results.md` via `echo "- R$(( $(wc -l < ./scoped/results.md) + 1 )): <one-line output>" >> ./scoped/results.md`.
 2. Increment the cursor by one and write it back to `./scoped/cursor.md`.
-3. Rewrite MEMORY without `## Step Result` and with state="ready":
+3. Rewrite MEMORY without `## Outcome` and with state="ready":
 
 ```
 cat > ./MEMORY.md << 'MEMEOF'
@@ -105,6 +105,11 @@ MEMEOF
 ```
 
 **If the status value suggests the plan needs revising** (e.g. the literal `needs_replan`):
+1. Read the cursor from `./scoped/cursor.md`. Surgically record the just-popped step's output as a `[REPLAN-TRIGGER]` note in `./scoped/results.md` — this is what makes the sub-steps (or failure reason) visible to the next plan.md push:
+   `echo "- R$(( $(wc -l < ./scoped/results.md) + 1 )): [REPLAN-TRIGGER from S<cursor+1>] <one-line summary of the output, e.g. 'Decomposed into: <comma-separated sub-steps>'>" >> ./scoped/results.md`
+   (If the output already contains a structured sub-step list, summarize it as `Decomposed into: 1) X, 2) Y, ...` so plan.md can incorporate them as concrete leaves.)
+2. Do NOT change the cursor — the new plan will be absorbed and iteration will resume from the same cursor index, but against the regenerated plan.
+3. Then write MEMORY:
 
 ```
 cat > ./MEMORY.md << 'MEMEOF'
@@ -113,7 +118,7 @@ planning
 ## Matched Instruction
 Route after step (needs_replan)
 ## Last Action
-Step S<cursor+1> requested replan; queued plan.md push.
+Step S<cursor+1> requested replan; recorded REPLAN-TRIGGER note in results.md; queued plan.md push.
 ## Result
 Replan queued.
 ## Push
@@ -122,11 +127,11 @@ dynamics/plan.md
 goal: |
   <verbatim PROGRAM.md body re-read from ../../PROGRAM.md, indented two spaces>
 results_so_far: |
-  <verbatim contents of ./scoped/results.md, indented two spaces; or "(no prior results)" literal if empty>
+  <verbatim contents of ./scoped/results.md, indented two spaces>
 MEMEOF
 ```
 
-Do not change the cursor on replan. After return the plan is re-absorbed via "Absorb plan" and iteration resumes.
+After return the plan is re-absorbed via "Absorb plan" and iteration resumes from the unchanged cursor — but against the new plan, which should now contain the sub-steps as concrete leaves.
 
 **If the status is neither clearly success nor clearly needs_replan** (malformed): rewrite MEMORY with state="ready" and append a non-blocking `## Pending Questions` item of the form `- **Q<N>**: Step S<cursor+1> returned a malformed status; asking user to disambiguate.` (use the next free Q-index). DO NOT set state to "waiting_for_user" — keep iteration going by advancing the cursor. The MEMORY rewrite for this case looks like:
 

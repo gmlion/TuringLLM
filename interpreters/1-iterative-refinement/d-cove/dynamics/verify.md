@@ -44,13 +44,21 @@ Do NOT modify `./scoped/verifications.md` here. Do NOT write `## Return`. Do NOT
 3. Remove the `## Answer` section from MEMORY.
 4. Check whether any pending bullets remain: run `grep -c 'pending$' ./scoped/verifications.md`.
    - **If count > 0** (more questions remain): set state to "asking".
-   - **If count == 0** (all questions answered): read `./scoped/verifications.md` and the draft below, synthesize a corrected full answer by comparing each verified claim against the original draft, then write MEMORY with state=done plus a `## Return` section containing `revised` as a block scalar:
+   - **If count == 0** (all questions answered): read `./scoped/verifications.md` and the draft below, synthesize a corrected full answer by comparing each verified claim against the original draft, then write `./MEMORY.md` with this EXACT single-heredoc shape (the `## Return` block MUST be in the same heredoc as the state change — without it the shell pops with no return value, breaking the caller):
 
+         cat > ./MEMORY.md << 'MEMEOF'
          ## State
          done
+         ## Matched Instruction
+         Record answer (final)
+         ## Last Action
+         All verification questions answered; wrote revised draft to ## Return; popping back to caller.
+         ## Result
+         Verification complete.
          ## Return
          revised: |
            <your corrected full answer, every line indented two spaces>
+         MEMEOF
 
 Draft:
 {{draft}}

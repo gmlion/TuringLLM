@@ -6,13 +6,23 @@ Return: state done → caller sees {caller_state}_completed, and ## Return entri
 
 ## Instruction: Distil lesson
 **Condition:** MEMORY state is "empty"
-**Action:** Read the attempt, verdict, and feedback below. Write MEMORY with state=done plus a `## Return` section containing `lesson` (one short verbal rule the next attempt should apply — one or two sentences, phrased as a directive ("always X", "avoid Y"), not a restatement of the feedback) as a block scalar:
+**Action:** Read the attempt, verdict, and feedback below. Write `./MEMORY.md` with this EXACT single-heredoc shape (the `## Return` block MUST be in the same heredoc as the state change — without it the shell pops with no return value, breaking the caller):
 
-    ## State
-    done
-    ## Return
-    lesson: |
-      <your one or two sentence directive, every line indented two spaces>
+```
+cat > ./MEMORY.md << 'MEMEOF'
+## State
+done
+## Matched Instruction
+Distil lesson
+## Last Action
+Wrote lesson directive to ## Return; popping back to caller.
+## Result
+Lesson distilled.
+## Return
+lesson: |
+  <your one or two sentence directive ("always X", "avoid Y"), every line indented two spaces>
+MEMEOF
+```
 
 Attempt:
 {{attempt}}

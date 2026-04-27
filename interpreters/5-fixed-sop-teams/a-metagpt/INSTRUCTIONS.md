@@ -4,17 +4,17 @@ IMPORTANT: Everything between "# Strategy" and "# Sub-instructions" is the strat
 
 This interpreter implements the MetaGPT pattern (patterns.md Group 5): a fixed SOP walking PM → Architect → Engineer → QA, with document hand-off as the contract between roles (one role per phase, each produces a typed document consumed by the next).
 
-Typed hand-off contract (per role, via `## Push-Args` and `## Return`). Note the section names match the shell's splice convention (`key:` becomes `## Key` — first char uppercased, rest preserved):
+Typed hand-off contract (per role, via `## Push-Args` and `## Return`). Section names follow the project convention: Title Case, no underscores. Return keys are single English words so the shell's splice (`key:` → `## Key`) yields clean section names:
 - `role-pm.md` consumes `{{program}}`, returns key `prd` → splices as `## Prd`.
 - `role-architect.md` consumes `{{prd}}`, returns key `design` → splices as `## Design`.
 - `role-engineer.md` consumes `{{design}}`, returns key `tasks` → splices as `## Tasks`.
-- `role-qa.md` consumes `{{tasks}}` and `{{code_location}}`, returns key `code_review` → splices as `## Code_review`.
+- `role-qa.md` consumes `{{tasks}}` and `{{code_location}}`, returns key `review` → splices as `## Review`.
 
 After dispatching to the next role, each step REMOVES the section it just forwarded so subsequent `empty_completed` conditions can disambiguate by the most-recently-spliced section.
 
 Each Dispatch instruction sets the caller's state to a phase-active label (`pm_active`, `architect_active`, `engineer_active`, `qa_active`) BEFORE the push. The shell preserves that as the returnState; on pop, the caller's state becomes `<label>_completed`, which the next Dispatch instruction matches. This avoids the `empty_completed` aliasing across all four push sites.
 
-The typed hand-off sections (`## Prd`, `## Design`, `## Tasks`, `## Code_review`) **accumulate in MEMORY** as the SOP progresses — they are NOT removed after dispatch. State-name disambiguation handles the condition matching; section accumulation gives the final MEMORY a complete record of every role's contribution, satisfying R33's "final MEMORY contains the full typed hand-off sections" requirement.
+The typed hand-off sections (`## Prd`, `## Design`, `## Tasks`, `## Review`) **accumulate in MEMORY** as the SOP progresses — they are NOT removed after dispatch. State-name disambiguation handles the condition matching; section accumulation gives the final MEMORY a complete record of every role's contribution, satisfying R33's "final MEMORY contains the full typed hand-off sections" requirement.
 
 ## Instruction: Initialize
 **Condition:** MEMORY state is "empty"
@@ -67,8 +67,8 @@ Leave `## Design` in MEMORY (accumulates per R33). **Set state to "engineer_acti
 Leave `## Tasks` in MEMORY (accumulates per R33). **Set state to "qa_active"**.
 
 ## Instruction: Finish
-**Condition:** MEMORY state is "qa_active_completed" and `## Code_review` is present
-**Action:** Read `## Code_review`. If the verdict field suggests success, set state to "done". If it suggests failure, append a non-blocking `## Pending Questions` entry noting the failed review and set state to "done" anyway (the CLI tool is still an artefact; the user may inspect it). Do NOT re-push any role; this interpreter is a linear SOP, not a loop.
+**Condition:** MEMORY state is "qa_active_completed" and `## Review` is present
+**Action:** Read `## Review`. If the verdict field suggests success, set state to "done". If it suggests failure, append a non-blocking `## Pending Questions` entry noting the failed review and set state to "done" anyway (the CLI tool is still an artefact; the user may inspect it). Do NOT re-push any role; this interpreter is a linear SOP, not a loop.
 
 # Sub-instructions
 

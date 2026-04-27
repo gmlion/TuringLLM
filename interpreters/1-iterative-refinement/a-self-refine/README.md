@@ -10,11 +10,14 @@ across iterations beyond the current `## Draft`.
 
 ## State machine
 
-```
-empty ─► drafted ─(push self-critique)─► [dynamic] ─(pop)─► drafted_completed
-                                                                 │
-                                                  accepted ──► done
-                                                  rejected ──► drafted (loop)
+```mermaid
+stateDiagram-v2
+    [*] --> empty
+    empty --> drafted: Initialize
+    drafted --> drafted_completed: push self-critique.md / pop
+    drafted_completed --> done: accepted
+    drafted_completed --> drafted: rejected (loop)
+    done --> [*]
 ```
 
 Four strategy instructions: `Initialize`, `Request critique`,

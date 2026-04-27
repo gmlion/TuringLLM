@@ -514,7 +514,10 @@ async function main() {
 
     // Set cycle context with the pre-stack-ops top frame so that push/pop/splice
     // events fired inside runStackBlock are stamped with the correct cycle number.
-    setCycleContext(cycle, frameDir);
+    // Use the relative frameDir from the call stack (not the absolute path
+    // returned by activeFramePaths) so events.jsonl entries match the
+    // visualizer's selectedFrameDir filter, which is also relative.
+    setCycleContext(cycle, callStack.stack[callStack.stack.length - 1].frameDir);
 
     // Deterministic stack management (before LLM invocation)
     if (runStackBlock(callStack)) {

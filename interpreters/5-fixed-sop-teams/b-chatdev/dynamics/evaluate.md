@@ -6,15 +6,25 @@ Return: state done → caller sees {caller_state}_completed, and ## Return entri
 
 ## Instruction: Judge
 **Condition:** MEMORY state is "empty"
-**Action:** Judge whether the attempt below meets every bullet of the criterion. Write MEMORY with state=done plus a `## Return` section containing `verdict` (the literal text `pass` or `fail`) and `feedback` (concrete description of what is right or wrong, citing specific criterion bullets by number), both as block scalars:
+**Action:** Judge whether the attempt below meets every bullet of the criterion. Write `./MEMORY.md` with this EXACT single-heredoc shape (the `## Return` block MUST be in the same heredoc as the state change — without it the shell pops with no return value, breaking the caller):
 
-    ## State
-    done
-    ## Return
-    verdict: |
-      <pass or fail>
-    feedback: |
-      <your concrete feedback, every line indented two spaces>
+```
+cat > ./MEMORY.md << 'MEMEOF'
+## State
+done
+## Matched Instruction
+Judge
+## Last Action
+Wrote verdict + feedback to ## Return; popping back to caller.
+## Result
+Evaluation complete.
+## Return
+verdict: |
+  <pass or fail>
+feedback: |
+  <your concrete feedback, every line indented two spaces>
+MEMEOF
+```
 
 Attempt:
 {{attempt}}

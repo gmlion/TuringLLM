@@ -11,17 +11,17 @@ accumulated memory of prior failures — "verbal RL".
 
 ## State machine
 
-```
-empty ─► attempting ─► attempted ─(push evaluate)─► attempted_completed
-                                                           │
-                                         pass ─────────► done
-                                         fail ─► failed_attempt
-                                                           │
-                                                  (push reflect)
-                                                           │
-                                             failed_attempt_completed
-                                                           │
-                                     append ## Lesson; reset → attempting
+```mermaid
+stateDiagram-v2
+    [*] --> empty
+    empty --> attempting: Initialize
+    attempting --> attempted: Attempt
+    attempted --> attempted_completed: push evaluate.md / pop
+    attempted_completed --> done: pass
+    attempted_completed --> failed_attempt: fail
+    failed_attempt --> failed_attempt_completed: push reflect.md / pop
+    failed_attempt_completed --> attempting: append Lesson; reset
+    done --> [*]
 ```
 
 Seven strategy instructions: `Initialize`, `Attempt`, `Request

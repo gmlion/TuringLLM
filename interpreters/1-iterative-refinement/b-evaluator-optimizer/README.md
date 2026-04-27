@@ -10,11 +10,14 @@ iterations beyond the current `## Attempt` and `## Criterion`.
 
 ## State machine
 
-```
-empty ─► attempted ─(push evaluate)─► [dynamic] ─(pop)─► attempted_completed
-                                                                 │
-                                                    pass ──► done
-                                                    fail ──► attempted (loop with rewritten Attempt)
+```mermaid
+stateDiagram-v2
+    [*] --> empty
+    empty --> attempted: Initialize
+    attempted --> attempted_completed: push evaluate.md / pop
+    attempted_completed --> done: pass
+    attempted_completed --> attempted: fail (rewrite Attempt)
+    done --> [*]
 ```
 
 Four strategy instructions: `Initialize`, `Request evaluation`,

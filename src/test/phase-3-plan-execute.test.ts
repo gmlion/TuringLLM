@@ -59,17 +59,17 @@ describe("phase-3 a-plan-execute: file layout and content", () => {
   test("plan.md declares empty + done states and returns 'plan'", () => {
     const p = readFileSync(resolve(INTERP, "dynamics/plan.md"), "utf-8");
     assert.match(p, /state is "empty"/);
-    assert.match(p, /state to "done"/);
+    assert.match(p, /^done$/m);
     assert.match(p, /\{\{goal\}\}/);
     assert.match(p, /## Return\n[\s\S]*\bplan:/);
   });
 
-  test("execute-step.md consumes current_step + context and returns step_result", () => {
+  test("execute-step.md consumes current_step + context and returns outcome", () => {
     const e = readFileSync(resolve(INTERP, "dynamics/execute-step.md"), "utf-8");
     assert.match(e, /\{\{current_step\}\}/);
     assert.match(e, /\{\{context\}\}/);
-    assert.match(e, /state to "done"/);
-    assert.match(e, /step_result:/);
+    assert.match(e, /^done$/m);
+    assert.match(e, /outcome:/);
   });
 
   test("execute-step.md documents needs_replan return path", () => {
@@ -80,7 +80,7 @@ describe("phase-3 a-plan-execute: file layout and content", () => {
   test("synthesize.md consumes results and returns report", () => {
     const y = readFileSync(resolve(INTERP, "dynamics/synthesize.md"), "utf-8");
     assert.match(y, /\{\{results\}\}/);
-    assert.match(y, /state to "done"/);
+    assert.match(y, /^done$/m);
     assert.match(y, /report:/);
   });
 

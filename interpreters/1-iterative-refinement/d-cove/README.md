@@ -17,18 +17,23 @@ iterative refinement.
 
 ## State machine
 
-```
-empty ─► drafted ─(push verify, args=draft)─► [verify dynamic at depth 1]
-                                                        │
-                                                        ▼
-                                          [N children at depth 2,
-                                           one per claim, one at a time]
-                                                        │
-                                                        ▼
-                                               verify emits ## Revised
-                                                        │ done
-                                                        ▼
-          drafted_completed ─(Finalize)─► done ─(Finish)─► HALT
+```mermaid
+stateDiagram-v2
+    [*] --> empty
+    empty --> drafted: Initialize
+    drafted --> verify_d1: push verify.md (args=draft)
+
+    state verify_d1 {
+        [*] --> picking_claim
+        picking_claim --> answering_d2: push answer-independently.md (depth 2)
+        answering_d2 --> picking_claim: pop (next claim)
+        picking_claim --> emit_revised: all claims answered
+        emit_revised --> [*]
+    }
+
+    verify_d1 --> drafted_completed: pop
+    drafted_completed --> done: Finalize
+    done --> [*]
 ```
 
 Four strategy instructions: `Initialize`, `Request verification`,
