@@ -266,6 +266,8 @@
     let autoInterval = null;
     let instanceDir = '';
     let currentPage = 'home';   // 'home' | 'instance'
+    let currentRoute = null;    // Route object from UrlRouter.parseRoute
+    let currentGraphMode = 'frame';
     // cycles[i] = { num, hash, dir, callStack: {stack:[{returnState,frameDir}], nextCounter}, frames: { <frameDir>: { state, files: [{path, content}] } } }
     let cycles = [];
     let liveCycle = null;     // pseudo-cycle for the current instance state, num = -1
@@ -956,18 +958,47 @@
     }
 
     function bootstrap() {
-      const inst = new URLSearchParams(window.location.search).get('instance');
-      if (inst) {
-        currentPage = 'instance';
-        document.getElementById('homePage').hidden = true;
-        document.getElementById('instancePage').hidden = false;
-        loadInstance();
-      } else {
+      if (!window.UrlRouter) return; // module not yet loaded; the module's <script type="module"> will call bootstrap() once it's ready
+      const route = UrlRouter.parseRoute(window.location.search);
+      currentRoute = route;
+      const home = document.getElementById('homePage');
+      const inst = document.getElementById('instancePage');
+      const graph = document.getElementById('graphView');
+      const cycle = document.getElementById('cycleView');
+      const timeline = document.getElementById('timeline');
+      if (route.kind === 'home') {
         currentPage = 'home';
-        document.getElementById('instancePage').hidden = true;
-        document.getElementById('homePage').hidden = false;
+        home.hidden = false;
+        inst.hidden = true;
         loadHomeInstances();
+        return;
       }
+      currentPage = 'instance';
+      home.hidden = true;
+      inst.hidden = false;
+      instanceDir = route.instance;
+      document.getElementById('topInstanceName').textContent = instanceDir.replace(/^instances\//, '');
+      if (route.kind === 'graph') {
+        currentGraphMode = route.mode;
+        document.getElementById('graphModeBtn').textContent = 'Mode: per-' + currentGraphMode;
+        graph.hidden = false;
+        cycle.hidden = true;
+        if (timeline) timeline.style.display = 'none'; // R16: hide cycle-dot timeline in graph view
+        loadInstanceForGraph();
+      } else {
+        graph.hidden = true;
+        cycle.hidden = false;
+        if (timeline) timeline.style.display = '';
+        // Seed selected cycle/frame so the existing cycle-view code uses them
+        selectedCycleNum = route.cycle;
+        selectedFrameDir = route.frame;
+        loadInstance();   // existing function, drives the 3-column view
+      }
+    }
+
+    function loadInstanceForGraph() {
+      // Stub for T8/T9 — T10 implements rendering.
+      console.log('[graph view] would render', currentGraphMode, 'graph for', instanceDir);
     }
     bootstrap();
   </script>
