@@ -159,12 +159,15 @@ export function buildPerCycleGraph(
     });
   }
   const edges: GraphEdge[] = [];
-  // Continuity: consecutive cycles of the same frame.
+  // Continuity: only between TRULY consecutive cycles of the same frame
+  // (cycle N → cycle N+1). When the frame pushes a child and resumes later,
+  // the gap is bridged by push+pop edges, not by a continuity edge — so we
+  // skip the link if the cycle gap > 1.
   const lastByFrame = new Map<string, number>();
   for (const e of events) {
     if (e.type !== "cycle_start" || !e.frame) continue;
     const prev = lastByFrame.get(e.frame);
-    if (prev !== undefined) {
+    if (prev !== undefined && e.cycle === prev + 1) {
       edges.push({
         source: `${e.frame}@${prev}`,
         target: `${e.frame}@${e.cycle}`,

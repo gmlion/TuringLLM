@@ -162,6 +162,21 @@ describe("buildPerCycleGraph edges (R9)", () => {
     assert.deepEqual(cont[1], { source: "frames/f000-strategy@2", target: "frames/f000-strategy@3", type: "continuity" });
   });
 
+  test("NO continuity edge when the frame's next cycle is non-adjacent (push/pop gap)", () => {
+    // Strategy runs cycle 1, pushes plan; plan runs cycle 2, pops; strategy resumes at 3.
+    // Strategy@1 and Strategy@3 are not adjacent — push+pop edges already bridge them.
+    const events: EventRecord[] = [
+      { seq: 1, ts: "", cycle: 1, frame: "frames/f000-strategy", type: "cycle_start" },
+      { seq: 2, ts: "", cycle: 1, frame: "frames/f000-strategy", type: "push", target: "dynamics/plan.md", frameDir: "frames/f001-plan", depth: 1 },
+      { seq: 3, ts: "", cycle: 2, frame: "frames/f001-plan", type: "cycle_start" },
+      { seq: 4, ts: "", cycle: 2, frame: "frames/f001-plan", type: "pop", frameDir: "frames/f001-plan", returnState: "x", depth: 0 },
+      { seq: 5, ts: "", cycle: 3, frame: "frames/f000-strategy", type: "cycle_start" },
+    ];
+    const g = buildPerCycleGraph(events, null);
+    const cont = g.edges.filter((e) => e.type === "continuity");
+    assert.equal(cont.length, 0, "no continuity edge across push/pop gap (strategy 1 → 3)");
+  });
+
   test("push/pop edges resolve to existing cycle_start nodes (not the event's own cycle)", () => {
     // Realistic shell ordering (src/main.ts:511-535): per cycle N,
     // (1) setCycleContext with pre-stack-op top, (2) runStackBlock emits
