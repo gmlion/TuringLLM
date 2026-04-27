@@ -1079,8 +1079,10 @@
               'font-size': 11,
               'text-valign': 'center', 'text-halign': 'center',
               'shape': 'round-rectangle',
-              'width': 'label', 'height': 28,
-              'padding': '6px',
+              // `width: 'label'` was deprecated and now produces width=0 in
+              // current Cytoscape — compute width from label length instead.
+              'width': (n) => Math.max(60, String(n.data('label')).length * 7 + 12),
+              'height': 28,
             } },
           { selector: 'edge', style: {
               'curve-style': 'bezier',
