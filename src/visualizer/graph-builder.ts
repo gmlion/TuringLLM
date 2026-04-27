@@ -152,7 +152,10 @@ export function buildPerCycleGraph(
     const slug = parseSlug(e.frame);
     nodes.push({
       id: `${e.frame}@${e.cycle}`,
-      label: `${slug} #${e.cycle}`,
+      // Compact label — the swimlane row already conveys the slug, so showing
+      // just `#N` keeps per-cycle nodes narrow and prevents overlap when the
+      // cycle range is dense.
+      label: `#${e.cycle}`,
       slug,
       cycle: e.cycle,
       frameDir: e.frame,
