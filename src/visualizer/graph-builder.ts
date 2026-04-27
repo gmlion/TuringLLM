@@ -134,17 +134,6 @@ export function buildPerFrameGraph(
           break;
         }
       }
-      // Fallback: if no later cycle_start (e.g. trace ends mid-pop), use
-      // the earliest matching push to identify the caller. R8 mandates
-      // one pop edge per pop event regardless of trace truncation.
-      if (child && !caller) {
-        for (const p of events) {
-          if (p.type === "push" && p.frameDir === child && p.frame) {
-            caller = p.frame as string;
-            break;
-          }
-        }
-      }
       if (child && caller) edges.push({ source: child, target: caller, type: "pop" });
     }
   }
