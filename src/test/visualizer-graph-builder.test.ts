@@ -39,3 +39,49 @@ describe("computeSlugRowOrder", () => {
     assert.deepEqual(computeSlugRowOrder(events), ["strategy", "dialogue"]);
   });
 });
+
+import { buildPerFrameGraph } from "../visualizer/graph-builder.js";
+
+describe("buildPerFrameGraph", () => {
+  test("returns empty graph for empty events (R20)", () => {
+    assert.deepEqual(
+      buildPerFrameGraph([], null),
+      { nodes: [], edges: [], slugRowOrder: [] },
+    );
+  });
+
+  test("one node per frame; label is `slug (first–last)`", () => {
+    const events = [
+      { seq: 1, ts: "", cycle: 1, frame: "frames/f000-strategy", type: "cycle_start" },
+      { seq: 2, ts: "", cycle: 2, frame: "frames/f001-dialogue", type: "cycle_start" },
+      { seq: 3, ts: "", cycle: 3, frame: "frames/f001-dialogue", type: "cycle_start" },
+      { seq: 4, ts: "", cycle: 4, frame: "frames/f000-strategy", type: "cycle_start" },
+    ];
+    const g = buildPerFrameGraph(events, null);
+    assert.equal(g.nodes.length, 2);
+    const strategy = g.nodes.find((n) => n.frameDir === "frames/f000-strategy")!;
+    const dialogue = g.nodes.find((n) => n.frameDir === "frames/f001-dialogue")!;
+    assert.equal(strategy.label, "strategy (1–4)");
+    assert.equal(dialogue.label, "dialogue (2–3)");
+    assert.equal(strategy.cycle, 1);
+    assert.equal(dialogue.cycle, 2);
+  });
+
+  test("active frame's lastCycle is the latest event cycle (R21)", () => {
+    const events = [
+      { seq: 1, ts: "", cycle: 1, frame: "frames/f000-strategy", type: "cycle_start" },
+      { seq: 2, ts: "", cycle: 2, frame: "frames/f001-dialogue", type: "cycle_start" },
+      { seq: 3, ts: "", cycle: 3, frame: "frames/f001-dialogue", type: "cycle_start" },
+    ];
+    const liveStack = {
+      nextCounter: 2,
+      stack: [
+        { returnState: "<root>", frameDir: "frames/f000-strategy" },
+        { returnState: "active", frameDir: "frames/f001-dialogue" },
+      ],
+    };
+    const g = buildPerFrameGraph(events, liveStack);
+    const dialogue = g.nodes.find((n) => n.frameDir === "frames/f001-dialogue")!;
+    assert.equal(dialogue.label, "dialogue (2–3)");
+  });
+});

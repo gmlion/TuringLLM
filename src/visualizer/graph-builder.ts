@@ -69,3 +69,54 @@ export function computeSlugRowOrder(events: EventRecord[]): string[] {
   }
   return slugs;
 }
+
+/** Compute per-frame lifespans from events + live stack. R5 + R21. */
+function collectFrames(events: EventRecord[], liveStack: CallStack | null): Frame[] {
+  const map = new Map<string, Frame>();
+  let latestCycle = 0;
+  for (const e of events) {
+    if (e.type !== "cycle_start" || !e.frame) continue;
+    latestCycle = Math.max(latestCycle, e.cycle);
+    const existing = map.get(e.frame);
+    if (existing) {
+      existing.lastCycle = Math.max(existing.lastCycle, e.cycle);
+    } else {
+      map.set(e.frame, {
+        frameDir: e.frame,
+        slug: parseSlug(e.frame),
+        firstCycle: e.cycle,
+        lastCycle: e.cycle,
+        isActive: false,
+      });
+    }
+  }
+  const activeDirs = new Set(
+    liveStack ? liveStack.stack.map((s) => s.frameDir) : [],
+  );
+  for (const f of map.values()) {
+    if (activeDirs.has(f.frameDir)) {
+      f.isActive = true;
+      // R21: extend lastCycle to the latest cycle observed.
+      f.lastCycle = Math.max(f.lastCycle, latestCycle);
+    }
+  }
+  return Array.from(map.values());
+}
+
+/** Build the per-frame (sparse) graph. R5, R10, R20, R21 (edges added in T4). */
+export function buildPerFrameGraph(
+  events: EventRecord[],
+  liveStack: CallStack | null,
+): Graph {
+  const slugRowOrder = computeSlugRowOrder(events);
+  if (events.length === 0) return { nodes: [], edges: [], slugRowOrder };
+  const frames = collectFrames(events, liveStack);
+  const nodes: GraphNode[] = frames.map((f) => ({
+    id: f.frameDir,
+    label: `${f.slug} (${f.firstCycle}–${f.lastCycle})`,
+    slug: f.slug,
+    cycle: f.firstCycle,
+    frameDir: f.frameDir,
+  }));
+  return { nodes, edges: [], slugRowOrder };
+}
