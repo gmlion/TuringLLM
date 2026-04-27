@@ -433,8 +433,9 @@
 
     // ---- Loading ----
     function refresh() {
-      if (currentPage === 'home') loadHomeInstances();
-      else loadInstance();
+      if (currentRoute?.kind === 'graph') loadInstanceForGraph();
+      else if (currentRoute?.kind === 'cycle') loadInstance();
+      else loadHomeInstances();
     }
 
     async function loadInstance() {
@@ -963,6 +964,14 @@
       const route = { kind: 'graph', instance: instanceDir, mode: currentGraphMode };
       history.pushState(null, '', UrlRouter.formatRoute(route));
       bootstrap();
+    }
+
+    function toggleGraphMode() {
+      currentGraphMode = currentGraphMode === 'frame' ? 'cycle' : 'frame';
+      document.getElementById('graphModeBtn').textContent = 'Mode: per-' + currentGraphMode;
+      const route = { kind: 'graph', instance: instanceDir, mode: currentGraphMode };
+      history.pushState(null, '', UrlRouter.formatRoute(route));
+      loadInstanceForGraph();
     }
 
     function bootstrap() {
