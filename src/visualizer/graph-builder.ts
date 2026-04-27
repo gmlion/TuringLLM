@@ -118,5 +118,35 @@ export function buildPerFrameGraph(
     cycle: f.firstCycle,
     frameDir: f.frameDir,
   }));
-  return { nodes, edges: [], slugRowOrder };
+  const edges: GraphEdge[] = [];
+  for (const e of events) {
+    if (e.type === "push") {
+      const caller = e.frame as string;
+      const child = e.frameDir as string;
+      if (caller && child) edges.push({ source: caller, target: child, type: "push" });
+    } else if (e.type === "pop") {
+      const child = e.frameDir as string;
+      const idx = events.indexOf(e);
+      let caller: string | null = null;
+      for (let i = idx + 1; i < events.length; i++) {
+        if (events[i].type === "cycle_start" && events[i].frame) {
+          caller = events[i].frame as string;
+          break;
+        }
+      }
+      // Fallback: if no later cycle_start (e.g. trace ends mid-pop), use
+      // the earliest matching push to identify the caller. R8 mandates
+      // one pop edge per pop event regardless of trace truncation.
+      if (child && !caller) {
+        for (const p of events) {
+          if (p.type === "push" && p.frameDir === child && p.frame) {
+            caller = p.frame as string;
+            break;
+          }
+        }
+      }
+      if (child && caller) edges.push({ source: child, target: caller, type: "pop" });
+    }
+  }
+  return { nodes, edges, slugRowOrder };
 }
