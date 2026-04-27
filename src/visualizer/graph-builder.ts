@@ -185,12 +185,26 @@ export function buildPerCycleGraph(
     }
     lastByFrame.set(e.frame, e.cycle);
   }
-  // Push/pop: connect the cycle the event fired in to the next cycle_start of the relevant other frame.
-  const findNextCycleStart = (afterIdx: number, ofFrame: string): number | null => {
-    for (let i = afterIdx + 1; i < events.length; i++) {
+  // Push/pop edges connect the LAST cycle_start of the source frame BEFORE the
+  // event to the FIRST cycle_start of the target frame AFTER the event.
+  // (The event itself fires between two cycle_start emissions; the event's own
+  // cycle number does not necessarily map to a node, because cycle_start for
+  // that cycle is emitted with the post-stack-op active frame, not the
+  // pre-stack-op one.)
+  const findLastCycleStartBefore = (beforeIdx: number, ofFrame: string): number | null => {
+    for (let i = beforeIdx - 1; i >= 0; i--) {
       if (events[i].type === "cycle_start" && events[i].frame === ofFrame) {
         return events[i].cycle;
       }
+    }
+    return null;
+  };
+  const findNextCycleStart = (afterIdx: number, ofFrame?: string): { cycle: number; frame: string } | null => {
+    for (let i = afterIdx + 1; i < events.length; i++) {
+      const ev = events[i];
+      if (ev.type !== "cycle_start" || !ev.frame) continue;
+      if (ofFrame !== undefined && ev.frame !== ofFrame) continue;
+      return { cycle: ev.cycle, frame: ev.frame };
     }
     return null;
   };
@@ -199,30 +213,24 @@ export function buildPerCycleGraph(
       const caller = e.frame as string;
       const child = e.frameDir as string;
       if (!caller || !child) return;
+      const callerLast = findLastCycleStartBefore(idx, caller);
       const childFirst = findNextCycleStart(idx, child);
-      if (childFirst !== null) {
+      if (callerLast !== null && childFirst !== null) {
         edges.push({
-          source: `${caller}@${e.cycle}`,
-          target: `${child}@${childFirst}`,
+          source: `${caller}@${callerLast}`,
+          target: `${child}@${childFirst.cycle}`,
           type: "push",
         });
       }
     } else if (e.type === "pop") {
       const child = e.frameDir as string;
-      const childCycle = e.cycle;
-      let caller: string | null = null;
-      let callerCycle: number | null = null;
-      for (let i = idx + 1; i < events.length; i++) {
-        if (events[i].type === "cycle_start" && events[i].frame) {
-          caller = events[i].frame as string;
-          callerCycle = events[i].cycle;
-          break;
-        }
-      }
-      if (child && caller && callerCycle !== null) {
+      if (!child) return;
+      const childLast = findLastCycleStartBefore(idx, child);
+      const callerNext = findNextCycleStart(idx);
+      if (childLast !== null && callerNext !== null) {
         edges.push({
-          source: `${child}@${childCycle}`,
-          target: `${caller}@${callerCycle}`,
+          source: `${child}@${childLast}`,
+          target: `${callerNext.frame}@${callerNext.cycle}`,
           type: "pop",
         });
       }
