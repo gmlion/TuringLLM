@@ -996,9 +996,74 @@
       }
     }
 
-    function loadInstanceForGraph() {
-      // Stub for T8/T9 — T10 implements rendering.
-      console.log('[graph view] would render', currentGraphMode, 'graph for', instanceDir);
+    let cy = null;       // Cytoscape instance, lazily created
+
+    async function loadInstanceForGraph() {
+      const events = await loadEventsRaw();
+      const liveStack = await readJson(`${instanceDir}/.call-stack.json`);
+      const builder = currentGraphMode === 'frame'
+        ? GraphBuilder.buildPerFrameGraph
+        : GraphBuilder.buildPerCycleGraph;
+      const graph = builder(events, liveStack);
+      renderGraph(graph);
+      // populate header indicators for graph view
+      document.getElementById('topCycles').textContent = events.filter(e => e.type === 'cycle_start').length;
+      document.getElementById('topDepth').textContent = liveStack ? liveStack.stack.length : '-';
+      const lastCycleEnd = [...events].reverse().find(e => e.type === 'cycle_end');
+      document.getElementById('topState').textContent = lastCycleEnd?.state ?? '-';
+    }
+
+    async function loadEventsRaw() {
+      const text = await readFile(`${instanceDir}/logs/events.jsonl`);
+      if (!text) return [];
+      return text.trim().split('\n').map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(e => e !== null).sort((a, b) => a.seq - b.seq);
+    }
+
+    function renderGraph(graph) {
+      const empty = document.getElementById('cyEmpty');
+      const cyDiv = document.getElementById('cyGraph');
+      if (!graph.nodes.length) {
+        empty.hidden = false;
+        cyDiv.style.display = 'none';
+        return;
+      }
+      empty.hidden = true;
+      cyDiv.style.display = '';
+      const ROW_H = 90, COL_W = 60, PAD_X = 40, PAD_Y = 40;
+      const rowOf = new Map(graph.slugRowOrder.map((slug, i) => [slug, i]));
+      const elements = [
+        ...graph.nodes.map(n => ({
+          data: { id: n.id, label: n.label, frameDir: n.frameDir, cycle: n.cycle },
+          position: { x: PAD_X + n.cycle * COL_W, y: PAD_Y + (rowOf.get(n.slug) ?? 0) * ROW_H },
+        })),
+        ...graph.edges.map((e, i) => ({ data: { id: `e${i}`, source: e.source, target: e.target, type: e.type } })),
+      ];
+      if (cy) cy.destroy();
+      cy = cytoscape({
+        container: document.getElementById('cyGraph'),
+        elements,
+        layout: { name: 'preset' },
+        style: [
+          { selector: 'node', style: {
+              'background-color': '#21262d',
+              'border-width': 1, 'border-color': '#58a6ff',
+              'label': 'data(label)',
+              'color': '#c9d1d9',
+              'font-size': 11,
+              'text-valign': 'center', 'text-halign': 'center',
+              'shape': 'round-rectangle',
+              'width': 'label', 'height': 28,
+              'padding': '6px',
+            } },
+          { selector: 'edge', style: {
+              'curve-style': 'bezier',
+              'width': 1.5, 'line-color': '#30363d',
+              'target-arrow-shape': 'triangle', 'target-arrow-color': '#30363d',
+            } },
+          { selector: 'edge[type = "pop"]', style: { 'line-style': 'dashed' } },
+          { selector: 'edge[type = "continuity"]', style: { 'curve-style': 'straight' } },
+        ],
+      });
     }
     bootstrap();
   </script>
