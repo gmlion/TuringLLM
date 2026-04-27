@@ -1064,8 +1064,20 @@
           { selector: 'edge[type = "continuity"]', style: { 'curve-style': 'straight' } },
         ],
       });
+      cy.on('tap', 'node', (evt) => {
+        const data = evt.target.data();
+        const route = {
+          kind: 'cycle',
+          instance: instanceDir,
+          cycle: data.cycle,
+          frame: data.frameDir,
+        };
+        history.pushState(null, '', UrlRouter.formatRoute(route));
+        bootstrap();
+      });
     }
     bootstrap();
+    window.addEventListener('popstate', () => bootstrap());
   </script>
 
 <div id="payloadModal" class="modal-backdrop" onclick="onPayloadBackdropClick(event)">
