@@ -119,14 +119,13 @@ export function buildPerFrameGraph(
     frameDir: f.frameDir,
   }));
   const edges: GraphEdge[] = [];
-  for (const e of events) {
+  events.forEach((e, idx) => {
     if (e.type === "push") {
       const caller = e.frame as string;
       const child = e.frameDir as string;
       if (caller && child) edges.push({ source: caller, target: child, type: "push" });
     } else if (e.type === "pop") {
       const child = e.frameDir as string;
-      const idx = events.indexOf(e);
       let caller: string | null = null;
       for (let i = idx + 1; i < events.length; i++) {
         if (events[i].type === "cycle_start" && events[i].frame) {
@@ -136,7 +135,7 @@ export function buildPerFrameGraph(
       }
       if (child && caller) edges.push({ source: child, target: caller, type: "pop" });
     }
-  }
+  });
   return { nodes, edges, slugRowOrder };
 }
 
