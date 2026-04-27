@@ -170,5 +170,63 @@ export function buildPerCycleGraph(
       frameDir: e.frame,
     });
   }
-  return { nodes, edges: [], slugRowOrder };
+  const edges: GraphEdge[] = [];
+  // Continuity: consecutive cycles of the same frame.
+  const lastByFrame = new Map<string, number>();
+  for (const e of events) {
+    if (e.type !== "cycle_start" || !e.frame) continue;
+    const prev = lastByFrame.get(e.frame);
+    if (prev !== undefined) {
+      edges.push({
+        source: `${e.frame}@${prev}`,
+        target: `${e.frame}@${e.cycle}`,
+        type: "continuity",
+      });
+    }
+    lastByFrame.set(e.frame, e.cycle);
+  }
+  // Push/pop: connect the cycle the event fired in to the next cycle_start of the relevant other frame.
+  const findNextCycleStart = (afterIdx: number, ofFrame: string): number | null => {
+    for (let i = afterIdx + 1; i < events.length; i++) {
+      if (events[i].type === "cycle_start" && events[i].frame === ofFrame) {
+        return events[i].cycle;
+      }
+    }
+    return null;
+  };
+  events.forEach((e, idx) => {
+    if (e.type === "push") {
+      const caller = e.frame as string;
+      const child = e.frameDir as string;
+      if (!caller || !child) return;
+      const childFirst = findNextCycleStart(idx, child);
+      if (childFirst !== null) {
+        edges.push({
+          source: `${caller}@${e.cycle}`,
+          target: `${child}@${childFirst}`,
+          type: "push",
+        });
+      }
+    } else if (e.type === "pop") {
+      const child = e.frameDir as string;
+      const childCycle = e.cycle;
+      let caller: string | null = null;
+      let callerCycle: number | null = null;
+      for (let i = idx + 1; i < events.length; i++) {
+        if (events[i].type === "cycle_start" && events[i].frame) {
+          caller = events[i].frame as string;
+          callerCycle = events[i].cycle;
+          break;
+        }
+      }
+      if (child && caller && callerCycle !== null) {
+        edges.push({
+          source: `${child}@${childCycle}`,
+          target: `${caller}@${callerCycle}`,
+          type: "pop",
+        });
+      }
+    }
+  });
+  return { nodes, edges, slugRowOrder };
 }

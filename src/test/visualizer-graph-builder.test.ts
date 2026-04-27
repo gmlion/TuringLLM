@@ -143,3 +143,35 @@ describe("buildPerCycleGraph (R6, R10)", () => {
     );
   });
 });
+
+describe("buildPerCycleGraph edges (R9)", () => {
+  test("continuity edge between consecutive cycles of the same frame", () => {
+    const events: EventRecord[] = [
+      { seq: 1, ts: "", cycle: 1, frame: "frames/f000-strategy", type: "cycle_start" },
+      { seq: 2, ts: "", cycle: 2, frame: "frames/f000-strategy", type: "cycle_start" },
+      { seq: 3, ts: "", cycle: 3, frame: "frames/f000-strategy", type: "cycle_start" },
+    ];
+    const g = buildPerCycleGraph(events, null);
+    const cont = g.edges.filter((e) => e.type === "continuity");
+    assert.equal(cont.length, 2);
+    assert.deepEqual(cont[0], { source: "frames/f000-strategy@1", target: "frames/f000-strategy@2", type: "continuity" });
+    assert.deepEqual(cont[1], { source: "frames/f000-strategy@2", target: "frames/f000-strategy@3", type: "continuity" });
+  });
+
+  test("push edge connects caller@push_cycle to child@first_cycle_of_child", () => {
+    const events: EventRecord[] = [
+      { seq: 1, ts: "", cycle: 1, frame: "frames/f000-strategy", type: "cycle_start" },
+      { seq: 2, ts: "", cycle: 1, frame: "frames/f000-strategy", type: "push", target: "dynamics/dialogue.md", frameDir: "frames/f001-dialogue", depth: 1 },
+      { seq: 3, ts: "", cycle: 2, frame: "frames/f001-dialogue", type: "cycle_start" },
+      { seq: 4, ts: "", cycle: 2, frame: "frames/f001-dialogue", type: "pop", frameDir: "frames/f001-dialogue", returnState: "x", depth: 0 },
+      { seq: 5, ts: "", cycle: 3, frame: "frames/f000-strategy", type: "cycle_start" },
+    ];
+    const g = buildPerCycleGraph(events, null);
+    const pushE = g.edges.filter((e) => e.type === "push");
+    const popE = g.edges.filter((e) => e.type === "pop");
+    assert.equal(pushE.length, 1);
+    assert.deepEqual(pushE[0], { source: "frames/f000-strategy@1", target: "frames/f001-dialogue@2", type: "push" });
+    assert.equal(popE.length, 1);
+    assert.deepEqual(popE[0], { source: "frames/f001-dialogue@2", target: "frames/f000-strategy@3", type: "pop" });
+  });
+});
