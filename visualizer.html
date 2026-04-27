@@ -204,6 +204,8 @@
 
   <div id="instancePage" hidden>
     <div class="topbar" style="display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-bottom:16px;padding:10px 16px;background:#161b22;border:1px solid #30363d;border-radius:8px;font-size:0.85em;">
+      <a id="backToGraphLink" href="#" onclick="backToGraph(); return false;" hidden style="color:#58a6ff;text-decoration:none;">← Graph</a>
+      <span id="backToGraphSep" hidden style="color:#30363d;">|</span>
       <a href="?" style="color:#58a6ff;text-decoration:none;">← Home</a>
       <span style="color:#30363d;">|</span>
       <span><span style="color:#8b949e;">Instance: </span><span id="topInstanceName" style="color:#58a6ff;font-weight:bold;"></span></span>
@@ -957,6 +959,12 @@
       mermaid.initialize({ startOnLoad: false, theme: 'dark', securityLevel: 'loose' });
     }
 
+    function backToGraph() {
+      const route = { kind: 'graph', instance: instanceDir, mode: currentGraphMode };
+      history.pushState(null, '', UrlRouter.formatRoute(route));
+      bootstrap();
+    }
+
     function bootstrap() {
       if (!window.UrlRouter) return; // module not yet loaded; the module's <script type="module"> will call bootstrap() once it's ready
       const route = UrlRouter.parseRoute(window.location.search);
@@ -984,11 +992,15 @@
         graph.hidden = false;
         cycle.hidden = true;
         if (timeline) timeline.style.display = 'none'; // R16: hide cycle-dot timeline in graph view
+        document.getElementById('backToGraphLink').hidden = true;
+        document.getElementById('backToGraphSep').hidden = true;
         loadInstanceForGraph();
       } else {
         graph.hidden = true;
         cycle.hidden = false;
         if (timeline) timeline.style.display = '';
+        document.getElementById('backToGraphLink').hidden = false;
+        document.getElementById('backToGraphSep').hidden = false;
         // Seed selected cycle/frame so the existing cycle-view code uses them
         selectedCycleNum = route.cycle;
         selectedFrameDir = route.frame;
