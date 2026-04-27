@@ -1084,13 +1084,17 @@
             } },
           { selector: 'edge', style: {
               'curve-style': 'bezier',
-              'width': 1.5, 'line-color': '#30363d',
-              'target-arrow-shape': 'triangle', 'target-arrow-color': '#30363d',
+              'width': 2, 'line-color': '#58a6ff', 'opacity': 0.6,
+              'target-arrow-shape': 'triangle', 'target-arrow-color': '#58a6ff',
             } },
-          { selector: 'edge[type = "pop"]', style: { 'line-style': 'dashed' } },
-          { selector: 'edge[type = "continuity"]', style: { 'curve-style': 'straight' } },
+          { selector: 'edge[type = "pop"]', style: { 'line-style': 'dashed', 'line-color': '#d2a8ff', 'target-arrow-color': '#d2a8ff' } },
+          { selector: 'edge[type = "continuity"]', style: { 'curve-style': 'straight', 'line-color': '#8b949e', 'target-arrow-color': '#8b949e' } },
         ],
       });
+      // Auto-fit so all nodes are visible regardless of cycle range; preset
+      // positions place nodes at absolute coords (e.g. cycle 50 → x=3040)
+      // which would otherwise be off-screen on first load.
+      cy.fit(undefined, 30);
       cy.on('tap', 'node', (evt) => {
         const data = evt.target.data();
         // Defensive: every graph node populated by buildPer{Frame,Cycle}Graph carries
