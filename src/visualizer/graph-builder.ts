@@ -49,3 +49,23 @@ export interface Graph {
 export function parseSlug(frameDir: string): string {
   return frameDir.replace(/^frames\//, "").replace(/^f\d+-/, "");
 }
+
+/** Row order for swimlane layout: strategy first, then by first appearance. */
+export function computeSlugRowOrder(events: EventRecord[]): string[] {
+  const firstSeen = new Map<string, number>();
+  for (const e of events) {
+    if (e.type !== "cycle_start" || !e.frame) continue;
+    const slug = parseSlug(e.frame);
+    if (!firstSeen.has(slug)) firstSeen.set(slug, e.cycle);
+  }
+  const slugs = Array.from(firstSeen.entries())
+    .sort((a, b) => a[1] - b[1])
+    .map(([slug]) => slug);
+  // Strategy always first if present.
+  const strategyIdx = slugs.indexOf("strategy");
+  if (strategyIdx > 0) {
+    slugs.splice(strategyIdx, 1);
+    slugs.unshift("strategy");
+  }
+  return slugs;
+}
