@@ -125,7 +125,7 @@ describe("buildPerFrameGraph edges (R8)", () => {
 import { buildPerCycleGraph } from "../visualizer/graph-builder.js";
 
 describe("buildPerCycleGraph (R6, R10)", () => {
-  test("one node per cycle_start; label is `#N` (slug conveyed by swimlane row)", () => {
+  test("one node per cycle_start; label is `slug #N`", () => {
     const events: EventRecord[] = [
       { seq: 1, ts: "", cycle: 1, frame: "frames/f000-strategy", type: "cycle_start" },
       { seq: 2, ts: "", cycle: 2, frame: "frames/f001-dialogue", type: "cycle_start" },
@@ -134,11 +134,10 @@ describe("buildPerCycleGraph (R6, R10)", () => {
     const g = buildPerCycleGraph(events, null);
     assert.equal(g.nodes.length, 3);
     assert.equal(g.nodes[0].id, "frames/f000-strategy@1");
-    assert.equal(g.nodes[0].label, "#1");
-    assert.equal(g.nodes[0].slug, "strategy");   // slug still set on the node for row assignment
+    assert.equal(g.nodes[0].label, "strategy #1");
     assert.equal(g.nodes[1].id, "frames/f001-dialogue@2");
-    assert.equal(g.nodes[1].label, "#2");
-    assert.equal(g.nodes[2].label, "#3");
+    assert.equal(g.nodes[1].label, "dialogue #2");
+    assert.equal(g.nodes[2].label, "dialogue #3");
   });
 
   test("returns empty graph for empty events (R20)", () => {

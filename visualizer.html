@@ -1056,17 +1056,9 @@
       }
       empty.hidden = true;
       cyDiv.style.display = '';
-      const ROW_H = 90, COL_W = 60, PAD_X = 160, PAD_Y = 40;   // PAD_X leaves space for the row-header column
+      const ROW_H = 90, COL_W = 160, PAD_X = 40, PAD_Y = 40;   // wider COL_W so per-cycle labels like "execute-step #57" fit per column without overlapping
       const rowOf = new Map(graph.slugRowOrder.map((slug, i) => [slug, i]));
       const elements = [
-        // Row-header pseudo-nodes — one per slug, anchored to the left, no
-        // border/background, just text. They label each swimlane so the
-        // compact `#N` per-cycle nodes remain identifiable by row.
-        ...graph.slugRowOrder.map((slug, i) => ({
-          data: { id: `__row_${slug}`, label: slug, isRowHeader: true },
-          position: { x: 20, y: PAD_Y + i * ROW_H },
-          selectable: false, grabbable: false,
-        })),
         ...graph.nodes.map(n => ({
           data: { id: n.id, label: n.label, frameDir: n.frameDir, cycle: n.cycle },
           position: { x: PAD_X + n.cycle * COL_W, y: PAD_Y + (rowOf.get(n.slug) ?? 0) * ROW_H },
@@ -1091,16 +1083,6 @@
               // current Cytoscape — compute width from label length instead.
               'width': (n) => Math.max(60, String(n.data('label')).length * 7 + 12),
               'height': 28,
-            } },
-          { selector: 'node[?isRowHeader]', style: {
-              'background-opacity': 0,
-              'border-width': 0,
-              'color': '#8b949e',
-              'font-size': 14,
-              'font-weight': 'bold',
-              'text-halign': 'center', 'text-valign': 'center',
-              'width': 130, 'height': 28,
-              'events': 'no',
             } },
           { selector: 'edge', style: {
               'curve-style': 'bezier',
