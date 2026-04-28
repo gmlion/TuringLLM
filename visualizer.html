@@ -1136,13 +1136,26 @@
       else if (e.type === 'tool_call' && e.tool) detail = e.tool;
 
       const detailHtml = detail ? ` <span style="color:#c9d1d9; opacity:0.75;">${escapeAttr(detail)}</span>` : '';
-      return `<div style="margin-bottom:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">`
+      const header = `<div style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">`
         + `<span style="color:#6e7681;">${time}</span> `
         + `<span style="color:#6e7681;">${cycleStr}</span> `
         + `<span style="color:${typeColor};">${e.type}</span> `
         + `<span style="color:#8b949e;">${escapeAttr(slug)}</span>`
         + detailHtml
         + `</div>`;
+
+      // For LLM responses, render the actual output text inline as a wrapped
+      // block below the header. Empty output gets a muted "(no output)" hint
+      // so failed cycles (e.g. ENAMETOOLONG) are still distinguishable.
+      if (e.type === 'llm_response') {
+        const out = e.output != null ? String(e.output) : '';
+        const body = out.trim()
+          ? `<pre style="margin:2px 0 8px 14px; padding:6px 8px; background:#161b22; border-left:2px solid #58a6ff; color:#c9d1d9; white-space:pre-wrap; word-break:break-word; font-family:inherit; font-size:1em; max-height:340px; overflow-y:auto;">${escapeAttr(out)}</pre>`
+          : `<div style="margin:1px 0 6px 14px; color:#6e7681; font-style:italic;">(no output)</div>`;
+        return `<div style="margin-bottom:2px;">${header}${body}</div>`;
+      }
+
+      return `<div style="margin-bottom:1px;">${header}</div>`;
     }
 
     function escapeAttr(s) {
