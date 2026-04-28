@@ -3,42 +3,78 @@
 *Anthropic, "Building Effective Agents", 2024. See
 `docs/agent-workflows/patterns.md` §Group 1.*
 
-Two distinct roles: a generator produces attempts, a separate evaluator
-judges each attempt against an explicit `## Criterion` and returns a
-pass/fail verdict plus structured feedback. No memory carries across
-iterations beyond the current `## Attempt` and `## Criterion`.
+## What's modeled
 
-## State machine
+A producer/judge split. One role generates an attempt; a separate
+role checks the attempt against an explicit, written acceptance
+criterion and issues a pass/fail verdict plus structured feedback.
+On fail, the producer tries again using that feedback. The
+critical move (relative to self-refine, where producer and critic
+collapse into one cycle) is that the **judge has its own context
+and is given the criterion, not just the attempt**. This makes
+the gate explicit and inspectable rather than implicit in the
+producer's self-judgement.
 
-```mermaid
-stateDiagram-v2
-    [*] --> empty
-    empty --> attempted: Initialize
-    attempted --> attempted_completed: push evaluate.md / pop
-    attempted_completed --> done: pass
-    attempted_completed --> attempted: fail (rewrite Attempt)
-    done --> [*]
-```
+## Two orchestrators, two contexts
 
-Four strategy instructions: `Initialize`, `Request evaluation`,
-`Handle verdict`, `Finish`.
+| Driver | When it's active | What it can see | What it produces |
+| --- | --- | --- | --- |
+| **Strategy** (`f000-strategy`) | Initial attempt, between iterations, final accept | Its own MEMORY, the current attempt at `./scoped/attempt.md`, the criterion at `./scoped/criterion.md`, the user program at `../../PROGRAM.md` | A new push (request a verdict on the current attempt), or a state of `done` |
+| **Evaluator** (`fNNN-evaluate`) | One judging pass, then it's gone | Only the attempt and criterion handed in via push-args; nothing about the strategy's history, prior verdicts, or how many iterations have passed | A `verdict` (literal `pass` or `fail`) and `feedback` text, spliced back to the strategy on pop |
 
-## Dynamic: `evaluate.md`
+A new evaluator context is created on every push and destroyed on
+the matching pop. Stack depth is at most 2: `strategy →
+evaluator`. Continuity across iterations lives only on disk:
+`./scoped/attempt.md` (overwritten with each new attempt) and
+`./scoped/criterion.md` (set once at startup, never rewritten).
 
-| | |
-| --- | --- |
-| Consumes | `## Attempt`, `## Criterion` |
-| Produces | `## Verdict` (literal `pass` or `fail`), `## Feedback` |
-| Internal states | `empty` → `done` (single instruction: `Judge`) |
+## How an iteration works
 
-This `evaluate.md` is the **canonical** copy. `c-reflexion/dynamics/
-evaluate.md` is kept byte-equal via `src/test/phase-1-dynamics-identity.test.ts`.
+A single iteration is three cycles in the simple case:
+
+1. **(strategy)** *Request evaluation.* The strategy reads
+   `./scoped/attempt.md` and `./scoped/criterion.md` and writes a
+   `## Push` to the evaluator dynamic, handing both in via
+   push-args.
+2. **(evaluator)** *Judge.* The evaluator reads attempt and
+   criterion, decides pass or fail, and writes both the verdict
+   and the feedback into a `## Return` block paired with `state:
+   done`. The shell pops; the strategy's MEMORY now has
+   `## Verdict` and `## Feedback` spliced in.
+3. **(strategy)** *Handle verdict.*
+   - If `## Verdict` is literally `pass` → state `done`.
+   - Otherwise → use `## Feedback` to rewrite
+     `./scoped/attempt.md`, drop the `## Verdict`/`## Feedback`
+     markers, set state back to `attempted`, loop.
+
+## Where things live
+
+- `./scoped/attempt.md` — the current attempt. Wholesale rewritten
+  each iteration with the producer's response to feedback.
+- `./scoped/criterion.md` — the acceptance criterion. Written
+  once from PROGRAM.md and never touched again.
+- `## Verdict` / `## Feedback` (in strategy MEMORY) — markers from
+  the most recent evaluator, dropped before the next iteration.
+
+There are no workspace files in this interpreter — the artefact
+*is* the attempt.
+
+## Dynamics in this interpreter
+
+| File | Receives (push-args) | Returns | Stack depth from caller |
+| --- | --- | --- | --- |
+| `dynamics/evaluate.md` | `attempt`, `criterion` | `verdict`, `feedback` | leaf |
+
+`dynamics/evaluate.md` is the **canonical** copy. Other consumers
+in the repo (c-reflexion, a-metagpt, b-chatdev) ship a byte-equal
+copy, pinned by `src/test/phase-dynamics-identity.test.ts`.
 
 ## Demo `PROGRAM.md`
 
 Rewrite a technical paragraph about prompt caching in plain,
-non-expert English. The acceptance criterion has three bullets: ≤ 5
-sentences, no listed jargon terms, preserves three factual claims.
+non-expert English. The acceptance criterion has three bullets:
+≤ 5 sentences, no listed jargon terms, preserves three factual
+claims.
 
 ## Run it
 
@@ -47,17 +83,18 @@ sentences, no listed jargon terms, preserves three factual claims.
 instances/my-b/run.sh
 ```
 
-## Known behaviour
+## Notable behaviour
 
-- The fail→retry loop only fires when the first attempt actually fails.
-  Capable models often pass a "rewrite in plain English" criterion on
-  the first try (the bundled demo typically halts in around 4 cycles).
-  Pick harsher criteria — or a harder task — if you want to visibly
-  exercise the loop.
-- **Malformed verdict path:** if the evaluator returns anything other
-  than literal `pass` or `fail`, the strategy treats the verdict as
-  `fail` (conservative) and appends a non-blocking `## Pending
-  Questions` item. It deliberately does *not* transition to
-  `waiting_for_user` — that would stall the loop because this strategy
-  has no `user_responded` handler.
-- No iteration cap.
+- **Often passes on the first try.** Capable models can pass a
+  "rewrite in plain English" criterion immediately; the bundled
+  demo typically halts in around 4 cycles. Pick harsher criteria
+  — or a harder task — if you want to visibly exercise the
+  fail→retry path.
+- **Malformed verdict handling.** If the evaluator returns
+  anything other than literal `pass` or `fail`, the strategy
+  treats it as `fail` (conservative) and appends a non-blocking
+  `## Pending Questions` item. It deliberately does *not*
+  transition to `waiting_for_user` — that would stall the loop
+  because this strategy has no `user_responded` handler.
+- **No iteration cap.** Convergence is the evaluator's
+  judgement.
