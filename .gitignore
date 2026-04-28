@@ -5,3 +5,4 @@ dist/
 MEMORY.md
 .api_key
 .env
+.claude/
