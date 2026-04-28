@@ -225,9 +225,20 @@
       <div class="timeline" id="timeline" style="flex:1 1 100%;display:flex;gap:4px;overflow-x:auto;align-items:flex-end;min-width:0;"></div>
     </div>
 
-    <div id="graphView">
-      <div id="cyGraph" style="height: calc(100vh - 140px); background: #0d1117; border: 1px solid #30363d; border-radius: 8px;"></div>
-      <div id="cyEmpty" hidden style="text-align:center; color:#8b949e; padding: 40px;">Instance has no cycles yet.</div>
+    <div id="graphView" style="display:flex; gap:8px;">
+      <div style="flex:1; min-width:0;">
+        <div id="cyGraph" style="height: calc(100vh - 140px); background: #0d1117; border: 1px solid #30363d; border-radius: 8px;"></div>
+        <div id="cyEmpty" hidden style="text-align:center; color:#8b949e; padding: 40px;">Instance has no cycles yet.</div>
+      </div>
+      <div id="liveEventStream" style="width:360px; flex-shrink:0; height:calc(100vh - 140px); display:flex; flex-direction:column; background:#0d1117; border:1px solid #30363d; border-radius:8px;">
+        <div style="padding:8px 12px; border-bottom:1px solid #30363d; font-size:0.85em; color:#8b949e; flex-shrink:0; display:flex; justify-content:space-between; align-items:baseline;">
+          <span style="text-transform:uppercase; letter-spacing:0.05em;">Live events</span>
+          <span id="liveEventStreamCount" style="font-size:0.85em;"></span>
+        </div>
+        <div id="liveEventStreamList" style="flex:1; overflow-y:auto; padding:6px 8px; font-family:'SFMono-Regular',Consolas,monospace; font-size:0.78em; line-height:1.35;">
+          <div style="color:#6e7681; padding:8px;">(no events yet)</div>
+        </div>
+      </div>
     </div>
     <div id="cycleView" hidden>
   <div class="grid-3col">
@@ -1033,11 +1044,109 @@
         : GraphBuilder.buildPerCycleGraph;
       const graph = builder(events, liveStack);
       renderGraph(graph);
+      updateLiveEventStream(events);
       // populate header indicators for graph view
       document.getElementById('topCycles').textContent = events.filter(e => e.type === 'cycle_start').length;
       document.getElementById('topDepth').textContent = liveStack ? liveStack.stack.length : '-';
       const lastCycleEnd = [...events].reverse().find(e => e.type === 'cycle_end');
       document.getElementById('topState').textContent = lastCycleEnd?.state ?? '-';
+    }
+
+    // ---- Live event stream (right-hand column on the graph view) ----
+    // Tracks the highest seq we've already rendered so subsequent refreshes
+    // append only new events rather than re-rendering (preserves DOM, preserves
+    // scroll position when the user is mid-inspection). Resets on instance
+    // change.
+    let liveStreamLastSeq = 0;
+    let liveStreamInstanceDir = null;
+    let liveStreamUserScrolledUp = false;
+    let liveStreamScrollHooked = false;
+
+    function hookLiveStreamScroll() {
+      if (liveStreamScrollHooked) return;
+      const list = document.getElementById('liveEventStreamList');
+      if (!list) return;
+      list.addEventListener('scroll', () => {
+        const atBottom = list.scrollTop + list.clientHeight >= list.scrollHeight - 8;
+        liveStreamUserScrolledUp = !atBottom;
+      });
+      liveStreamScrollHooked = true;
+    }
+
+    function updateLiveEventStream(events) {
+      hookLiveStreamScroll();
+      const list = document.getElementById('liveEventStreamList');
+      const count = document.getElementById('liveEventStreamCount');
+      if (!list) return;
+
+      // Reset on instance change so we don't carry events across instances.
+      if (liveStreamInstanceDir !== instanceDir) {
+        liveStreamInstanceDir = instanceDir;
+        liveStreamLastSeq = 0;
+        liveStreamUserScrolledUp = false;
+        list.innerHTML = '';
+      }
+
+      const newOnes = events.filter(e => e.seq > liveStreamLastSeq);
+      if (events.length === 0) {
+        list.innerHTML = '<div style="color:#6e7681; padding:8px;">(no events yet)</div>';
+        count.textContent = '';
+        return;
+      }
+      if (newOnes.length === 0) {
+        count.textContent = `${events.length} events`;
+        return;
+      }
+
+      // Initial render: clear placeholder.
+      if (liveStreamLastSeq === 0) list.innerHTML = '';
+
+      list.insertAdjacentHTML('beforeend', newOnes.map(formatLiveEvent).join(''));
+      liveStreamLastSeq = newOnes[newOnes.length - 1].seq;
+      count.textContent = `${events.length} events`;
+
+      if (!liveStreamUserScrolledUp) list.scrollTop = list.scrollHeight;
+    }
+
+    function formatLiveEvent(e) {
+      const typeColor = {
+        cycle_start: '#3fb950',
+        cycle_end: '#8b949e',
+        llm_request: '#79c0ff',
+        llm_response: '#58a6ff',
+        push: '#d2a8ff',
+        pop: '#d2a8ff',
+        splice: '#d2a8ff',
+        retry: '#d29922',
+        machine_git_commit: '#6e7681',
+      }[e.type] || '#c9d1d9';
+
+      const time = (e.ts || '').slice(11, 19);
+      const slug = (e.frame || '').replace(/^frames\//, '').replace(/^f\d+-/, '');
+      const cycleStr = e.cycle != null ? `#${e.cycle}` : '';
+
+      let detail = '';
+      if (e.type === 'llm_response' && e.duration_ms != null) detail = `${(e.duration_ms / 1000).toFixed(1)}s`;
+      else if (e.type === 'cycle_end' && e.duration_ms != null) detail = `${(e.duration_ms / 1000).toFixed(1)}s · state=${e.state || ''}`;
+      else if (e.type === 'push' && e.target) detail = `→ ${String(e.target).replace(/^dynamics\//, '')}${e.depth != null ? ` (d${e.depth})` : ''}`;
+      else if (e.type === 'pop') detail = `← d${e.depth != null ? e.depth : '?'}`;
+      else if (e.type === 'splice' && e.splicedKeys) detail = e.splicedKeys.join(',');
+      else if (e.type === 'retry' && e.reason) detail = String(e.reason).slice(0, 50);
+      else if (e.type === 'machine_git_commit' && e.subject) detail = e.subject;
+      else if (e.type === 'tool_call' && e.tool) detail = e.tool;
+
+      const detailHtml = detail ? ` <span style="color:#c9d1d9; opacity:0.75;">${escapeAttr(detail)}</span>` : '';
+      return `<div style="margin-bottom:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">`
+        + `<span style="color:#6e7681;">${time}</span> `
+        + `<span style="color:#6e7681;">${cycleStr}</span> `
+        + `<span style="color:${typeColor};">${e.type}</span> `
+        + `<span style="color:#8b949e;">${escapeAttr(slug)}</span>`
+        + detailHtml
+        + `</div>`;
+    }
+
+    function escapeAttr(s) {
+      return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     }
 
     async function loadEventsRaw() {
