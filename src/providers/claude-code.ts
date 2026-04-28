@@ -1,5 +1,7 @@
 import { execFileSync } from "child_process";
-import { resolve } from "path";
+import { mkdtempSync, rmSync, writeFileSync } from "fs";
+import { tmpdir } from "os";
+import { join, resolve } from "path";
 import { getSystemPrompt, getUserPrompt } from "../prompt.js";
 import { log, logRaw } from "../logger.js";
 import { QuotaExceededError } from "../errors.js";
@@ -29,109 +31,121 @@ export async function runCycle(
   const filesBefore: [string, string] = [readFile(memoryPath), readFile(instructionsPath)];
   const events: ProviderEvent[] = [];
 
+  // Pass system prompt via a temp file and the user prompt via stdin so neither
+  // counts against the OS argv ceiling (Windows CreateProcess caps at ~32 KB,
+  // and large MEMORY/INSTRUCTIONS pairs blow past that). See the demo4b
+  // postmortem for the original failure mode.
+  const promptDir = mkdtempSync(join(tmpdir(), "turing-cc-"));
+  const systemPromptFile = join(promptDir, "system-prompt.md");
+  writeFileSync(systemPromptFile, systemPrompt, "utf-8");
+
   let retryContext = "";
 
-  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-    let stdout = "";
-    let stderr = "";
-    let exitCode = 0;
+  try {
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      let stdout = "";
+      let stderr = "";
+      let exitCode = 0;
 
-    const prompt = retryContext ? `${userPrompt}\n\n${retryContext}` : userPrompt;
+      const prompt = retryContext ? `${userPrompt}\n\n${retryContext}` : userPrompt;
 
-    const t0Llm = Date.now();
-    // llm_request.prompt is the concatenated system+user prompt (convention shared
-    // across providers); the literal `-p` arg passed to the `claude` binary is just
-    // the user prompt — system prompt is passed via --system-prompt.
-    events.push({ type: "llm_request", provider: "claude-code", model: process.env.CC_MODEL || "haiku", prompt: `${systemPrompt}\n\n${prompt}` });
+      const t0Llm = Date.now();
+      // llm_request.prompt is the concatenated system+user prompt (convention shared
+      // across providers).
+      events.push({ type: "llm_request", provider: "claude-code", model: process.env.CC_MODEL || "haiku", prompt: `${systemPrompt}\n\n${prompt}` });
 
-    try {
-      const args = [
-        "-p", prompt,
-        "--system-prompt", systemPrompt,
-        "--model", process.env.CC_MODEL || "haiku",
-        "--output-format", "json",
-        "--allowedTools", "Bash(*)", "Write(*)", "Edit(*)", "WebSearch", "WebFetch",
-        "--dangerously-skip-permissions",
-      ];
+      try {
+        const args = [
+          "--print",
+          "--system-prompt-file", systemPromptFile,
+          "--model", process.env.CC_MODEL || "haiku",
+          "--output-format", "json",
+          "--allowedTools", "Bash(*)", "Write(*)", "Edit(*)", "WebSearch", "WebFetch",
+          "--dangerously-skip-permissions",
+        ];
 
-      stdout = execFileSync("claude", args, {
-        encoding: "utf-8",
-        timeout: 0,
-        maxBuffer: 10 * 1024 * 1024,
-        cwd,
-        env: { ...process.env },
-      });
-    } catch (err: unknown) {
-      if (err instanceof QuotaExceededError) throw err;
-      const e = err as { stdout?: string; stderr?: string; status?: number; signal?: string };
-      if (e.signal === "SIGINT" || e.status === 130) {
-        process.exit(0);
+        stdout = execFileSync("claude", args, {
+          encoding: "utf-8",
+          input: prompt,
+          timeout: 0,
+          maxBuffer: 10 * 1024 * 1024,
+          cwd,
+          env: { ...process.env },
+        });
+      } catch (err: unknown) {
+        if (err instanceof QuotaExceededError) throw err;
+        const e = err as { stdout?: string; stderr?: string; status?: number; signal?: string; code?: string };
+        if (e.signal === "SIGINT" || e.status === 130) {
+          process.exit(0);
+        }
+        // ENAMETOOLONG / E2BIG would mean we still exceeded the OS limit even
+        // with stdin+file (e.g. a giant single allowedTools entry). Surface it
+        // immediately rather than retrying — no retry will fix this.
+        if (e.code === "ENAMETOOLONG" || e.code === "E2BIG") {
+          throw new Error(`claude subprocess spawn failed with ${e.code}; argv too large despite stdin+system-prompt-file routing`);
+        }
+        stdout = (e.stdout || "").trim();
+        stderr = (e.stderr || "").trim();
+        exitCode = e.status ?? 1;
       }
-      stdout = (e.stdout || "").trim();
-      stderr = (e.stderr || "").trim();
-      exitCode = e.status ?? 1;
-    }
 
-    // Log everything
-    logRaw(`  [claude-code exit=${exitCode}]`);
-    logRaw(`  [claude-code stdout]\n${stdout}`);
-    if (stderr) logRaw(`  [claude-code stderr]\n${stderr}`);
+      logRaw(`  [claude-code exit=${exitCode}]`);
+      logRaw(`  [claude-code stdout]\n${stdout}`);
+      if (stderr) logRaw(`  [claude-code stderr]\n${stderr}`);
 
-    // Check quota
-    if (isQuotaError(stdout) || isQuotaError(stderr)) {
-      throw new QuotaExceededError(`Quota exceeded: ${(stderr || stdout).slice(0, 200)}`);
-    }
-
-    // Parse JSON output for logging
-    let resultText = "";
-    let durationMs = Date.now() - t0Llm;
-    try {
-      const parsed = JSON.parse(stdout);
-      resultText = parsed.result || "";
-
-      // Log cost info if available
-      if (parsed.cost_usd) {
-        log(`  [cost] $${parsed.cost_usd.toFixed(4)}`);
+      if (isQuotaError(stdout) || isQuotaError(stderr)) {
+        throw new QuotaExceededError(`Quota exceeded: ${(stderr || stdout).slice(0, 200)}`);
       }
-      if (parsed.duration_ms) {
-        durationMs = parsed.duration_ms;
-        log(`  [duration] ${(parsed.duration_ms / 1000).toFixed(1)}s`);
+
+      let resultText = "";
+      let durationMs = Date.now() - t0Llm;
+      try {
+        const parsed = JSON.parse(stdout);
+        resultText = parsed.result || "";
+
+        if (parsed.cost_usd) {
+          log(`  [cost] $${parsed.cost_usd.toFixed(4)}`);
+        }
+        if (parsed.duration_ms) {
+          durationMs = parsed.duration_ms;
+          log(`  [duration] ${(parsed.duration_ms / 1000).toFixed(1)}s`);
+        }
+      } catch {
+        resultText = stdout;
       }
-    } catch {
-      resultText = stdout;
+
+      events.push({ type: "llm_response", output: resultText, durationMs });
+
+      if (resultText) {
+        log(`  [claude-code] ${resultText.trim()}`);
+      } else if (exitCode !== 0) {
+        log(`  [claude-code] exited with code ${exitCode}${stderr ? ": " + stderr : ""}`);
+      } else {
+        log(`  [claude-code] (no text output)`);
+      }
+
+      const completeness = checkCycleCompleteness(memoryPath, instructionsPath, filesBefore);
+
+      if (completeness.halt) {
+        return { halt: true, haltMessage: completeness.haltMessage, summary: resultText, events };
+      }
+
+      if (completeness.noMatch) {
+        return { halt: false, noMatch: true, summary: resultText, events };
+      }
+
+      if (completeness.complete) {
+        return { halt: false, summary: resultText, events };
+      }
+
+      retryContext = `RETRY: Previous attempt failed. ${completeness.problem} You MUST update MEMORY.md with the new ## State before stopping.`;
+      events.push({ type: "retry", attempt: attempt + 1, reason: completeness.problem });
+      log(`  [retry ${attempt + 1}] ${completeness.problem}`);
     }
 
-    events.push({ type: "llm_response", output: resultText, durationMs });
-
-    // Console summary
-    if (resultText) {
-      log(`  [claude-code] ${resultText.trim()}`);
-    } else if (exitCode !== 0) {
-      log(`  [claude-code] exited with code ${exitCode}${stderr ? ": " + stderr : ""}`);
-    } else {
-      log(`  [claude-code] (no text output)`);
-    }
-
-    // Check cycle completeness
-    const completeness = checkCycleCompleteness(memoryPath, instructionsPath, filesBefore);
-
-    if (completeness.halt) {
-      return { halt: true, haltMessage: completeness.haltMessage, summary: resultText, events };
-    }
-
-    if (completeness.noMatch) {
-      return { halt: false, noMatch: true, summary: resultText, events };
-    }
-
-    if (completeness.complete) {
-      return { halt: false, summary: resultText, events };
-    }
-
-    retryContext = `RETRY: Previous attempt failed. ${completeness.problem} You MUST update MEMORY.md with the new ## State before stopping.`;
-    events.push({ type: "retry", attempt: attempt + 1, reason: completeness.problem });
-    log(`  [retry ${attempt + 1}] ${completeness.problem}`);
+    log(`  [warn] cycle incomplete after ${MAX_RETRIES} retries`);
+    return { halt: false, events };
+  } finally {
+    rmSync(promptDir, { recursive: true, force: true });
   }
-
-  log(`  [warn] cycle incomplete after ${MAX_RETRIES} retries`);
-  return { halt: false, events };
 }
