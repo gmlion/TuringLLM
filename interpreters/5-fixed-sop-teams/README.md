@@ -16,9 +16,7 @@ outputs are directly comparable.
 Under the `interpreter + PROGRAM → instance` rule, comparing two
 role-collaboration models requires two interpreters running the
 same PROGRAM. Collapsing them into one interpreter would erase
-the comparison this phase exists for. See the spec at
-`docs/specs/2026-04-24-implement-phase-3-and-4/` §Phase 4 for
-the full argument.
+the comparison.
 
 ## Shared PROGRAM.md
 
@@ -28,10 +26,10 @@ by `src/test/phase-4-chatdev.test.ts`.
 
 ## Shared dynamic
 
-Both leaves ship a byte-equal copy of `dynamics/evaluate.md`
-(from Phase 1b). The four-way identity across `b-evaluator-
-optimizer`, `c-reflexion`, `a-metagpt`, `b-chatdev` is pinned
-by `src/test/phase-dynamics-identity.test.ts` (R29).
+Both leaves ship a byte-equal copy of `dynamics/evaluate.md`. The
+four-way identity across `b-evaluator-optimizer`, `c-reflexion`,
+`a-metagpt`, `b-chatdev` is pinned by
+`src/test/phase-dynamics-identity.test.ts`.
 
 ## Run them side-by-side
 
@@ -46,5 +44,3 @@ diff -u instances/mg/workspace/ instances/cd/workspace/
 ## See also
 
 - `docs/agent-workflows/patterns.md` §Group 5.
-- `docs/specs/2026-04-24-implement-phase-3-and-4/` — the
-  spec that shipped this group and retired `game-team`.

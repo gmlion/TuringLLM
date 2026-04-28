@@ -51,6 +51,4 @@ instances/my-b/run.sh
 - Plan contains exactly 5 top-level steps, one per input file.
   Validated in `src/test/phase-3-orchestrator-workers.test.ts`.
 - Under an LLM that chooses a different plan shape, the test's
-  "exactly 5 pushes" invariant is the quality gate — if the
-  runtime plan is different, see `phase-3-4-notes.md` for
-  reconciliation guidance.
+  "exactly 5 pushes" invariant is the quality gate.

@@ -57,13 +57,12 @@ alternates type in deterministic blocks. N = 20 claims for `verify.md`
 to decompose, giving the depth-2 verification fan-out a realistic
 workout.
 
-The earlier Phase-2 four-person puzzle (Alice/Bob/Carol/Dan) was too
-easy for Haiku — the first draft was already correct and the live
-run's revise step had nothing to fix (see
-`docs/agent-workflows/phase-2-notes.md` §d-cove live demo). The
-twenty-person version increases the chance that at least one claim
-in the first draft is wrong, so CoVe can demonstrate *value*
-(correction), not just *mechanics* (depth-2 stack reach).
+An earlier four-person variant of the puzzle (Alice/Bob/Carol/Dan)
+was too easy for Haiku — the first draft was already correct and the
+live run's revise step had nothing to fix. The twenty-person version
+increases the chance that at least one claim in the first draft is
+wrong, so CoVe can demonstrate *value* (correction), not just
+*mechanics* (depth-2 stack reach).
 
 ## Run it
 

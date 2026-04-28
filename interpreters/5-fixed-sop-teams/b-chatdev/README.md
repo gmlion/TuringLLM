@@ -32,7 +32,7 @@ documenting`, `Finish`.
 | File                 | Consumes                                                                 | Produces           | Stack depth                |
 | -------------------- | ------------------------------------------------------------------------ | ------------------ | -------------------------- |
 | `dynamics/dialogue.md` | `{{participants}}`, `{{topic}}`, `{{input}}` (opt.), `{{acceptance}}` (opt.) | `dialogue_output`  | 1 (2 when acceptance=true) |
-| `dynamics/evaluate.md` | `{{attempt}}`, `{{criterion}}`                                           | `verdict`, `feedback` | leaf (byte-equal to Phase 1b) |
+| `dynamics/evaluate.md` | `{{attempt}}`, `{{criterion}}`                                           | `verdict`, `feedback` | leaf (byte-equal copy of the shared evaluator) |
 
 Role descriptions under `./roles/` — `ceo.md`, `cto.md`,
 `coder.md`, `reviewer.md`, `tester.md`, `writer.md` — are read
@@ -41,8 +41,8 @@ by `dialogue.md` via `bash cat`.
 ## Demo `PROGRAM.md`
 
 Build `wc-plus` — same task as `../a-metagpt/PROGRAM.md`
-(byte-equal, required by R22). Running both interpreters on the
-same PROGRAM.md is the comparison the phase exists for.
+(byte-equal). Running both interpreters on the same PROGRAM.md
+is the comparison the group exists for.
 
 ## Run it
 
@@ -67,8 +67,8 @@ instances/my-chatdev/run.sh
 - **Outer retry on `fail` verdict.** When `evaluate.md` returns
   `fail`, the strategy re-pushes `dialogue.md` for the same phase
   with the reviewer's feedback fed in via `input`. **No iteration
-  cap (R10)** — convergence is the LLM's judgement, consistent
-  with the other iterative interpreters in this repo. The
+  cap** — convergence is the LLM's judgement, consistent with the
+  other iterative interpreters in this repo. The
   divergence from ChatDev's `ComposedPhase.cycle_num` is
   intentional: the original cap exists in their codebase to bound
   GPT-4 spend; here we trust the loop to terminate.

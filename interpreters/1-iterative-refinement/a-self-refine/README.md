@@ -49,8 +49,7 @@ instances/my-a/run.sh
   `@throws` annotations, edge-case discussion) rather than trimming.
   Strategies whose acceptance criterion includes size constraints will
   typically loop 3–5 times before converging. This is working as
-  designed, not a bug — see the Phase-1 demo note at
-  `docs/agent-workflows/phase-1-notes.md` §a.
-- No iteration cap (R10). Ctrl-C is safe; state persists in
+  designed, not a bug.
+- No iteration cap. Ctrl-C is safe; state persists in
   `instances/<name>/MEMORY.md` and re-running resumes from the next
   cycle.

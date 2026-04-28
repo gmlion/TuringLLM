@@ -51,13 +51,13 @@ instances/my-b/run.sh
 
 - The fail→retry loop only fires when the first attempt actually fails.
   Capable models often pass a "rewrite in plain English" criterion on
-  the first try (the Phase-1 demo halted in 4 cycles). Pick harsher
-  criteria — or a harder task — if you want to visibly exercise the
-  loop.
+  the first try (the bundled demo typically halts in around 4 cycles).
+  Pick harsher criteria — or a harder task — if you want to visibly
+  exercise the loop.
 - **Malformed verdict path:** if the evaluator returns anything other
   than literal `pass` or `fail`, the strategy treats the verdict as
   `fail` (conservative) and appends a non-blocking `## Pending
   Questions` item. It deliberately does *not* transition to
   `waiting_for_user` — that would stall the loop because this strategy
   has no `user_responded` handler.
-- No iteration cap (R10).
+- No iteration cap.

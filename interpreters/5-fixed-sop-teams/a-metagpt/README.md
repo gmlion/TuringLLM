@@ -30,7 +30,7 @@ Five strategy instructions: `Initialize`, `Dispatch Architect`,
 | `dynamics/role-architect.md`| `{{prd}}`                            | `design`                                     | 1                          |
 | `dynamics/role-engineer.md` | `{{design}}`                         | `tasks` (+ side-effect: code in workspace/)  | 1                          |
 | `dynamics/role-qa.md`       | `{{tasks}}`, `{{code_location}}`     | `code_review`                                | 2 (pushes `evaluate.md`)   |
-| `dynamics/evaluate.md`      | `{{attempt}}`, `{{criterion}}`       | `verdict`, `feedback`                        | leaf (byte-equal copy from Phase 1b) |
+| `dynamics/evaluate.md`      | `{{attempt}}`, `{{criterion}}`       | `verdict`, `feedback`                        | leaf (byte-equal copy of the shared evaluator) |
 
 ## Demo `PROGRAM.md`
 

@@ -22,7 +22,7 @@ self-contained.
 All three rely on the shell's existing push/pop machinery at stack
 depth 1. The strategy loops by re-entering its trigger state after each
 pop; there is no hard iteration cap — the LLM decides when the work is
-accepted (see `requirements.md` R10).
+accepted.
 
 ## When to reach for which one
 
@@ -38,12 +38,10 @@ accepted (see `requirements.md` R10).
 ## Shared dynamic: `evaluate.md`
 
 `b-evaluator-optimizer/dynamics/evaluate.md` is the canonical copy.
-`c-reflexion/dynamics/evaluate.md` is a byte-equal copy, enforced by
-`src/test/phase-1-dynamics-identity.test.ts`. Do not hand-edit the copy
-— if the contract changes, update the canonical file and `cp` again.
-Phase 2 (CoVe) is expected to be the third consumer; at that point a
-shared-dynamics convention in `new-instance.sh` may be worth the churn
-(see `docs/specs/2026-04-19-agent-workflows-phase-1/design.md` OQ4).
+The other consumers ship byte-equal copies, enforced by
+`src/test/phase-dynamics-identity.test.ts`. Do not hand-edit the
+copies — if the contract changes, update the canonical file and `cp`
+again.
 
 ## Arguments via INSTRUCTIONS (push-args)
 
@@ -51,9 +49,11 @@ All four dynamics in this group receive their per-call inputs via `## Push-Args`
 
 Outputs (`## Critique`, `## Refined`, `## Verdict`, `## Feedback`, `## Lesson`, `## Revised`, `## Answer`) are still written to MEMORY — they're the call's return value to the caller.
 
-## Per-frame scoped files (Phase 2b)
+## Per-frame scoped files
 
-Phase 2b introduced a per-frame directory layout (`frames/f<NNN>-<slug>/`) and a `./scoped/` subdirectory in each frame for heap state that is too large or too structured for MEMORY sections. All four interpreters in this group were retrofitted.
+Each frame lives in `frames/f<NNN>-<slug>/` and has a `./scoped/`
+subdirectory for heap state that is too large or too structured for
+MEMORY sections. All four interpreters in this group use it.
 
 ### File layout per interpreter
 
@@ -88,9 +88,9 @@ Files that accumulate state across multiple pushes or within a single dynamic's 
 
 ## Coming next in this group
 
-Phase 2b (per-frame layout + ## Return) closed out Group 1. Future variants in this group, if any, would compose CoVe with iteration (e.g. CoVe + Evaluator–Optimizer hybrid).
+Future variants in this group, if any, would compose CoVe with
+iteration (e.g. CoVe + Evaluator–Optimizer hybrid).
 
-See `docs/agent-workflows/requirements.md` for the full phase plan and
-`docs/agent-workflows/patterns.md` §Group 1 for literature references
-(Madaan et al. 2023, Anthropic 2024, Shinn et al. 2023, Dhuliawala et
-al. 2023).
+See `docs/agent-workflows/patterns.md` §Group 1 for literature
+references (Madaan et al. 2023, Anthropic 2024, Shinn et al. 2023,
+Dhuliawala et al. 2023).

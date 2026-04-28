@@ -47,8 +47,8 @@ execution traces.
 | `dynamics/execute-step.md`  | `{{current_step}}`, `{{context}}`         | `step_result` (`status: success | needs_replan`)  |
 | `dynamics/synthesize.md`    | `{{results}}`                             | `report`                                          |
 
-The three files are **byte-identical** across all three leaves.
-Pinned by `src/test/phase-3-dynamics-identity.test.ts`.
+The three files are **byte-identical** across all three leaves,
+pinned by an identity test under `src/test/`.
 
 ## Demos at a glance
 
@@ -70,5 +70,3 @@ instances/my-a/run.sh
 ## See also
 
 - `docs/agent-workflows/patterns.md` §Group 2 — the conceptual taxonomy.
-- `docs/specs/2026-04-24-implement-phase-3-and-4/` — the spec that
-  shipped this group.

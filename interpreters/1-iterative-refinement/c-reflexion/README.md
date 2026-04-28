@@ -53,18 +53,15 @@ instances/my-c/run.sh
 
 ## Known behaviour
 
-- **R11 vs. reality.** `requirements.md` R11 asks for ≥ 2 lessons
-  accumulated before the live demo halts at `done`. The scripted
-  integration test in `src/test/phase-1-reflexion.test.ts` enforces
-  this. The **live demo with Claude Haiku 4.5 typically accumulates
-  only 1 lesson** because the palindrome task is too canonical — the
-  first naive attempt fails once (strips spaces only), the second
-  applies the lesson and passes. See
-  `docs/agent-workflows/phase-1-notes.md` §c reflexion for three
-  proposed mitigations (harder hidden tests, different demo, relaxed
-  R11 wording). The Reflexion *pattern* runs correctly; only the
-  quantitative gate can fall short.
+- **Lesson accumulation in practice.** The integration test in
+  `src/test/phase-1-reflexion.test.ts` exercises a path where ≥ 2
+  lessons accumulate before halt. The **live demo with Claude Haiku
+  4.5 typically accumulates only 1 lesson** because the palindrome
+  task is too canonical — the first naive attempt fails once (strips
+  spaces only), the second applies the lesson and passes. The
+  Reflexion *pattern* runs correctly; the demo just doesn't need
+  many iterations.
 - `## Lessons` and `## Criterion` are preserved across iterations;
   `## Attempt`, `## Verdict`, `## Feedback`, and `## Lesson` are
   cleared by the `Accumulate lesson` instruction.
-- No iteration cap (R10).
+- No iteration cap.
