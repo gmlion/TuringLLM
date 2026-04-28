@@ -288,7 +288,7 @@ Per-frame heap state that is too large or too structured for MEMORY sections liv
 
 **Surgical-edit rule:** use `sed -i`, `awk`, or `echo >>` for files other than `MEMORY.md`, `INSTRUCTIONS.md`, and `PROGRAM.md`. Wholesale rewrites of `scoped/` files that accumulate state (e.g. `lessons.md`) will silently drop prior content. The system prompt enforces this convention.
 
-### Breaking change (R43)
+### Breaking change
 
 Pre-Phase-2b instances (those with `INSTRUCTIONS.md` and `MEMORY.md` directly at the instance root, without a `frames/` subtree) **cannot resume** under the Phase-2b shell. The instance layout is a breaking change. Wipe `instances/` and recreate from scratch with `new-instance.sh` if resuming old work.
 

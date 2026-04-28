@@ -15,7 +15,7 @@ The "events per cycle" baseline (5.6–6.0) maps cleanly: `cycle_start`, `llm_re
 
 **Payload count is 0 across all four instances** because every demo runs under the `claude-code` provider, where tool calls are subprocess-internal and never visible at the provider layer (per design, `claude-code.ts` emits only `llm_request` + `llm_response` per attempt). For non-CC providers (api/openai/ollama/local), `tool_call`/`tool_result` events with `payloads/` files would appear and the file count would scale roughly with cycles. Worth flagging as a Phase 5 consideration: the externalization path is fully tested in `events.test.ts` but never exercised by a live demo; an api-provider demo run would close that gap.
 
-## Stream layout (R1–R5, R29, R30)
+## Stream layout
 
 `events.jsonl` is one JSON object per line, sorted by monotonic `seq`. Verified directly:
 
@@ -27,7 +27,7 @@ $ head -2 instances/bl-d/logs/events.jsonl
 
 The seq-strictly-increases test (`better-logging-demo.test.ts`) passes for all four instances — no gaps, no out-of-order writes. The single-line-per-emit + `appendFileSync` + `.events-seq` persistence pattern proved robust under interleaved cycles (bl-a, bl-b, bl-c, bl-d all ran concurrently for parts of their lifetimes; each instance's file stayed self-consistent because each provider has its own `events.ts` module state — they're separate Node processes).
 
-## Depth-2 invariant (R32, bl-d)
+## Depth-2 invariant
 
 bl-d hit `depth: 2` on push event seq=27 (cycle 5):
 
@@ -48,8 +48,8 @@ The B-architecture (providers buffer `ProviderEvent[]` into `CycleResult.events`
 The visualizer (T10–T12) reads `events.jsonl` per `loadInstance`, sorts by `seq`, and:
 - scopes events to the selected cycle (or all events for "live")
 - scopes events to the selected frame node (or all for "any frame")
-- exposes per-type checkboxes (R26)
-- fetches payload files on click (R27 — exercised manually with mock payloads since live demos didn't produce any)
+- exposes per-type checkboxes
+- fetches payload files on click  (exercised manually with mock payloads since live demos didn't produce any)
 
 The "click frame in stack graph → events panel re-scopes" interaction works smoothly. The cycle timeline + stack graph combo, layered with the events panel, gives a three-axis navigation: time × frame × event-type. With 150 events in bl-d, the type filter is essential for cutting noise (e.g., hide `llm_request`/`llm_response` to focus on push/pop/splice flow).
 
@@ -61,7 +61,7 @@ Total better-logging implementation: 13 tasks (T1–T13), 227 tests passing, no 
 
 The B-architecture decision (providers stay events-agnostic, main.ts drains buffered events) paid off during T6 — the only architectural-quality issue surfaced by the code reviewer was a pre-existing local.ts retry bug that became visible because the new event stream made it observable. No provider-specific knowledge of events.ts was needed.
 
-**Breaking change (R31):** the Phase-2b layout (`frames/f<NNN>-<slug>/`) is required, AND now `events.jsonl` becomes the visualizer's source of truth. Pre-better-logging instances under `instances/` lack the file; the visualizer surfaces a clear empty-state message rather than crashing. As with R44 in Phase 2b, the active-cleanup step (`rm -rf instances/*` + recreate) is the migration path.
+**Breaking change:** the Phase-2b layout (`frames/f<NNN>-<slug>/`) is required, AND now `events.jsonl` becomes the visualizer's source of truth. Pre-better-logging instances under `instances/` lack the file; the visualizer surfaces a clear empty-state message rather than crashing. As with the corresponding migration in Phase 2b, the active-cleanup step (`rm -rf instances/*` + recreate) is the migration path.
 
 **Candidate Phase 5 work** suggested by these demos:
 - An api/openai-provider demo run to exercise the `tool_call`/`tool_result` payload externalization end-to-end (currently only unit-tested).
