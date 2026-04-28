@@ -1215,10 +1215,29 @@
           { selector: 'edge[type = "continuity"]', style: { 'curve-style': 'straight', 'line-color': '#8b949e', 'target-arrow-color': '#8b949e' } },
         ],
       });
-      // Auto-fit so all nodes are visible regardless of cycle range; preset
-      // positions place nodes at absolute coords (e.g. cycle 50 → x=3040)
-      // which would otherwise be off-screen on first load.
-      cy.fit(undefined, 30);
+      // On long runs `cy.fit(all)` shrinks individual nodes to unreadable
+      // sizes. Instead: zoom to a readable level (1.0 = nodes at their
+      // natural rendered size) and pan so the most recent node sits
+      // near the right edge of the viewport with prior cycles trailing
+      // to its left. The user can wheel-zoom out to see the full graph
+      // if they want.
+      const lastNode = cy.nodes().reduce((best, n) => {
+        const c = n.data('cycle') ?? -1;
+        return c > (best?.data('cycle') ?? -1) ? n : best;
+      }, null);
+      if (lastNode) {
+        cy.zoom(1.0);
+        const pos = lastNode.position();
+        // Place the last node 100px from the right edge of the viewport,
+        // vertically centered on its swimlane row. Cytoscape pan formula:
+        // a graph point (gx, gy) renders at pixel (gx*zoom + pan.x, gy*zoom + pan.y).
+        cy.pan({
+          x: (cy.width() - 100) - pos.x * cy.zoom(),
+          y: (cy.height() / 2) - pos.y * cy.zoom(),
+        });
+      } else {
+        cy.fit(undefined, 30);
+      }
       cy.on('tap', 'node', (evt) => {
         const data = evt.target.data();
         // Defensive: every graph node populated by buildPer{Frame,Cycle}Graph carries
