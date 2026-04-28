@@ -338,3 +338,7 @@ instances/foo/
   — implementation notes from Phase 1 (iterative refinement).
 - [`CLAUDE.md`](CLAUDE.md) — project-specific guidance for Claude Code
   agents working on this repo.
+
+## License
+
+Apache License 2.0 — see [`LICENSE`](LICENSE) and [`NOTICE`](NOTICE).
