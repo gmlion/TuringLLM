@@ -1,0 +1,5 @@
+# Enforce LF line endings for all text files in the working tree, even on
+# Windows (overrides core.autocrlf=true). Tests and bash recipes embedded
+# in *.md files compare on \n; mixing CRLF in the working tree silently
+# breaks them.
+* text=auto eol=lf
