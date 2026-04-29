@@ -84,8 +84,7 @@ All four patterns in this group share a single shape:
 > **generate → critique → revise**, repeated until a stop criterion is met.
 
 They differ in *who critiques*, *what is remembered between iterations*, and
-*how the critique is structured*. Calling them "different tiers" is a mistake
-— they are variants of one architectural pattern.
+*how the critique is structured*.
 
 ### Self-Refine
 *Madaan et al., NeurIPS 2023.* One role. The same model generates, critiques
@@ -271,8 +270,13 @@ long-running persona-based agent.
 **proposer** LLMs independently answer the prompt, an **aggregator** LLM
 synthesises them, and layers can be stacked so one layer's aggregate is
 the next layer's prompt. Agents within a layer do **not** see each other
-(unlike Debate) — ensembling rather than argumentation. Reported SOTA on
-AlpacaEval using open models.
+(unlike Debate) — ensembling rather than argumentation. The paper uses
+six **heterogeneous** open models as proposers (Qwen1.5-110B/72B,
+WizardLM-2-8x22B, LLaMA-3-70B, Mixtral-8x22B, dbrx-instruct); the
+diversity the aggregator exploits comes from differing training
+distributions, not differing role prompts — which is what separates MoA
+from Self-Consistency (same model, N samples). Reported SOTA on
+AlpacaEval.
 
 ### Solo Performance Prompting (SPP)
 *Wang et al., 2023 (arXiv:2307.05300).* A single LLM dynamically

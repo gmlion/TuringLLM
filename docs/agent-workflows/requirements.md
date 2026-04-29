@@ -133,7 +133,7 @@ system prompt.
 | 1 — Iterative refinement | Phase 1, Phase 2 | — |
 | 2 — Planning & decomposition | Phase 3 (plan-execute baseline with 3 demos + optional ReWOO variant; parallel Orchestrator–Workers deferred) | `evaluate.md` from Phase 1 |
 | 5 — Fixed-SOP teams | Phase 4 (game-team retired; fixed-SOP teams delivered) | `evaluate.md` |
-| 4 — Peer collaboration | Phase 5 (Debate), Phase 5b (MoA) | `reflect.md` from Phase 1 |
+| 4 — Peer collaboration | Phase 5 (Debate), Phase 5b (MoA) | — |
 | 3 — Search | Phase 6 (ToT, optional GoT variant) | `evaluate.md` |
 | 3 + 1 + 7 crossover | Phase 6b (LATS) | Phases 1c, 6, MCTS harness from Phase 7 |
 | 7 — Meta-frameworks | Phase 7 (+ optional Phase 8) | everything |
@@ -159,7 +159,7 @@ is copied wholesale by `new-instance.sh`. Names and contracts are normative.
 | `execute-batch.md` | 3b (ReWOO) | `## Plan` with `#E` placeholders | `## Resolved Plan` | 1 |
 | `role-<name>.md` | 4a | prior role's section | this role's section | 1 (qa: 2) |
 | `dialogue.md` | 4b | `## Topic`, `## Participants` | `## Dialogue Output` | 1 (acceptance=true: 2) |
-| `opine.md` | 5 | `## Question`, `## Round` | `## Opinion` (appended) | 1 |
+| `opine.md` | 5 | `## Question`, `## Round`, `## Persona`, `## Transcript` | `## Opinion` | 1 |
 | `propose.md` | 5b | `## Prompt`, `## Persona` | `## Proposal` (appended) | 1 |
 | `expand-node.md` | 6 | `## Parent Thought` | `## Children`, `## Value` | N |
 | `evaluate-workflow.md` | 7 | `## Candidate Workflow` | `## Score`, `## Trace` | 2 |
@@ -395,18 +395,24 @@ Phase-dialogue between role pairs (ChatDev — Qian et al., 2023).
 
 ## Phase 5 — Peer collaboration: Debate (patterns.md Group 4)
 
-First of two Group-5 interpreters. CAMEL is skipped (two-role conversation
+First of two Group-4 interpreters. CAMEL is skipped (two-role conversation
 adds little over 4b's dialogue dynamic).
 
-**Deliverable:** `interpreters/debate/`.
+**Deliverable:** `interpreters/4-peer-collaboration/a-debate/`.
 
-- Strategy: round coordinator. Runs R rounds; each round pushes `opine.md`
-  for each of N agents with distinct personas.
-- New dynamic: `opine.md` — appends to `## Opinions` list.
-- **Reuse:** between rounds, coordinator may push `reflect.md` from 1c to
-  nudge agents off stuck points.
+- Strategy: round coordinator with **strict round isolation**. Runs R
+  rounds; each round pushes `opine.md` once per persona; within a round,
+  agents do not see each other's contributions — they see only prior
+  rounds' batches. Coordinator snapshots each round's opinions to a
+  per-round scoped file before opening the next round.
+- New dynamic: `opine.md` — receives the question, round number, persona,
+  and prior-rounds transcript; returns `## Opinion`. Strategy appends
+  surgically to `./scoped/transcript.md` after each pop.
+- PROGRAM.md is free-form prose (the question, named personas, optional
+  round count); the strategy parses it at Initialize into normalized
+  scoped files.
 - Demo `PROGRAM.md`: an ambiguous-answer question ("Postgres or SQLite for
-  use case U?").
+  use case U?") with three named personas.
 
 ---
 
