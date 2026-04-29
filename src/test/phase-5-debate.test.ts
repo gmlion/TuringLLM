@@ -71,3 +71,43 @@ describe("phase-5 a-debate: demo PROGRAM.md (R17)", () => {
     assert.equal(personaHeaders.length, 3, `expected 3 persona ### headers, found ${personaHeaders.length}`);
   });
 });
+
+describe("phase-5 a-debate: strategy preamble + Initialize (R1-R4, R19)", () => {
+  test("INSTRUCTIONS.md exists", () => {
+    assert.ok(existsSync(resolve(INTERP, "INSTRUCTIONS.md")), "INSTRUCTIONS.md missing");
+  });
+
+  test("strategy is bounded by # Strategy / # Sub-instructions and is verbatim-required", () => {
+    const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+    assert.match(s, /^# Strategy/m);
+    assert.match(s, /^# Sub-instructions/m);
+    assert.match(s, /VERBATIM into every update_instructions call/);
+  });
+
+  test("strategy does not reference reflect.md (R19)", () => {
+    const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+    assert.doesNotMatch(s, /reflect\.md/);
+  });
+
+  test("Initialize references PROGRAM.md and writes the four scoped files (R1, R4)", () => {
+    const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+    const init = extractInstructionBody(s, "Initialize");
+    assert.match(init, /PROGRAM\.md/);
+    assert.match(init, /scoped\/personas\.md/);
+    assert.match(init, /scoped\/rounds\.md/);
+    assert.match(init, /scoped\/question\.md/);
+  });
+
+  test("Initialize defaults R to 3 when unspecified (R2)", () => {
+    const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+    const init = extractInstructionBody(s, "Initialize");
+    assert.match(init, /default[^.]*3/i);
+  });
+
+  test("Initialize handles fewer than two personas via Pending Questions + waiting_for_user (R3)", () => {
+    const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+    const init = extractInstructionBody(s, "Initialize");
+    assert.match(init, /## Pending Questions/);
+    assert.match(init, /waiting_for_user/);
+  });
+});
