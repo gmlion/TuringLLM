@@ -129,6 +129,40 @@ Then wholesale-rewrite MEMORY:
     Ready to push opine.md.
     STAGE_EOF
 
+## Instruction: Push
+**Condition:** MEMORY state is "dispatch_push"
+**Action:** Emit the static-template MEMORY rewrite that pushes `opine.md`. Bash variable substitution interpolates the staged values into the heredoc (the `MEM_EOF` delimiter is unquoted, so `$VAR` is expanded; bash variable expansion is one-shot — values containing `$`, backticks, etc. become literal text in the output, not re-evaluated). The heredoc text itself is invariant across pushes.
+
+    ROUND=$(cat ./scoped/staged/round.md)
+    PERSONA_NAME=$(cat ./scoped/staged/persona_name.md)
+    PERSONA_DESC=$(sed 's/^/  /' ./scoped/staged/persona_description.md)
+    QUESTION=$(sed 's/^/  /' ./scoped/staged/question.md)
+    TRANSCRIPT=$(sed 's/^/  /' ./scoped/staged/transcript.md)
+
+    cat > ./MEMORY.md << MEM_EOF
+## State
+dispatching
+## Matched Instruction
+Push
+## Last Action
+Pushed opine.md for $PERSONA_NAME in round $ROUND.
+## Result
+Push queued.
+## Push
+dynamics/opine.md
+## Push-Args
+round: $ROUND
+persona_name: $PERSONA_NAME
+persona_description: |
+$PERSONA_DESC
+question: |
+$QUESTION
+transcript: |
+$TRANSCRIPT
+MEM_EOF
+
+The state value `dispatching` is what the shell stores as the returnState; on pop it becomes `dispatching_completed`, which `Absorb` matches.
+
 # Sub-instructions
 
 (none — this interpreter needs none.)

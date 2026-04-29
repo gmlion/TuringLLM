@@ -146,3 +146,42 @@ describe("phase-5 a-debate: Stage instruction (R5, R6)", () => {
     }
   });
 });
+
+describe("phase-5 a-debate: Push instruction (R8, R14)", () => {
+  test("Push is matched on dispatch_push state", () => {
+    const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+    const push = extractInstructionBody(s, "Push");
+    assert.ok(push.length > 0, "Push instruction missing");
+  });
+
+  test("Push emits ## Push opine.md and ## Push-Args (R8)", () => {
+    const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+    const push = extractInstructionBody(s, "Push");
+    assert.match(push, /## Push\s*\ndynamics\/opine\.md/);
+    assert.match(push, /## Push-Args/);
+  });
+
+  test("Push declares all five push-args (R8, R14)", () => {
+    const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+    const push = extractInstructionBody(s, "Push");
+    for (const k of ["round:", "persona_name:", "persona_description:", "question:", "transcript:"]) {
+      assert.match(push, new RegExp(`^\\s*${escapeRegExp(k)}`, "m"), `Push missing arg ${k}`);
+    }
+  });
+
+  test("Push sets state to dispatching (so post-pop is dispatching_completed)", () => {
+    const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+    const push = extractInstructionBody(s, "Push");
+    assert.match(push, /## State\s*\n\s*dispatching\b/);
+  });
+
+  test("Push reads from scoped/staged/ files (the stage/push split)", () => {
+    const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+    const push = extractInstructionBody(s, "Push");
+    assert.match(push, /scoped\/staged\/round\.md/);
+    assert.match(push, /scoped\/staged\/persona_name\.md/);
+    assert.match(push, /scoped\/staged\/persona_description\.md/);
+    assert.match(push, /scoped\/staged\/question\.md/);
+    assert.match(push, /scoped\/staged\/transcript\.md/);
+  });
+});
