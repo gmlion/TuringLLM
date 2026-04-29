@@ -284,3 +284,32 @@ describe("phase-5 a-debate: Conclude instruction (R12, R13)", () => {
     assert.match(conc, /neutral|coordinator|NOT impersonating/i);
   });
 });
+
+describe("phase-5 a-debate: README + interpreter integrity (R18, R20)", () => {
+  test("README.md exists and references Du et al. 2023", () => {
+    assert.ok(existsSync(resolve(INTERP, "README.md")), "README.md missing");
+    const s = readFileSync(resolve(INTERP, "README.md"), "utf-8");
+    assert.match(s, /Du et al\.,?\s*2023/);
+    assert.match(s, /Multi-Agent Debate/);
+  });
+
+  test("dynamics/ contains exactly opine.md (R20)", () => {
+    const dyns = readdirSync(resolve(INTERP, "dynamics"));
+    assert.deepEqual(dyns.sort(), ["opine.md"], `expected only opine.md, found ${dyns.join(", ")}`);
+  });
+
+  test("interpreter has all six core strategy instructions (Initialize, Stage, Push, Absorb, Round transition, Conclude)", () => {
+    const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+    for (const inst of ["Initialize", "Stage", "Push", "Absorb", "Round transition", "Conclude"]) {
+      assert.match(s, new RegExp(`^## Instruction:\\s*${escapeRegExp(inst)}\\b`, "m"), `missing instruction: ${inst}`);
+    }
+  });
+
+  test("Sub-instructions section is empty (this interpreter needs none)", () => {
+    const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+    const idx = s.search(/^# Sub-instructions/m);
+    assert.ok(idx >= 0, "# Sub-instructions section missing");
+    const sub = s.slice(idx).replace(/^# Sub-instructions\s*\n/, "").trim();
+    assert.match(sub, /\(none/, `sub-instructions section should declare "(none …)", got: ${sub.slice(0, 80)}`);
+  });
+});
