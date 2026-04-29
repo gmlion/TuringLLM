@@ -54,3 +54,20 @@ describe("phase-5 a-debate: opine.md dynamic (R14, R15, R16)", () => {
     assert.doesNotMatch(s, /^## Push\s*\ndynamics\//m);
   });
 });
+
+describe("phase-5 a-debate: demo PROGRAM.md (R17)", () => {
+  test("PROGRAM.md exists", () => {
+    assert.ok(existsSync(resolve(INTERP, "PROGRAM.md")), "PROGRAM.md missing");
+  });
+
+  test("PROGRAM.md mentions the canonical Postgres-vs-SQLite question (R17)", () => {
+    const s = readFileSync(resolve(INTERP, "PROGRAM.md"), "utf-8");
+    assert.match(s, /Postgres or SQLite/i);
+  });
+
+  test("PROGRAM.md names exactly three persona blocks (R17)", () => {
+    const s = readFileSync(resolve(INTERP, "PROGRAM.md"), "utf-8");
+    const personaHeaders = (s.match(/^### \w/gm) || []);
+    assert.equal(personaHeaders.length, 3, `expected 3 persona ### headers, found ${personaHeaders.length}`);
+  });
+});
