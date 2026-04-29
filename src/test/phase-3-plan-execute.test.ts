@@ -70,10 +70,14 @@ describe("phase-3 a-plan-execute: file layout and content", () => {
     assert.match(t, /## Return\n[\s\S]*\bresult:/);
   });
 
-  test("tackle.md Try uses single-tool-call as the atomic-vs-composite heuristic", () => {
+  test("tackle.md Try frames the atomic-vs-composite decision as role-based judgement", () => {
     const t = readFileSync(resolve(INTERP, "dynamics/tackle.md"), "utf-8");
-    assert.match(t, /SINGLE tool call|single tool call/i);
-    assert.match(t, /assess[\s\S]{0,200}before/i);
+    // Role-anchored framing: the decision is "as {{role}}, do you produce this now or split?"
+    assert.match(t, /\{\{role\}\}/);
+    assert.match(t, /Decide as.*\{\{role\}\}.*would|professional judgement|as \{\{role\}\}/i);
+    // Atomic = one tool call, composite = push plan
+    assert.match(t, /one tool call|single tool call/i);
+    assert.match(t, /push plan|deferring to plan/i);
   });
 
   test("tackle.md composite path pushes plan.md and recursive iterations push tackle.md", () => {
