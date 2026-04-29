@@ -163,6 +163,51 @@ Then wholesale-rewrite MEMORY:
 
 The state value `dispatching` is what the shell stores as the returnState; on pop it becomes `dispatching_completed`, which `Absorb` matches.
 
+## Instruction: Absorb
+**Condition:** MEMORY state is "dispatching_completed" and `## Opinion` is present
+**Action:** Extract the returned opinion from MEMORY's `## Opinion` section, surgically append it to the cumulative transcript and to the per-round snapshot, advance the agent counter, then route based on whether more agents remain in this round.
+
+    r=$(cat ./scoped/round.md)
+    k=$(cat ./scoped/agent.md)
+    name=$(cat ./scoped/staged/persona_name.md)
+    N=$(cat ./scoped/N.md)
+
+    awk '/^## Opinion$/{f=1; next} /^## [A-Z]/ && f {exit} f' ./MEMORY.md > ./scoped/_last_opinion.txt
+
+    {
+      echo ""
+      echo "### Round $r — $name"
+      cat ./scoped/_last_opinion.txt
+    } >> ./scoped/transcript.md
+
+    {
+      echo ""
+      echo "### Round $r — $name"
+      cat ./scoped/_last_opinion.txt
+    } >> ./scoped/round-$r.md
+
+    new_k=$((k + 1))
+    echo "$new_k" > ./scoped/agent.md
+
+    if [ "$new_k" -lt "$N" ]; then
+      NEXT_STATE=dispatch_stage
+    else
+      NEXT_STATE=round_transition
+    fi
+
+    cat > ./MEMORY.md << ABSORB_EOF
+    ## State
+    $NEXT_STATE
+    ## Matched Instruction
+    Absorb
+    ## Last Action
+    Absorbed opinion for $name in round $r; advanced agent to $new_k; routing to $NEXT_STATE.
+    ## Result
+    Opinion appended to transcript and round-$r snapshot.
+    ABSORB_EOF
+
+R7 is satisfied because the absorb cycle that handles agent K = N writes the final entry to `./scoped/round-$r.md` BEFORE setting state to `round_transition` — by the time `Stage` runs again for round r+1, the snapshot is complete on disk.
+
 # Sub-instructions
 
 (none — this interpreter needs none.)

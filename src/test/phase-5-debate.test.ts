@@ -185,3 +185,39 @@ describe("phase-5 a-debate: Push instruction (R8, R14)", () => {
     assert.match(push, /scoped\/staged\/transcript\.md/);
   });
 });
+
+describe("phase-5 a-debate: Absorb instruction (R7, R9, R11)", () => {
+  test("Absorb is matched on dispatching_completed with ## Opinion", () => {
+    const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+    const absorb = extractInstructionBody(s, "Absorb");
+    assert.ok(absorb.length > 0, "Absorb instruction missing");
+    assert.match(absorb, /dispatching_completed/);
+    assert.match(absorb, /## Opinion/);
+  });
+
+  test("Absorb appends to both transcript.md and round-$r.md (R7, R9)", () => {
+    const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+    const absorb = extractInstructionBody(s, "Absorb");
+    assert.match(absorb, />>\s*\.\/scoped\/transcript\.md/);
+    assert.match(absorb, />>\s*\.\/scoped\/round-\$r\.md/);
+  });
+
+  test("Absorb labels each opinion with round and persona name (R9)", () => {
+    const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+    const absorb = extractInstructionBody(s, "Absorb");
+    assert.match(absorb, /### Round \$r — \$name/);
+  });
+
+  test("Absorb routes to round_transition when agent counter hits N (R11)", () => {
+    const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+    const absorb = extractInstructionBody(s, "Absorb");
+    assert.match(absorb, /round_transition/);
+    assert.match(absorb, /new_k.*-lt.*N|N.*-le.*new_k/);
+  });
+
+  test("Absorb increments scoped/agent.md", () => {
+    const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+    const absorb = extractInstructionBody(s, "Absorb");
+    assert.match(absorb, /echo\s+"?\$new_k"?\s+>\s+\.\/scoped\/agent\.md/);
+  });
+});
