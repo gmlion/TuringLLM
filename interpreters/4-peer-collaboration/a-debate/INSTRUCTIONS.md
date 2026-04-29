@@ -208,6 +208,33 @@ The state value `dispatching` is what the shell stores as the returnState; on po
 
 R7 is satisfied because the absorb cycle that handles agent K = N writes the final entry to `./scoped/round-$r.md` BEFORE setting state to `round_transition` — by the time `Stage` runs again for round r+1, the snapshot is complete on disk.
 
+## Instruction: Round transition
+**Condition:** MEMORY state is "round_transition"
+**Action:** Increment the round counter, reset the agent counter to 0, then route based on whether more rounds remain. This is its own cycle (one focused action) so the LLM does not have to combine "absorb the last agent's opinion" with "finalize this round and advance" in a single emission.
+
+    r=$(cat ./scoped/round.md)
+    R=$(cat ./scoped/rounds.md)
+    new_r=$((r + 1))
+    echo "$new_r" > ./scoped/round.md
+    echo 0 > ./scoped/agent.md
+
+    if [ "$new_r" -le "$R" ]; then
+      NEXT_STATE=dispatch_stage
+    else
+      NEXT_STATE=concluding
+    fi
+
+    cat > ./MEMORY.md << ROUND_EOF
+    ## State
+    $NEXT_STATE
+    ## Matched Instruction
+    Round transition
+    ## Last Action
+    Round $r complete; advanced to round $new_r of $R; routing to $NEXT_STATE.
+    ## Result
+    Round transition complete.
+    ROUND_EOF
+
 # Sub-instructions
 
 (none — this interpreter needs none.)

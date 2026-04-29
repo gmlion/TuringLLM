@@ -221,3 +221,27 @@ describe("phase-5 a-debate: Absorb instruction (R7, R9, R11)", () => {
     assert.match(absorb, /echo\s+"?\$new_k"?\s+>\s+\.\/scoped\/agent\.md/);
   });
 });
+
+describe("phase-5 a-debate: Round transition instruction (R10, R11)", () => {
+  test("Round transition is matched on round_transition state", () => {
+    const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+    const rt = extractInstructionBody(s, "Round transition");
+    assert.ok(rt.length > 0, "Round transition instruction missing");
+    assert.match(rt, /MEMORY state is "round_transition"/);
+  });
+
+  test("Round transition increments round.md and resets agent.md to 0 (R11)", () => {
+    const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+    const rt = extractInstructionBody(s, "Round transition");
+    assert.match(rt, /new_r=\$\(\(\s*r\s*\+\s*1\s*\)\)/);
+    assert.match(rt, /echo\s+"?\$new_r"?\s+>\s+\.\/scoped\/round\.md/);
+    assert.match(rt, /echo\s+0\s+>\s+\.\/scoped\/agent\.md/);
+  });
+
+  test("Round transition routes to concluding when new_r > R (R10)", () => {
+    const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+    const rt = extractInstructionBody(s, "Round transition");
+    assert.match(rt, /concluding/);
+    assert.match(rt, /new_r.*-le.*R|R.*-lt.*new_r/);
+  });
+});
