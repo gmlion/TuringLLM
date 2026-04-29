@@ -157,7 +157,7 @@ describe("phase-5 a-debate: Push instruction (R8, R14)", () => {
   test("Push emits ## Push opine.md and ## Push-Args (R8)", () => {
     const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
     const push = extractInstructionBody(s, "Push");
-    assert.match(push, /## Push\s*\ndynamics\/opine\.md/);
+    assert.match(push, /## Push\s*\n\s*dynamics\/opine\.md/);
     assert.match(push, /## Push-Args/);
   });
 

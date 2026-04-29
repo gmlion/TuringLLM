@@ -140,26 +140,26 @@ Then wholesale-rewrite MEMORY:
     TRANSCRIPT=$(sed 's/^/  /' ./scoped/staged/transcript.md)
 
     cat > ./MEMORY.md << MEM_EOF
-## State
-dispatching
-## Matched Instruction
-Push
-## Last Action
-Pushed opine.md for $PERSONA_NAME in round $ROUND.
-## Result
-Push queued.
-## Push
-dynamics/opine.md
-## Push-Args
-round: $ROUND
-persona_name: $PERSONA_NAME
-persona_description: |
-$PERSONA_DESC
-question: |
-$QUESTION
-transcript: |
-$TRANSCRIPT
-MEM_EOF
+    ## State
+    dispatching
+    ## Matched Instruction
+    Push
+    ## Last Action
+    Pushed opine.md for $PERSONA_NAME in round $ROUND.
+    ## Result
+    Push queued.
+    ## Push
+    dynamics/opine.md
+    ## Push-Args
+    round: $ROUND
+    persona_name: $PERSONA_NAME
+    persona_description: |
+    $PERSONA_DESC
+    question: |
+    $QUESTION
+    transcript: |
+    $TRANSCRIPT
+    MEM_EOF
 
 The state value `dispatching` is what the shell stores as the returnState; on pop it becomes `dispatching_completed`, which `Absorb` matches.
 
