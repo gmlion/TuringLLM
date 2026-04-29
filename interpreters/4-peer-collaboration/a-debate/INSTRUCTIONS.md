@@ -235,6 +235,32 @@ R7 is satisfied because the absorb cycle that handles agent K = N writes the fin
     Round transition complete.
     ROUND_EOF
 
+## Instruction: Conclude
+**Condition:** MEMORY state is "concluding"
+**Action:** Read the full debate transcript and the question, then synthesise a neutral final position. **The strategy speaks here, NOT impersonating any persona.** Summarise where personas converged and name remaining disagreements explicitly.
+
+Read the inputs:
+
+    bash cat ./scoped/question.md
+    bash cat ./scoped/transcript.md
+
+Compose 4–8 sentences of synthesis in a coordinator voice. Do NOT use any persona's name as the speaker; do NOT mark this output with `<SOLUTION>`. Then wholesale-rewrite MEMORY:
+
+    cat > ./MEMORY.md << 'CONCLUDE_EOF'
+    ## State
+    done
+    ## Matched Instruction
+    Conclude
+    ## Last Action
+    Synthesised final position from full transcript; halting.
+    ## Result
+    Debate complete.
+    ## Final Position
+    <your 4–8-sentence synthesis here, in neutral coordinator voice — no persona attribution>
+    CONCLUDE_EOF
+
+The shell intercepts state `done` at stack depth 1 and halts.
+
 # Sub-instructions
 
 (none — this interpreter needs none.)

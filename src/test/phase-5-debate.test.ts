@@ -245,3 +245,42 @@ describe("phase-5 a-debate: Round transition instruction (R10, R11)", () => {
     assert.match(rt, /new_r.*-le.*R|R.*-lt.*new_r/);
   });
 });
+
+describe("phase-5 a-debate: Conclude instruction (R12, R13)", () => {
+  test("Conclude is matched on concluding state", () => {
+    const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+    const conc = extractInstructionBody(s, "Conclude");
+    assert.ok(conc.length > 0, "Conclude instruction missing");
+    assert.match(conc, /MEMORY state is "concluding"/);
+  });
+
+  test("Conclude reads scoped/transcript.md (R12)", () => {
+    const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+    const conc = extractInstructionBody(s, "Conclude");
+    assert.match(conc, /scoped\/transcript\.md/);
+  });
+
+  test("Conclude writes ## Final Position in MEMORY (R12)", () => {
+    const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+    const conc = extractInstructionBody(s, "Conclude");
+    assert.match(conc, /## Final Position/);
+  });
+
+  test("Conclude does not push any further dynamic (R20 still holds)", () => {
+    const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+    const conc = extractInstructionBody(s, "Conclude");
+    assert.doesNotMatch(conc, /^\s*## Push\s*\n\s*dynamics\//m);
+  });
+
+  test("Conclude sets state to done (R13)", () => {
+    const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+    const conc = extractInstructionBody(s, "Conclude");
+    assert.match(conc, /## State\s*\n\s*done/);
+  });
+
+  test("Conclude requires neutral coordinator voice (no persona impersonation)", () => {
+    const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+    const conc = extractInstructionBody(s, "Conclude");
+    assert.match(conc, /neutral|coordinator|NOT impersonating/i);
+  });
+});
