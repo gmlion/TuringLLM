@@ -16,8 +16,7 @@ describe("phase-3 a-plan-execute: file layout and content", () => {
       "PROGRAM.md",
       "README.md",
       "dynamics/plan.md",
-      "dynamics/execute-step.md",
-      "dynamics/synthesize.md",
+      "dynamics/tackle.md",
     ]) {
       assert.ok(existsSync(resolve(INTERP, f)), `${f} missing`);
     }
@@ -30,58 +29,59 @@ describe("phase-3 a-plan-execute: file layout and content", () => {
     assert.match(s, /# Sub-instructions/);
   });
 
-  test("strategy declares all six required state conditions", () => {
+  test("strategy is a thin shim: only Initialize and Finish instructions", () => {
     const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
-    for (const needle of [
-      'state is "empty"',
-      'state is "planning_completed"',
-      'state is "ready"',
-      'state is "executing_completed"',
-      'state is "synthesising_completed"',
-      'state is "done"',
-    ]) {
-      assert.match(s, new RegExp(needle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `missing: ${needle}`);
-    }
+    assert.match(s, /## Instruction: Initialize/);
+    assert.match(s, /## Instruction: Finish/);
+    assert.match(s, /state is "empty"/);
+    assert.match(s, /state is "tackling_completed"/);
+    // Finish sets state to "done"; the shell halts on the well-known state.
+    assert.match(s, /state to "done"|set state to "done"/i);
   });
 
-  test("strategy Route instruction uses fuzzy NL condition (R40 a)", () => {
+  test("Initialize pushes tackle.md with the user goal", () => {
     const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
-    // Route after step inspects ## Step Result body; condition must be fuzzy.
-    assert.match(s, /suggests|indicates|appears|is successful|looks|signals/i);
+    assert.match(s, /## Push[\s\S]*dynamics\/tackle\.md/);
+    assert.match(s, /goal:\s*\|/);
   });
 
-  test("strategy has a non-blocking pending-questions branch (R40 b)", () => {
-    const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
-    assert.match(s, /## Pending Questions/);
-    assert.match(s, /non-blocking|without.*waiting_for_user|do not.*waiting_for_user/i);
-  });
-
-  test("plan.md declares empty + done states and returns 'plan'", () => {
+  test("plan.md is one-shot decomposer: declares empty + done, returns 'plan', no replan logic", () => {
     const p = readFileSync(resolve(INTERP, "dynamics/plan.md"), "utf-8");
     assert.match(p, /state is "empty"/);
     assert.match(p, /^done$/m);
     assert.match(p, /\{\{goal\}\}/);
     assert.match(p, /## Return\n[\s\S]*\bplan:/);
+    // No replan / results_so_far parameter — pure decomposition only.
+    assert.doesNotMatch(p, /\{\{results_so_far\}\}/);
+    assert.doesNotMatch(p, /REPLAN-TRIGGER/);
   });
 
-  test("execute-step.md consumes current_step + context and returns outcome", () => {
-    const e = readFileSync(resolve(INTERP, "dynamics/execute-step.md"), "utf-8");
-    assert.match(e, /\{\{current_step\}\}/);
-    assert.match(e, /\{\{context\}\}/);
-    assert.match(e, /^done$/m);
-    assert.match(e, /outcome:/);
+  test("tackle.md declares the recursive 4-instruction state machine and returns 'result'", () => {
+    const t = readFileSync(resolve(INTERP, "dynamics/tackle.md"), "utf-8");
+    assert.match(t, /\{\{goal\}\}/);
+    for (const needle of [
+      "## Instruction: Try",
+      "## Instruction: Iterate",
+      "## Instruction: Continue",
+      "## Instruction: Synthesize",
+    ]) {
+      assert.match(t, new RegExp(needle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `missing instruction: ${needle}`);
+    }
+    assert.match(t, /## Return\n[\s\S]*\bresult:/);
   });
 
-  test("execute-step.md documents needs_replan return path", () => {
-    const e = readFileSync(resolve(INTERP, "dynamics/execute-step.md"), "utf-8");
-    assert.match(e, /needs_replan/);
+  test("tackle.md Try uses single-tool-call as the atomic-vs-composite heuristic", () => {
+    const t = readFileSync(resolve(INTERP, "dynamics/tackle.md"), "utf-8");
+    assert.match(t, /SINGLE tool call|single tool call/i);
+    assert.match(t, /assess[\s\S]{0,200}before/i);
   });
 
-  test("synthesize.md consumes results and returns report", () => {
-    const y = readFileSync(resolve(INTERP, "dynamics/synthesize.md"), "utf-8");
-    assert.match(y, /\{\{results\}\}/);
-    assert.match(y, /^done$/m);
-    assert.match(y, /report:/);
+  test("tackle.md composite path pushes plan.md and recursive iterations push tackle.md", () => {
+    const t = readFileSync(resolve(INTERP, "dynamics/tackle.md"), "utf-8");
+    // Composite path -> plan.md
+    assert.match(t, /## Push[\s\S]*dynamics\/plan\.md/);
+    // Iterate / Continue -> recursive tackle.md
+    assert.match(t, /## Push[\s\S]*dynamics\/tackle\.md/);
   });
 
   test("PROGRAM.md is the TypeScript project setup task (d1)", () => {
@@ -91,7 +91,7 @@ describe("phase-3 a-plan-execute: file layout and content", () => {
     assert.match(p, /ci\.yml|GitHub Actions/i);
   });
 
-  test("README names all four collapsed framings (R45 + R65)", () => {
+  test("README names all four collapsed framings", () => {
     const r = readFileSync(resolve(INTERP, "README.md"), "utf-8");
     assert.match(r, /Plan-and-Execute/);
     assert.match(r, /Orchestrator.Workers/);

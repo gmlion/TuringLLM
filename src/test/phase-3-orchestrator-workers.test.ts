@@ -16,8 +16,7 @@ describe("phase-3 b-orchestrator-workers: layout, PROGRAM, inputs, README", () =
       "PROGRAM.md",
       "README.md",
       "dynamics/plan.md",
-      "dynamics/execute-step.md",
-      "dynamics/synthesize.md",
+      "dynamics/tackle.md",
     ]) {
       assert.ok(existsSync(resolve(INTERP, f)), `${f} missing`);
     }
@@ -46,7 +45,7 @@ describe("phase-3 b-orchestrator-workers: layout, PROGRAM, inputs, README", () =
     }
   });
 
-  test("README names Orchestrator-Workers AND all four framings (R45 + R65)", () => {
+  test("README names Orchestrator-Workers AND all four framings", () => {
     const r = readFileSync(resolve(INTERP, "README.md"), "utf-8");
     assert.match(r, /Orchestrator.Workers/);
     assert.match(r, /Anthropic/);

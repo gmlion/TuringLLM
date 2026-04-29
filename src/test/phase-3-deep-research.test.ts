@@ -16,8 +16,7 @@ describe("phase-3 c-deep-research: layout, PROGRAM, recursion support", () => {
       "PROGRAM.md",
       "README.md",
       "dynamics/plan.md",
-      "dynamics/execute-step.md",
-      "dynamics/synthesize.md",
+      "dynamics/tackle.md",
     ]) {
       assert.ok(existsSync(resolve(INTERP, f)), `${f} missing`);
     }
@@ -31,14 +30,17 @@ describe("phase-3 c-deep-research: layout, PROGRAM, recursion support", () => {
     assert.match(p, /report\.md/);
   });
 
-  test("execute-step.md contains the recursion branch (push plan.md inside frame)", () => {
-    const e = readFileSync(resolve(INTERP, "dynamics/execute-step.md"), "utf-8");
-    assert.match(e, /## Push[\s\S]*dynamics\/plan\.md/);
-    // Must make the recursion conditional on broad/coarse steps:
-    assert.match(e, /broad|coarse|sub-plan|decompose|research area/i);
+  test("tackle.md contains the recursion branch (Try → composite path pushes plan.md; iteration pushes tackle.md recursively)", () => {
+    const t = readFileSync(resolve(INTERP, "dynamics/tackle.md"), "utf-8");
+    // Composite path -> plan.md
+    assert.match(t, /## Push[\s\S]*dynamics\/plan\.md/);
+    // Recursive -> tackle.md
+    assert.match(t, /## Push[\s\S]*dynamics\/tackle\.md/);
+    // Adversarial classification language somewhere in Try
+    assert.match(t, /atomic|composite|single tool call/i);
   });
 
-  test("README names Deep Research AND all four framings (R45 + R65)", () => {
+  test("README names Deep Research AND all four framings", () => {
     const r = readFileSync(resolve(INTERP, "README.md"), "utf-8");
     assert.match(r, /Deep Research/);
     assert.match(r, /Self-Ask/);
@@ -47,8 +49,8 @@ describe("phase-3 c-deep-research: layout, PROGRAM, recursion support", () => {
     assert.match(r, /XAgent/);
   });
 
-  test("README mentions stack depth 2 and the recursive plan-push behaviour", () => {
+  test("README mentions recursion (this leaf is the one that exercises recursive sub-tackling)", () => {
     const r = readFileSync(resolve(INTERP, "README.md"), "utf-8");
-    assert.match(r, /depth 2|stack.*2|recursive/i);
+    assert.match(r, /recursi/i);
   });
 });

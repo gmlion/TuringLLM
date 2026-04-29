@@ -5,20 +5,18 @@ arXiv:2305.04091). See `docs/agent-workflows/patterns.md` §Group 2.*
 
 ## What's modeled
 
-A planner-then-executor split. A first agent receives the goal
-and emits an ordered list of steps. A second agent executes one
-step at a time, reporting back what happened. After every step,
-the orchestrator decides whether to advance, replan from
-scratch, or move on to the synthesis phase. When all steps are
-done, a third agent reads the accumulated step results and emits
-a final report.
+A planner-then-executor split, recursive. Given a goal, an agent
+decides whether the goal is small enough to do with one tool call;
+if yes, it just does it; if no, it asks a planner to break the
+goal into 3–7 sub-goals and then tackles each sub-goal the same
+way (recursively). When all sub-goals are done, the agent
+synthesizes the sub-results into a final answer.
 
-The "plan, then execute" decomposition is the point: planning
-happens once (or N times after replans), independently of any
-single step's execution. The executor never sees the full plan
-— only the current step plus a short digest of prior results —
-so it can't optimize across steps in ways the planner didn't
-anticipate.
+The recursion is the architecture: the same dynamic (`tackle.md`)
+handles the goal at every level. The planner (`plan.md`) is a
+one-shot decomposer with no internal state and no iteration. The
+strategy is a thin shim that just hands the user goal to
+`tackle.md` and waits.
 
 ## Collapsed framings
 
@@ -39,103 +37,89 @@ Each leaf ships a different `PROGRAM.md` to elicit the framing's
 characteristic execution trace; the strategy and dynamics are
 byte-equal across the three leaves.
 
-## Four orchestrators, four contexts
+## Three orchestrators, three context types
 
 | Driver | When it's active | What it can see | What it produces |
 | --- | --- | --- | --- |
-| **Strategy** (`f000-strategy`) | Initial plan request, after each pop, between steps | Its own MEMORY, the plan at `./scoped/plan.md`, the cursor (current step index) at `./scoped/cursor.md`, the accumulating step log at `./scoped/results.md`, the user program | A push (request a plan, dispatch a step, request synthesis), or `done` |
-| **Planner** (`fNNN-plan`) | One planning pass | Only `goal` and `results_so_far` handed in via push-args; nothing else about the strategy's state | An ordered list of steps as `plan` |
-| **Executor** (`fNNN-execute-step`) | One step, possibly with a recursive replan request | `current_step` and `context` (a short digest of prior results) handed in via push-args; can use the full toolset (bash, write_file, web search) and write to `workspace/`. May push `plan.md` recursively if the step is too broad | An `outcome` (`status: success | needs_replan` + `output`), spliced to the strategy as `## Outcome` |
-| **Synthesizer** (`fNNN-synthesize`) | One synthesis pass at the end | The full `results` log handed in via push-args | A final `report` |
+| **Strategy** (`f000-strategy`) | Just at startup and just at the very end | The user program (`PROGRAM.md`) | One push of `tackle.md` with the goal, then on pop, halt |
+| **Tackle** (`fNNN-tackle`) | Once per goal at every recursion level | Only `goal` handed in via push-args; on the composite path also the spliced `## Plan` from its child planner and the spliced `## Result` from each child tackle | Either an immediate `result` (atomic case — one tool call done), or after orchestrating sub-tackles, a synthesized `result` |
+| **Plan** (`fNNN-plan`) | Once per composite goal | Only `goal` handed in via push-args | A `plan` (3–7 sub-goal bullets), and that's it — no iteration, no synthesis |
 
 A new context is created on every push and destroyed on the
-matching pop. **The executor does not see the plan** — only the
-single step it was dispatched. This is what makes the decomposition
-real: an executor can't quietly merge or reorder steps, because
-it doesn't know what the others are.
+matching pop. **Sibling tackle contexts never see each other's
+working state** — only the parent tackle stitches them together
+through its accumulating `./scoped/sub-results.md`.
 
-The executor *may* push `plan.md` again recursively if its step is
-too broad to act on directly. This is the depth-2 case
-(`strategy → execute-step → plan`); the executor pops with
-`needs_replan` and the strategy then re-runs `plan.md` with the
-expanded sub-steps visible in `results_so_far`. The next plan
-replaces the broad step with its concrete sub-step leaves.
+The recursion bottoms out when a tackle's `Try` instruction
+judges the goal atomic and executes a single tool call directly.
+For a goal whose natural decomposition tree is k deep, the
+peak stack is `1 (strategy) + 1 + 2k (tackle/plan pairs)`
+frames.
 
-## How a run works
+## How a single-level tackle works
 
-A run is `1 + 2 + sum_over_steps(2 to 4) + 2 + 1` cycles —
-typically ~15–25 cycles for a 5-step plan with no replans.
+A composite tackle is 4 sub-instructions executed across roughly
+`(1 + 2 + N + 1)` cycles where N is the number of sub-goals (one
+push, one absorb-plan, one continue per sub-goal except the last,
+one final synthesize):
 
-1. **(strategy)** *Initialize.* Read PROGRAM.md, create empty
-   `./scoped/results.md` and `./scoped/cursor.md = 0`, push
-   `plan.md` with the goal. State → `planning`.
-2. **(planner)** *Produce plan.* Returns 3–7 ordered steps as
-   `plan` on pop.
-3. **(strategy)** *Absorb plan.* Write `## Plan` body to
-   `./scoped/plan.md`. State → `ready`.
-4. **(strategy, repeated)** *Dispatch step.* If cursor < #steps,
-   read the cursor-th step from `./scoped/plan.md`, build a
-   short context digest from the tail of `./scoped/results.md`,
-   push `execute-step.md`. State → `executing`.
-5. **(executor)** *Execute or recursively replan.* Either:
-   - Perform the step using the toolset (bash, write, web), log
-     a summary to `./scoped/attempt.md`, then self-check and
-     return either `acceptable` or `needs_replan`; or
-   - Recognize the step as too broad, push `plan.md` to
-     decompose it, absorb the returned sub-plan into
-     `./scoped/attempt.md`, and return `needs_replan` so the
-     strategy will re-plan with the sub-steps as concrete leaves.
-6. **(strategy)** *Route after step.*
-   - `success` → surgically append the output to
-     `./scoped/results.md` as `- R<N>: …`, advance the cursor,
-     state → `ready` (loop to step 4).
-   - `needs_replan` → log a `[REPLAN-TRIGGER from S<N>]` note in
-     `./scoped/results.md` (without advancing the cursor), push
-     `plan.md` again with the updated `results_so_far`. State →
-     `planning` (loop back to step 2).
-   - malformed → log a non-blocking `## Pending Questions` item,
-     advance the cursor anyway. The loop must keep moving.
-7. **(strategy)** *Ready to synthesise.* When cursor reaches
-   #steps, push `synthesize.md` with the full results log.
-   State → `synthesising`.
-8. **(synthesizer)** *Produce report.* Returns the report on pop.
-9. **(strategy)** *Finish.* State → `done`. Shell halts.
+1. **Try** (state=empty). Read the goal. Assess: does this need
+   exactly one tool call, or more? If one, perform it now and
+   pop with `result`. If more, push `plan.md` with the goal and
+   park at `decomposing`.
+2. **Iterate** (state=decomposing_completed, `## Plan` present).
+   Write the planner's bullet list to
+   `./scoped/sub-goals.md`, init cursor to 0, push `tackle.md`
+   for the first sub-goal. State → `iterating`.
+3. **Continue** (state=iterating_completed AND `## Result`
+   present AND cursor < N-1). The just-popped sub-tackle gave us
+   one sub-result; append it to `./scoped/sub-results.md`,
+   advance the cursor, push `tackle.md` for the next sub-goal.
+   Loop.
+4. **Synthesize** (state=iterating_completed AND `## Result`
+   present AND cursor == N-1). The last sub-result has just
+   come back. Append it, then read all sub-results +
+   sub-goals and produce a synthesized final result. If the
+   original goal mentioned a specific output file (e.g.
+   `workspace/report.md`), write it as part of synthesis. Pop
+   with `result`.
+
+The atomic Try path is just steps 1: one tool call, one pop.
 
 ## Where things live
 
-- `./scoped/plan.md` (strategy frame) — the current plan.
-  Wholesale rewritten on each `Absorb plan` (initial plan or
-  replan).
-- `./scoped/cursor.md` — integer index of the step currently
-  executing. Wholesale overwritten on each advance.
-- `./scoped/results.md` — append-only log of step results
-  (`- R<N>: …`) and replan triggers (`- R<N>: [REPLAN-TRIGGER
-  from S<M>] …`). **Surgical `echo >>` only** — wholesale
-  rewriting it would discard the execution history.
-- `./scoped/attempt.md` (executor frame) — short prose summary
-  of what the executor did or what sub-plan was absorbed.
-- `workspace/` — actual project artefacts written by the executor
-  via the Bash / Write tools. This is the shared mutable surface
-  across all execution.
+- `./scoped/sub-goals.md` (composite tackle frames only) — the
+  planner's bullet list, wholesale-written in Iterate.
+- `./scoped/cursor.md` — integer index of the sub-goal currently
+  being tackled.
+- `./scoped/sub-results.md` — accumulating sub-results,
+  **surgical append only** (`echo >>` / heredoc-append).
+  Wholesale rewriting it would lose prior children's results.
+- `./scoped/result.md` — the synthesized final result before pop
+  (composite case only); written wholesale by Synthesize.
+- `workspace/` — actual project artefacts written by atomic
+  tackle frames via the Bash / Write tools. This is the shared
+  mutable surface across all execution.
 
 ## Dynamics in this interpreter
 
 | File | Receives (push-args) | Returns | Stack depth from caller |
 | --- | --- | --- | --- |
-| `dynamics/plan.md` | `goal`, `results_so_far` (optional) | `plan` | leaf |
-| `dynamics/execute-step.md` | `current_step`, `context` | `outcome` (= `status` + `output`) | 1 (2 when the executor recursively pushes `plan.md`) |
-| `dynamics/synthesize.md` | `results` | `report` | leaf |
+| `dynamics/tackle.md` | `goal` | `result` | 1 (atomic Try); recursive (composite path pushes `plan.md` momentarily, then pushes `tackle.md` per sub-goal) |
+| `dynamics/plan.md` | `goal` | `plan` | leaf — pure one-shot decomposer |
 
-The three files are byte-identical across this leaf,
+Both files are byte-identical across this leaf,
 `../b-orchestrator-workers/`, and `../c-deep-research/`, pinned
 by an identity test under `src/test/`.
 
 ## Demo `PROGRAM.md`
 
 Minimal TypeScript Node.js project setup (tsconfig, test, CI).
-The first plan typically under-specifies one of the steps,
-triggering a `needs_replan` return — so this demo exercises the
-recursive sub-planning path.
+Exercises the recursive path: the root `tackle.md` will judge
+the project setup composite, push `plan.md`, then iterate sub-
+tackles; some sub-goals will be atomic (write a single config
+file), others may further decompose (set up CI = workflow file +
+script + secrets reference).
 
 ## Run it
 
@@ -146,16 +130,16 @@ instances/my-a/run.sh
 
 ## Notable behaviour
 
-- **No iteration cap on replans.** Convergence is the model's
-  judgement — if every replan keeps decomposing further, the
-  loop will keep going. In practice replans converge within 1–2
-  rounds because the plan rule asks for 3–7 sibling-uniform
-  steps.
-- **Malformed step returns are non-blocking.** If the executor
-  returns a status that's neither `success` nor `needs_replan`,
-  the strategy logs a `## Pending Questions` item and advances
-  the cursor anyway, so the loop keeps making progress.
-- **Stack depth is at most 2.** The recursive sub-plan path is
-  `strategy → execute-step → plan`; once that plan pops, the
-  executor returns `needs_replan` and the next plan happens at
-  depth 1 again.
+- **The atomic-vs-composite decision is adversarial.** Each
+  tackle's Try makes the call based on its own assessment of
+  what one tool call could accomplish, not on a planner's
+  pre-classification. This avoids the planner's structural bias
+  toward decomposition.
+- **No iteration cap on recursion depth.** Convergence happens
+  when every leaf is atomic. In practice, 1–3 levels suffice for
+  reasonable goals.
+- **Sibling preservation is automatic.** Because each tackle
+  frame works on its own goal in isolation, it never needs to
+  re-plan or remember its caller's other sub-goals — those are
+  the parent's bookkeeping, in `./scoped/sub-goals.md` of the
+  parent frame.

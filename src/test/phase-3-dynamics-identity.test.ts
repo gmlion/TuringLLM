@@ -17,8 +17,7 @@ const LEAVES = [
 const FILES = [
   "INSTRUCTIONS.md",
   "dynamics/plan.md",
-  "dynamics/execute-step.md",
-  "dynamics/synthesize.md",
+  "dynamics/tackle.md",
 ];
 
 describe("phase-3 dynamics identity", () => {
