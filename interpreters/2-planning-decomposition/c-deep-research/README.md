@@ -157,3 +157,77 @@ instances/my-c/run.sh
   this demo.
 - **Report quality depends on the provider** and on web-tool
   availability.
+
+## Known failure mode: dimension drop on recursive replan
+
+When the PROGRAM goal names multiple parallel dimensions ("compare
+A, B, C across X, Y, Z, W"), this pattern can converge on covering
+*one* dimension in depth and silently dropping the others. The
+failure was observed empirically on the bundled Raft/Paxos/
+Multi-Paxos demo with Haiku 4.5: a 56-cycle, 28-minute run
+produced a 16 KB report covering only **leader election** (1 of
+the 4 PROGRAM dimensions), with the other three reduced to a
+one-row appendix table.
+
+**Trace (from `instances/dr/scoped/results.md`):**
+
+1. Initial plan (cycle 2): correctly emits 5 top-level steps,
+   one per dimension plus a synthesis step.
+2. Cycle ~5: executor on S1 ("leader election") returns
+   `needs_replan` with a sub-decomposition into raft / paxos /
+   multi-paxos / compare. Strategy logs `[REPLAN-TRIGGER from
+   S1]` and re-pushes `plan.md`.
+3. **The new plan replaces S1 with the 4 sub-steps but ALSO
+   drops S2/S3/S4** — the planner LLM ignores `plan.md`'s
+   instruction to "preserve not-yet-attempted siblings as-is".
+4. Iteration proceeds through the leader-election sub-steps.
+   Each subsequent "compare" / "synthesize" sub-step also
+   triggers another replan that again drops the (still missing)
+   sibling dimensions.
+5. By cycle 49 the planner finally produces a plan that
+   mentions log replication / fault tolerance / implementation
+   complexity — but the cursor has already advanced to
+   `len(plan)` from intermediate plan-shrinking, so "Ready to
+   synthesise" fires immediately. The synthesizer receives
+   only leader-election results and writes a leader-election-
+   only report.
+
+**Three contributing root causes:**
+
+1. **`plan.md` doesn't reliably preserve sibling top-level
+   steps across replans.** The instruction tells the planner to
+   keep them; the planner LLM often drops them. (The same
+   `plan.md` file is shared with `a-plan-execute` and
+   `b-orchestrator-workers` — which don't expose the bug
+   because their demos don't trigger recursive replans.)
+2. **The cursor advances faster than the plan shrinks.** When a
+   replan reduces plan length from N to M < N, the cursor
+   isn't clipped — so over time it can pass the new
+   `len(plan)` and trigger synthesis prematurely.
+3. **No coverage check before synthesis.** "Ready to synthesise"
+   fires purely on `cursor == len(plan)`, with no validation
+   that `results_so_far` actually mentions every dimension
+   named in the original PROGRAM goal.
+
+**Mitigations (none currently implemented — these would be a
+follow-up):**
+
+- The strategy could pass `original_dimensions` (parsed from
+  PROGRAM) as a separate push-arg to `plan.md`, and `plan.md`
+  could be required to emit at least one step for every
+  dimension not yet covered in `results_so_far`.
+- The strategy could insert a pre-synthesis validation
+  instruction that refuses to push `synthesize.md` until each
+  declared dimension has at least one corresponding `R<N>:`
+  entry in the results log; on validation failure, force a
+  final replan.
+
+**Empirical evidence:** see
+`benchmarks/deep-research-single-prompt/COMPARISON.md` for the
+detailed comparison against a single-prompt Haiku call (which
+also failed to satisfy the spec, in a different way), and
+`benchmarks/deep-research-single-prompt-sonnet/COMPARISON.md`
+for the three-way comparison showing that a single-prompt
+**Sonnet** call produces a 24 KB four-dimension report in 5
+minutes for $1.10 — outperforming the multi-cycle Haiku
+interpreter on every quality axis at a fraction of the cost.

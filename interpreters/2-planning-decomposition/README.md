@@ -61,6 +61,11 @@ The collapses, briefly:
 - **c deep-research** — when the question is open enough that
   some sub-questions will themselves need decomposing. This is
   the only leaf that exercises stack depth 2 by design.
+  **Caveat:** there is a known failure mode where multi-dimension
+  goals (e.g. "compare A, B, C across X, Y, Z, W") can converge
+  on covering one dimension in depth and silently drop the
+  others. See `c-deep-research/README.md` §"Known failure mode"
+  for the trace and the proposed mitigations.
 
 ## Shared dynamics
 

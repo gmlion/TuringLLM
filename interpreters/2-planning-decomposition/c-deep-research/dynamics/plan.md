@@ -4,6 +4,8 @@ Consumes: `{{goal}}` (required); `{{results_so_far}}` (optional, present only wh
 Produces: `## Return` with key `plan` (a newline-separated bullet list of steps).
 State flow: `empty` → `done`.
 
+**Known failure mode (see `interpreters/2-planning-decomposition/c-deep-research/README.md` §"Known failure mode"):** on recursive replans, the planner LLM tends to drop sibling top-level steps from the original plan when expanding one step's `[REPLAN-TRIGGER]` into sub-leaves. The instruction below explicitly tells you to preserve them; if you're an agent reading this, *actually do that* — failing to preserve siblings causes c-deep-research to silently cover only the first PROGRAM dimension on multi-dimension goals.
+
 ## Instruction: Produce plan
 **Condition:** MEMORY state is "empty"
 **Action:** Read the goal:
