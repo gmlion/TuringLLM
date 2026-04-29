@@ -78,6 +78,57 @@ Then wholesale-rewrite MEMORY:
     Initialization complete; ready to dispatch round 1, agent 0.
     INIT_OK_EOF
 
+## Instruction: Stage
+**Condition:** MEMORY state is "dispatch_stage"
+**Action:** Compute the push-args for the next opine.md push and stage them as files under `./scoped/staged/`. Do NOT emit a `## Push` block this cycle — that is the next cycle's job.
+
+    r=$(cat ./scoped/round.md)
+    k=$(cat ./scoped/agent.md)
+    target=$((k + 1))   # 1-indexed for awk
+
+    # Extract the target-th persona block ("### name\n<description until next ### or EOF>").
+    awk -v target=$target '
+      /^### / {
+        count++
+        if (count == target) { in_block = 1; print; next }
+        if (count > target) { in_block = 0; exit }
+      }
+      in_block { print }
+    ' ./scoped/personas.md > ./scoped/staged/_persona_block.md
+
+    head -n 1 ./scoped/staged/_persona_block.md | sed 's/^### //' > ./scoped/staged/persona_name.md
+    tail -n +2 ./scoped/staged/_persona_block.md > ./scoped/staged/persona_description.md
+    rm -f ./scoped/staged/_persona_block.md
+
+    echo "$r" > ./scoped/staged/round.md
+    cp ./scoped/question.md ./scoped/staged/question.md
+
+    # Build the prior-rounds transcript. Loop bound is strictly less than r — the in-progress
+    # current round is deliberately excluded (R5 strict round isolation).
+    if [ "$r" -eq 1 ]; then
+      printf '%s\n' '(none — round 1)' > ./scoped/staged/transcript.md
+    else
+      : > ./scoped/staged/transcript.md
+      i=1
+      while [ "$i" -lt "$r" ]; do
+        cat ./scoped/round-$i.md >> ./scoped/staged/transcript.md
+        i=$((i + 1))
+      done
+    fi
+
+Then wholesale-rewrite MEMORY:
+
+    cat > ./MEMORY.md << 'STAGE_EOF'
+    ## State
+    dispatch_push
+    ## Matched Instruction
+    Stage
+    ## Last Action
+    Staged push-args for round $r, agent $k.
+    ## Result
+    Ready to push opine.md.
+    STAGE_EOF
+
 # Sub-instructions
 
 (none — this interpreter needs none.)

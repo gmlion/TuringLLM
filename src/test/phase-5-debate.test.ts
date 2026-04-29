@@ -111,3 +111,38 @@ describe("phase-5 a-debate: strategy preamble + Initialize (R1-R4, R19)", () => 
     assert.match(init, /waiting_for_user/);
   });
 });
+
+describe("phase-5 a-debate: Stage instruction (R5, R6)", () => {
+  test("Stage is matched on dispatch_stage state", () => {
+    const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+    const stage = extractInstructionBody(s, "Stage");
+    assert.ok(stage.length > 0, "Stage instruction missing");
+  });
+
+  test("Stage uses round-1 sentinel when round == 1 (R6)", () => {
+    const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+    const stage = extractInstructionBody(s, "Stage");
+    assert.match(stage, /\(none — round 1\)/);
+  });
+
+  test("Stage concatenates only prior-round files (R5)", () => {
+    const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+    const stage = extractInstructionBody(s, "Stage");
+    assert.match(stage, /round-\$i\.md|round-\${i}\.md/);
+    assert.match(stage, /\[\s*"\$i"\s*-lt\s*"\$r"\s*\]|\[\s*\$i\s*-lt\s*\$r\s*\]/);
+  });
+
+  test("Stage transitions to dispatch_push", () => {
+    const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+    const stage = extractInstructionBody(s, "Stage");
+    assert.match(stage, /## State\s*\n\s*dispatch_push/);
+  });
+
+  test("Stage writes all five staged push-arg files", () => {
+    const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+    const stage = extractInstructionBody(s, "Stage");
+    for (const fname of ["round.md", "persona_name.md", "persona_description.md", "question.md", "transcript.md"]) {
+      assert.match(stage, new RegExp(`scoped/staged/${escapeRegExp(fname)}`), `Stage missing staged/${fname}`);
+    }
+  });
+});
