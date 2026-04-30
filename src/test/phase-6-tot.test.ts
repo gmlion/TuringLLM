@@ -58,3 +58,72 @@ describe("phase-6 a-tot: evaluate.md reuse (R45)", () => {
     assert.ok(canon.equals(here), "evaluate.md diverged from canonical");
   });
 });
+
+function escapeRegExp(s: string) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function extractInstructionBody(src: string, name: string): string {
+  const startRe = new RegExp(`^## Instruction:\\s*${escapeRegExp(name)}\\b`, "m");
+  const m = src.match(startRe);
+  if (!m) return "";
+  const start = m.index! + m[0].length;
+  const rest = src.slice(start);
+  const endRe = /^(## Instruction:|# Sub-instructions)/m;
+  const e = rest.match(endRe);
+  return e ? rest.slice(0, e.index!) : rest;
+}
+
+describe("phase-6 a-tot: strategy preamble (structural)", () => {
+  test("strategy is bounded by # Strategy / # Sub-instructions and is verbatim-required", () => {
+    const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+    assert.match(s, /^# Strategy/m);
+    assert.match(s, /^# Sub-instructions/m);
+    assert.match(s, /VERBATIM into every update_instructions call/);
+  });
+});
+
+describe("phase-6 a-tot: Initialize instruction (R5–R9)", () => {
+  test("Initialize matches state == empty (R5)", () => {
+    const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+    const init = extractInstructionBody(s, "Initialize");
+    assert.ok(init.length > 0, "Initialize instruction missing");
+    assert.match(init, /MEMORY state is "empty"/);
+  });
+  test("Initialize references PROGRAM.md (R5)", () => {
+    const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+    const init = extractInstructionBody(s, "Initialize");
+    assert.match(init, /\.\.\/\.\.\/PROGRAM\.md/);
+  });
+  test("Initialize handles insufficient input via Pending Questions + waiting_for_user (R6)", () => {
+    const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+    const init = extractInstructionBody(s, "Initialize");
+    assert.match(init, /## Pending Questions/);
+    assert.match(init, /waiting_for_user/);
+  });
+  test("Initialize writes scoped/{numbers,target,max_depth,current_depth}.md (R7)", () => {
+    const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+    const init = extractInstructionBody(s, "Initialize");
+    for (const f of ["numbers.md", "target.md", "max_depth.md", "current_depth.md"]) {
+      assert.match(init, new RegExp(`scoped/${escapeRegExp(f)}`), `Initialize missing scoped/${f}`);
+    }
+  });
+  test("Initialize derives max_depth = N − 1 (R7)", () => {
+    const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+    const init = extractInstructionBody(s, "Initialize");
+    assert.match(init, /N\s*-\s*1|count\s*-\s*1|wc\s+-w/);
+  });
+  test("Initialize appends root node n0 with parent_id=- depth=0 status=live (R8)", () => {
+    const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+    const init = extractInstructionBody(s, "Initialize");
+    assert.match(init, /id:\s*n0/);
+    assert.match(init, /parent_id:\s*-/);
+    assert.match(init, /depth:\s*0/);
+    assert.match(init, /status:\s*live/);
+  });
+  test("Initialize transitions to expanding with current_depth 0 (R9)", () => {
+    const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+    const init = extractInstructionBody(s, "Initialize");
+    assert.match(init, /## State\s*\n\s*expanding/);
+  });
+});
