@@ -116,6 +116,157 @@ Then wholesale-rewrite MEMORY (R9):
     Initialization complete; current_depth=0; ready to expand the root.
     INIT_OK_EOF
 
+## Instruction: Expand-push
+**Condition:** MEMORY state is "expanding"
+**Action:** Find the first unexpanded live node at `current_depth` using the "Find first matching node" primitive (depth == current_depth, status == live, has zero children). If none exists, route via Phase-router (below) without emitting a push.
+
+The canonical push block this instruction emits into MEMORY is:
+
+```
+## Push
+dynamics/expand-node.md
+## Push-Args
+parent_thought: |
+  op: <parent op>
+  left: <parent left>
+target: <target int>
+numbers_remaining: <space-separated remaining numbers>
+```
+
+    DEPTH=$(cat ./scoped/current_depth.md)
+    TARGET=$(cat ./scoped/target.md)
+
+    HAS_CHILD=$(awk '/^parent_id:/ {print $2}' ./scoped/tree.md | sort -u)
+
+    ID=$(awk -v D="$DEPTH" -v EXCL="$HAS_CHILD" '
+      BEGIN { n=split(EXCL, arr, "\n"); for (i=1; i<=n; i++) excl[arr[i]] = 1 }
+      /^---$/ {
+        if (id != "" && d == D && s == "live" && !(id in excl)) { print id; exit }
+        id=""; d=""; s=""; next
+      }
+      /^id:/      { id = $2 }
+      /^depth:/   { d = $2 }
+      /^status:/  { s = $2 }
+    ' ./scoped/tree.md)
+
+If `$ID` is empty, defer to Phase-router via the absorb cycle (skip emitting `## Push`). Otherwise:
+
+    echo "$ID" > ./scoped/cursor.md
+    OP=$(awk -v ID="$ID" '/^---$/{in_block=0;next} /^id:/{in_block=($2==ID)} in_block && /^op:/{sub(/^op: /,""); print; exit}' ./scoped/tree.md)
+    LEFT=$(awk -v ID="$ID" '/^---$/{in_block=0;next} /^id:/{in_block=($2==ID)} in_block && /^left:/{sub(/^left: /,""); print; exit}' ./scoped/tree.md)
+    printf 'op: %s\nleft: %s\n' "$OP" "$LEFT" > ./scoped/staged/parent_thought.md
+    echo "$LEFT" > ./scoped/staged/numbers_remaining.md
+
+Then emit MEMORY:
+
+    PT=$(sed 's/^/  /' ./scoped/staged/parent_thought.md)
+    NR=$(cat ./scoped/staged/numbers_remaining.md)
+
+    cat > ./MEMORY.md << MEM_EOF
+    ## State
+    expanding
+    ## Matched Instruction
+    Expand-push
+    ## Last Action
+    Pushed expand-node.md for $ID at depth $DEPTH.
+    ## Result
+    Push queued.
+    ## Push
+    dynamics/expand-node.md
+    ## Push-Args
+    parent_thought: |
+    $PT
+    target: $TARGET
+    numbers_remaining: $NR
+    MEM_EOF
+
+The state value `expanding` is the returnState; on pop the shell sets state to `expanding_completed`, which `Expand-absorb` matches.
+
+## Instruction: Expand-absorb
+**Condition:** MEMORY state is "expanding_completed" and `## Children` is present in MEMORY
+**Action:** Parse the spliced `## Children` block as alternating `op:` / `left:` lines. For each well-formed pair, append a node block to `./scoped/tree.md` using the "Append a node block" primitive with `parent_id = $(cat ./scoped/cursor.md)`, `depth = current_depth + 1`, `value: 0`, `samples: 0`, `status: live`, and `op`/`left` parsed from the pair.
+
+    DEPTH=$(cat ./scoped/current_depth.md)
+    NEXT_DEPTH=$((DEPTH + 1))
+    PARENT=$(cat ./scoped/cursor.md)
+
+    awk '/^## Children$/{f=1; next} /^## [A-Z]/ && f {exit} f' ./MEMORY.md > ./scoped/_children.txt
+
+    WELL_FORMED=0
+    op=""
+    while IFS= read -r line; do
+      if [[ "$line" =~ ^op:\ (.+)$ ]]; then
+        op="${BASH_REMATCH[1]}"
+      elif [[ "$line" =~ ^left:\ (.+)$ ]] && [ -n "$op" ]; then
+        left="${BASH_REMATCH[1]}"
+        NEXT_INDEX=$(grep -c '^id: n' ./scoped/tree.md)
+        NEW_ID="n$NEXT_INDEX"
+        cat >> ./scoped/tree.md << NODE_EOF
+    ---
+    id: $NEW_ID
+    parent_id: $PARENT
+    depth: $NEXT_DEPTH
+    op: $op
+    left: $left
+    value: 0
+    samples: 0
+    status: live
+    NODE_EOF
+        WELL_FORMED=$((WELL_FORMED + 1))
+        op=""
+      fi
+    done < ./scoped/_children.txt
+
+    MISSING=$((5 - WELL_FORMED))
+
+Decide next state via Phase-router (R18):
+
+    UNEXPANDED=$(awk -v D="$DEPTH" -v EXCL="$(awk '/^parent_id:/ {print $2}' ./scoped/tree.md | sort -u)" '
+      BEGIN { n=split(EXCL, arr, "\n"); for (i=1; i<=n; i++) excl[arr[i]] = 1 }
+      /^---$/ {
+        if (id != "" && d == D && s == "live" && !(id in excl)) { print id; exit }
+        id=""; d=""; s=""; next
+      }
+      /^id:/{id=$2} /^depth:/{d=$2} /^status:/{s=$2}
+    ' ./scoped/tree.md)
+
+    UNSCORED=$(awk -v D="$NEXT_DEPTH" '
+      /^---$/ {
+        if (id != "" && d == D && s == "live" && samp < 3) { print id; exit }
+        id=""; d=""; s=""; samp=0; next
+      }
+      /^id:/{id=$2} /^depth:/{d=$2} /^status:/{s=$2} /^samples:/{samp=$2}
+    ' ./scoped/tree.md)
+
+    if [ -n "$UNEXPANDED" ]; then
+      [ -n "$UNSCORED" ] && NEXT_STATE=scoring || NEXT_STATE=expanding
+    elif [ -n "$UNSCORED" ]; then
+      NEXT_STATE=scoring
+    else
+      NEXT_STATE=pruning
+    fi
+
+Then wholesale-rewrite MEMORY (drop `## Children`, optionally append `## Pending Questions` on malformed):
+
+    if [ "$MISSING" -gt 0 ]; then
+      PQ_BLOCK=$(printf '\n## Pending Questions\n- Q: expand-node.md returned %d well-formed children (expected 5); %d entries malformed for parent %s.' "$WELL_FORMED" "$MISSING" "$PARENT")
+    else
+      PQ_BLOCK=""
+    fi
+
+    cat > ./MEMORY.md << MEM_EOF
+    ## State
+    $NEXT_STATE
+    ## Matched Instruction
+    Expand-absorb
+    ## Last Action
+    Absorbed $WELL_FORMED children for $PARENT at depth $NEXT_DEPTH; routing to $NEXT_STATE.
+    ## Result
+    Children appended to scoped/tree.md.$PQ_BLOCK
+    MEM_EOF
+
+The R47 path: `## Pending Questions` is appended; state is NEVER `waiting_for_user` here — the loop must keep progressing.
+
 # Sub-instructions
 
 (none — this interpreter needs none.)

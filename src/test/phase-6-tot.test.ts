@@ -199,3 +199,54 @@ describe("phase-6 a-tot: expand-node.md dynamic (R38–R40)", () => {
     assert.doesNotMatch(s, /^## Push\s*\ndynamics\//m);
   });
 });
+
+describe("phase-6 a-tot: Expand-push + Expand-absorb + Phase-router (R15–R18, R47)", () => {
+  const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+
+  test("Expand-push instruction exists and matches state == expanding (R15)", () => {
+    const ep = extractInstructionBody(s, "Expand-push");
+    assert.ok(ep.length > 0, "Expand-push missing");
+    assert.match(ep, /MEMORY state is "expanding"/);
+  });
+
+  test("Expand-push pushes dynamics/expand-node.md with the three push-args (R16)", () => {
+    const ep = extractInstructionBody(s, "Expand-push");
+    assert.match(ep, /## Push\s*\ndynamics\/expand-node\.md/);
+    for (const a of ["parent_thought", "target", "numbers_remaining"]) {
+      assert.match(ep, new RegExp(`^\\s*${a}:`, "m"), `Expand-push missing arg ${a}`);
+    }
+  });
+
+  test("Expand-push selects unexpanded live node at current_depth (R15)", () => {
+    const ep = extractInstructionBody(s, "Expand-push");
+    assert.match(ep, /scoped\/current_depth\.md/);
+    assert.match(ep, /parent_id/);
+  });
+
+  test("Expand-absorb matches state == expanding_completed with ## Children present (R17)", () => {
+    const ea = extractInstructionBody(s, "Expand-absorb");
+    assert.ok(ea.length > 0, "Expand-absorb missing");
+    assert.match(ea, /expanding_completed/);
+    assert.match(ea, /## Children/);
+  });
+
+  test("Expand-absorb appends children with value 0, samples 0, status live (R17)", () => {
+    const ea = extractInstructionBody(s, "Expand-absorb");
+    assert.match(ea, /value:\s*0/);
+    assert.match(ea, /samples:\s*0/);
+    assert.match(ea, /status:\s*live/);
+  });
+
+  test("Expand-absorb appends Pending Questions on malformed children (R47)", () => {
+    const ea = extractInstructionBody(s, "Expand-absorb");
+    assert.match(ea, /## Pending Questions/);
+    assert.doesNotMatch(ea, /## State\s*\n\s*waiting_for_user/);
+  });
+
+  test("Phase-router routes to expanding | scoring | pruning (R18)", () => {
+    const ea = extractInstructionBody(s, "Expand-absorb");
+    for (const target of ["expanding", "scoring", "pruning"]) {
+      assert.match(ea, new RegExp(`\\b${target}\\b`), `Expand-absorb router missing target ${target}`);
+    }
+  });
+});
