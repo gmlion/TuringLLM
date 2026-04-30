@@ -13,6 +13,7 @@ const EVALUATE_PATHS = [
   "interpreters/1-iterative-refinement/c-reflexion/dynamics/evaluate.md",
   "interpreters/5-fixed-sop-teams/a-metagpt/dynamics/evaluate.md",
   "interpreters/5-fixed-sop-teams/b-chatdev/dynamics/evaluate.md",
+  "interpreters/3-search/a-tot/dynamics/evaluate.md",
 ];
 
 describe("evaluate.md identity across phases", () => {

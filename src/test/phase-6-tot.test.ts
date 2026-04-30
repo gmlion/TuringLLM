@@ -42,3 +42,19 @@ describe("phase-6 a-tot: group README (R2)", () => {
     assert.match(s, /Zhou\s+et\s+al/i);
   });
 });
+
+describe("phase-6 a-tot: evaluate.md reuse (R45)", () => {
+  test("dynamics/evaluate.md exists in a-tot", () => {
+    assert.ok(
+      existsSync(resolve(INTERP, "dynamics/evaluate.md")),
+      "evaluate.md missing in a-tot/dynamics/",
+    );
+  });
+  test("dynamics/evaluate.md is byte-equal to canonical 1b copy (R45)", () => {
+    const canon = readFileSync(
+      resolve(REPO, "interpreters/1-iterative-refinement/b-evaluator-optimizer/dynamics/evaluate.md"),
+    );
+    const here = readFileSync(resolve(INTERP, "dynamics/evaluate.md"));
+    assert.ok(canon.equals(here), "evaluate.md diverged from canonical");
+  });
+});
