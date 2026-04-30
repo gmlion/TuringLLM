@@ -127,3 +127,37 @@ describe("phase-6 a-tot: Initialize instruction (R5–R9)", () => {
     assert.match(init, /## State\s*\n\s*expanding/);
   });
 });
+
+describe("phase-6 a-tot: tree ledger contract (R10–R14)", () => {
+  const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+
+  test("INSTRUCTIONS.md declares all 8 required node-block keys (R11)", () => {
+    for (const key of ["id:", "parent_id:", "depth:", "op:", "left:", "value:", "samples:", "status:"]) {
+      assert.match(s, new RegExp(escapeRegExp(key)), `tree.md schema missing key ${key}`);
+    }
+  });
+
+  test("INSTRUCTIONS.md declares the four status values (R14)", () => {
+    for (const status of ["live", "pruned", "terminal_pass", "terminal_fail"]) {
+      assert.match(s, new RegExp(`\\b${escapeRegExp(status)}\\b`), `status value ${status} not declared`);
+    }
+  });
+
+  test("INSTRUCTIONS.md uses --- block separator in tree.md (R10)", () => {
+    const init = extractInstructionBody(s, "Initialize");
+    assert.match(init, /^---$/m, "Initialize must seed tree.md with a --- separator before the root block");
+  });
+
+  test("INSTRUCTIONS.md uses awk for surgical updates of tree.md after Initialize (R12)", () => {
+    // Strategy outside Initialize must use awk (or sed) for in-place tree.md updates.
+    // We assert at least one awk pipeline that writes back to ./scoped/tree.md.
+    assert.match(s, /awk[^>]*\.\/scoped\/tree\.md[^|]*>\s*\.\/scoped\/tree\.md\.tmp/);
+    assert.match(s, /mv\s+\.\/scoped\/tree\.md\.tmp\s+\.\/scoped\/tree\.md/);
+  });
+
+  test("INSTRUCTIONS.md computes monotonic n<index> ids (R13)", () => {
+    // Look for the pattern that derives a new id from the count of existing ids.
+    assert.match(s, /grep\s+-c\s+'?\^id:\s*n'?[^\n]*\.\/scoped\/tree\.md/);
+    assert.match(s, /n"?\$/, "INSTRUCTIONS.md should construct new id as n<counter>");
+  });
+});
