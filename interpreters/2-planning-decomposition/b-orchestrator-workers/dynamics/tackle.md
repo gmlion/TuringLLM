@@ -11,6 +11,9 @@ State flow: `empty` → (`done` for atomic) | (`decomposing` → `iterating` →
 
 The atomic-vs-composite decision is professional judgement — what the role would naturally do — not a rule-matching exercise. A researcher writing one section just writes it. An analyst summarizing one document just summarizes it. A developer writing one config file just writes it.
 
+Scoped files:
+- `./scoped/justification.md` — the short justification the model writes BEFORE deciding atomic vs. composite (always created in Try, regardless of branch — debugging artefact).
+
 Scoped files (only created if the composite path is taken):
 - `./scoped/sub-goals.md` — the bullet list returned by `plan.md` (wholesale write).
 - `./scoped/cursor.md` — integer index of the sub-task currently being tackled (0-based).
@@ -36,7 +39,14 @@ The current sub-task to address:
 
     {{goal}}
 
-Decide as {{role}} would: produce this now (atomic — one tool call yields the artefact), or split into sub-tasks (composite — push plan.md to decompose)? Professional judgement appropriate to the role.
+**Justify before choosing.** Wholesale-write `./scoped/justification.md` (short blob) framing the decision in terms of the FINAL ARTIFACT the {{role}} is producing for the original_goal:
+
+- If you intend atomic: name the concrete output this single tool call will produce, and the specific part of the final artifact it advances.
+- If you intend composite: name each proposed sub-task as a structural component of the final artifact — whatever {{role}} naturally builds with (a section in a document, a file in a project, an entry in a list, a step in a procedure).
+
+Re-read your justification. If your composite sub-tasks read as sub-divisions inside a single component a {{role}} would naturally produce in one pass — that's over-decomposition; choose atomic. If your atomic case can't point to a specific part of the final artifact it serves, you may be at the wrong granularity (try composite, or reconsider whether this sub-task should exist at all).
+
+Now decide as {{role}} would: produce this now (atomic — one tool call yields the artefact), or split into sub-tasks (composite — push plan.md to decompose)? Professional judgement appropriate to the role.
 
 If your decision is **atomic**: perform the single tool call. Capture its relevant output. Then wholesale-rewrite MEMORY (single heredoc — the `## Return` block MUST be in the same write as the state change):
 
