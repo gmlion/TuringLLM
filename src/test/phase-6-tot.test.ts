@@ -161,3 +161,41 @@ describe("phase-6 a-tot: tree ledger contract (R10–R14)", () => {
     assert.match(s, /n"?\$/, "INSTRUCTIONS.md should construct new id as n<counter>");
   });
 });
+
+describe("phase-6 a-tot: expand-node.md dynamic (R38–R40)", () => {
+  const path = resolve(INTERP, "dynamics/expand-node.md");
+
+  test("dynamics/expand-node.md exists", () => {
+    assert.ok(existsSync(path), "expand-node.md missing");
+  });
+
+  test("expand-node.md declares push-arg placeholders (R38)", () => {
+    const s = readFileSync(path, "utf-8");
+    for (const ph of ["{{parent_thought}}", "{{target}}", "{{numbers_remaining}}"]) {
+      assert.match(s, new RegExp(escapeRegExp(ph)), `expand-node.md missing placeholder ${ph}`);
+    }
+  });
+
+  test("expand-node.md is single-cycle empty -> done (R39)", () => {
+    const s = readFileSync(path, "utf-8");
+    const headers = (s.match(/^## Instruction:/gm) || []);
+    assert.equal(headers.length, 1, "expand-node.md must have exactly one instruction");
+    assert.match(s, /MEMORY state is "empty"/);
+    assert.match(s, /## State\s*\n\s*done/);
+  });
+
+  test("expand-node.md returns one key 'children' via ## Return (R39)", () => {
+    const s = readFileSync(path, "utf-8");
+    assert.match(s, /## Return\s*\n\s*children:\s*\|/);
+  });
+
+  test("expand-node.md prompts for exactly k=5 child entries (R39)", () => {
+    const s = readFileSync(path, "utf-8");
+    assert.match(s, /\b5\b.*candidates|exactly\s+(?:k\s*=\s*)?5/i);
+  });
+
+  test("expand-node.md does not push further dynamics (R40)", () => {
+    const s = readFileSync(path, "utf-8");
+    assert.doesNotMatch(s, /^## Push\s*\ndynamics\//m);
+  });
+});
