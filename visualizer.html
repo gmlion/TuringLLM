@@ -115,6 +115,12 @@
     .frame-node { cursor: pointer; }
     .frame-node:hover .frame-rect { stroke: #58a6ff; }
 
+    /* Keep the layout in CSS so [hidden] can hide the view. An inline
+       `display:flex` would beat the UA `[hidden] { display: none }` rule
+       on specificity and leave the graph visible behind the cycle view. */
+    #graphView { display: flex; gap: 8px; }
+    #graphView[hidden] { display: none; }
+
     .empty-hint { color: #8b949e; font-style: italic; }
 
     .grid-3col {
@@ -225,7 +231,7 @@
       <div class="timeline" id="timeline" style="flex:1 1 100%;display:flex;gap:4px;overflow-x:auto;align-items:flex-end;min-width:0;"></div>
     </div>
 
-    <div id="graphView" style="display:flex; gap:8px;">
+    <div id="graphView">
       <div style="flex:1; min-width:0;">
         <div id="cyGraph" style="height: calc(100vh - 140px); background: #0d1117; border: 1px solid #30363d; border-radius: 8px;"></div>
         <div id="cyEmpty" hidden style="text-align:center; color:#8b949e; padding: 40px;">Instance has no cycles yet.</div>
@@ -559,7 +565,13 @@
 
     function getSelectedCycle() {
       if (selectedCycleNum === -1) return liveCycle;
-      return cycles.find(c => c.num === selectedCycleNum) || null;
+      const found = cycles.find(c => c.num === selectedCycleNum);
+      if (found) return found;
+      // Selected cycle has no history snapshot — typically the in-flight latest
+      // cycle, whose snapshot is written at commit time and so isn't on disk
+      // yet. Fall back to liveCycle (the instance root mirrors that cycle's
+      // current state) so stack and frame files are still inspectable.
+      return liveCycle;
     }
 
     function renderSelectedCycle() {
@@ -790,22 +802,35 @@
         return;
       }
 
-      const cycle = getSelectedCycle();
-      const cycleNum = cycle ? cycle.num : null;
+      // R24: scope by current selection. We scope by selectedCycleNum (what the
+      // user clicked) rather than by getSelectedCycle().num, because the latter
+      // can fall back to liveCycle (-1) when the in-flight cycle has no snapshot
+      // — and the user clicking the latest cycle node still wants to see only
+      // that cycle's events, not the full run. -1 ("live") resolves to the
+      // highest cycle number in the event log so the events panel matches the
+      // live stack/files panel.
+      let scopeCycle = selectedCycleNum;
+      if (scopeCycle === -1) {
+        let maxCycle = null;
+        for (const e of allEvents) {
+          if (typeof e.cycle === 'number' && (maxCycle === null || e.cycle > maxCycle)) maxCycle = e.cycle;
+        }
+        scopeCycle = maxCycle;
+      }
 
-      // R24: scope by current selection.
-      // Live cycle (-1) intentionally shows ALL events from the run for post-mortem
-      // inspection — not just the latest cycle. Click a historical cycle dot to narrow.
       let filtered = allEvents;
-      if (cycleNum !== null && cycleNum !== -1) {
-        filtered = filtered.filter(e => e.cycle === cycleNum);
+      if (scopeCycle !== null) {
+        filtered = filtered.filter(e => e.cycle === scopeCycle);
       }
       if (selectedFrameDir) {
         filtered = filtered.filter(e => e.frame === selectedFrameDir || e.frame === null);
       }
       filtered = filtered.filter(e => enabledEventTypes.has(e.type));
 
-      scopeLabel.textContent = `— cycle ${cycleNum === -1 ? 'live' : cycleNum ?? '(all)'} / frame ${selectedFrameDir ?? '(any)'} — ${filtered.length} events`;
+      const labelCycle = selectedCycleNum === -1
+        ? `live${scopeCycle !== null ? ` (#${scopeCycle})` : ''}`
+        : (selectedCycleNum ?? '(all)');
+      scopeLabel.textContent = `— cycle ${labelCycle} / frame ${selectedFrameDir ?? '(any)'} — ${filtered.length} events`;
 
       if (filtered.length === 0) {
         panel.innerHTML = '<span class="empty-hint">No events match the current selection.</span>';
