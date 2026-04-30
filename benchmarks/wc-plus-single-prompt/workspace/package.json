@@ -1,0 +1,14 @@
+{
+  "name": "wc-plus",
+  "version": "1.0.0",
+  "description": "A Node.js implementation of wc (word count) with JSON output support",
+  "type": "module",
+  "bin": {
+    "wc-plus": "src/wc-plus.js"
+  },
+  "scripts": {
+    "test": "node --test src/*.test.js"
+  },
+  "author": "",
+  "license": "ISC"
+}
