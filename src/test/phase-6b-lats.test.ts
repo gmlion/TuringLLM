@@ -78,3 +78,49 @@ describe("phase-6b b-lats: demo PROGRAM.md (R69)", () => {
     assert.ok(canon.equals(here), "PROGRAM.md diverged from a-tot");
   });
 });
+
+describe("phase-6b b-lats: rollout.md dynamic (R10, R11, R12, R13)", () => {
+  const path = resolve(INTERP, "dynamics/rollout.md");
+
+  test("dynamics/rollout.md exists", () => {
+    assert.ok(existsSync(path), "rollout.md missing");
+  });
+
+  test("rollout.md declares only {{partial_state}} and {{task}} push-args (R10)", () => {
+    const s = readFileSync(path, "utf-8");
+    assert.match(s, /\{\{partial_state\}\}/);
+    assert.match(s, /\{\{task\}\}/);
+    assert.doesNotMatch(s, /\{\{target\}\}/);
+    assert.doesNotMatch(s, /\{\{numbers_remaining\}\}/);
+    assert.doesNotMatch(s, /\{\{thought\}\}/);
+    assert.doesNotMatch(s, /\{\{parent_thought\}\}/);
+  });
+
+  test("rollout.md is single-cycle (## Instruction count == 1) (R11)", () => {
+    const s = readFileSync(path, "utf-8");
+    const matches = s.match(/^## Instruction:/gm) || [];
+    assert.equal(matches.length, 1);
+  });
+
+  test("rollout.md returns ## State done + ## Return terminal_state: | (R11)", () => {
+    const s = readFileSync(path, "utf-8");
+    assert.match(s, /## State\s*\n\s*done/);
+    assert.match(s, /## Return\s*\n\s*terminal_state:\s*\|/);
+  });
+
+  test("rollout.md does not push any further dynamic (R12)", () => {
+    const s = readFileSync(path, "utf-8");
+    assert.doesNotMatch(s, /^## Push\s*$/m);
+  });
+
+  test("rollout.md prose is domain-agnostic (R13)", () => {
+    const s = readFileSync(path, "utf-8");
+    for (const banned of [
+      "Game of 24", "arithmetic", "numbers", "target",
+      "maze", "code", "function", "test suite",
+      "parent_thought", "numbers_remaining", "thought",
+    ]) {
+      assert.ok(!s.includes(banned), `rollout.md contains banned domain word: "${banned}"`);
+    }
+  });
+});
