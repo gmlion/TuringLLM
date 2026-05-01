@@ -518,3 +518,51 @@ describe("phase-6 a-tot: demo PROGRAM.md (R48, R49)", () => {
     assert.match(s, /Game of 24|evaluate(?:s)? to 24|equal(?:s)? 24/i);
   });
 });
+
+describe("phase-6 a-tot: negative requirements (R52–R57)", () => {
+  const sInst = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+
+  test("strategy never references workspace/ for tree state (R52)", () => {
+    assert.doesNotMatch(sInst, /workspace\/(tree|frontier|nodes|search)/);
+    assert.doesNotMatch(sInst, /git\s+(checkout|branch).*workspace/);
+  });
+
+  test("k=5 and b=5 are bash literals, not parsed from PROGRAM.md (R53)", () => {
+    assert.match(sInst, /\bk\s*=\s*5\b|\b5\b.*candidates|exactly\s+5/i);
+    const sProg = readFileSync(resolve(INTERP, "PROGRAM.md"), "utf-8");
+    assert.doesNotMatch(sProg, /\bk\s*[=:]\s*\d|\bb\s*[=:]\s*\d/i);
+  });
+
+  test("no Graph-of-Thoughts variant in dynamics/ (R54)", () => {
+    const dyns = readdirSync(resolve(INTERP, "dynamics"));
+    for (const d of dyns) {
+      assert.doesNotMatch(d, /aggregate|graph|merge/i, `unexpected GoT-style dynamic ${d}`);
+    }
+  });
+
+  test("no retry/budget/restart/early-termination beyond BFS schedule (R55)", () => {
+    assert.doesNotMatch(sInst, /\b(retry|attempts_left|budget|max_iterations|time_limit)\b/i);
+  });
+
+  test("dynamics never reach into parent scoped/ (R56)", () => {
+    for (const dyn of ["expand-node.md", "score.md", "evaluate.md"]) {
+      const s = readFileSync(resolve(INTERP, "dynamics", dyn), "utf-8");
+      assert.doesNotMatch(s, /\.\.\/scoped\//);
+      assert.doesNotMatch(s, /frames\/f000-strategy\/scoped/);
+    }
+  });
+
+  test("no concurrency primitives in INSTRUCTIONS.md or dynamics (R57)", () => {
+    const allFiles = [
+      sInst,
+      readFileSync(resolve(INTERP, "dynamics/expand-node.md"), "utf-8"),
+      readFileSync(resolve(INTERP, "dynamics/score.md"), "utf-8"),
+      readFileSync(resolve(INTERP, "dynamics/evaluate.md"), "utf-8"),
+    ];
+    for (const f of allFiles) {
+      assert.doesNotMatch(f, /xargs\s+-P\b/);
+      assert.doesNotMatch(f, /parallel\s+--/);
+      assert.doesNotMatch(f, /\&\s*$/m);
+    }
+  });
+});
