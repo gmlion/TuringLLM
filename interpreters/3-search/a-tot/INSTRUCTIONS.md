@@ -466,6 +466,32 @@ The R44 path: malformed labels are treated as `impossible` and a non-blocking `#
     Frontier reduced.
     MEM_EOF
 
+## Instruction: Advance
+**Condition:** MEMORY state is "advancing"
+**Action:** Read current_depth and max_depth. If `current_depth + 1 ≤ max_depth`, increment and re-enter expanding (R26). Else, transition to goal_checking (R27).
+
+    DEPTH=$(cat ./scoped/current_depth.md)
+    MAX=$(cat ./scoped/max_depth.md)
+    NEXT=$((DEPTH + 1))
+
+    if [ "$NEXT" -le "$MAX" ]; then
+      echo "$NEXT" > ./scoped/current_depth.md
+      NEXT_STATE=expanding
+    else
+      NEXT_STATE=goal_checking
+    fi
+
+    cat > ./MEMORY.md << MEM_EOF
+    ## State
+    $NEXT_STATE
+    ## Matched Instruction
+    Advance
+    ## Last Action
+    Advanced from depth $DEPTH; routing to $NEXT_STATE.
+    ## Result
+    Depth advanced.
+    MEM_EOF
+
 # Sub-instructions
 
 (none — this interpreter needs none.)

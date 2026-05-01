@@ -379,3 +379,25 @@ describe("phase-6 a-tot: Prune instruction (R24, R25, R37)", () => {
     assert.match(p, /## State\s*\n\s*done/);
   });
 });
+
+describe("phase-6 a-tot: Advance instruction (R26, R27)", () => {
+  const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+
+  test("Advance instruction exists and matches state == advancing", () => {
+    const a = extractInstructionBody(s, "Advance");
+    assert.ok(a.length > 0, "Advance missing");
+    assert.match(a, /MEMORY state is "advancing"/);
+  });
+
+  test("Advance increments current_depth when next ≤ max_depth (R26)", () => {
+    const a = extractInstructionBody(s, "Advance");
+    assert.match(a, /scoped\/current_depth\.md/);
+    assert.match(a, /-le|-lt|<=/);
+    assert.match(a, /\bexpanding\b/);
+  });
+
+  test("Advance routes to goal_checking when next > max_depth (R27)", () => {
+    const a = extractInstructionBody(s, "Advance");
+    assert.match(a, /\bgoal_checking\b/);
+  });
+});
