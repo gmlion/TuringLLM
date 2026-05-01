@@ -267,6 +267,149 @@ Then wholesale-rewrite MEMORY (drop `## Children`, optionally append `## Pending
 
 The R47 path: `## Pending Questions` is appended; state is NEVER `waiting_for_user` here — the loop must keep progressing.
 
+## Instruction: Score-push
+**Condition:** MEMORY state is "scoring"
+**Action:** Find the first live unscored child (`depth == current_depth + 1` AND `status == live` AND `samples < 3`). If none, defer to Phase-router (no push this cycle).
+
+    DEPTH=$(cat ./scoped/current_depth.md)
+    NEXT_DEPTH=$((DEPTH + 1))
+    TARGET=$(cat ./scoped/target.md)
+
+    ID=$(awk -v D="$NEXT_DEPTH" '
+      /^---$/ {
+        if (id != "" && d == D && s == "live" && samp < 3) { print id; exit }
+        id=""; d=""; s=""; samp=0; next
+      }
+      /^id:/      { id = $2 }
+      /^depth:/   { d = $2 }
+      /^status:/  { s = $2 }
+      /^samples:/ { samp = $2 }
+    ' ./scoped/tree.md)
+
+If `$ID` is empty, route via Phase-router on the next cycle (no push). Otherwise stage the thought and emit `## Push`:
+
+    echo "$ID" > ./scoped/cursor.md
+    OP=$(awk -v ID="$ID" '/^---$/{in_block=0;next} /^id:/{in_block=($2==ID)} in_block && /^op:/{sub(/^op: /,""); print; exit}' ./scoped/tree.md)
+    LEFT=$(awk -v ID="$ID" '/^---$/{in_block=0;next} /^id:/{in_block=($2==ID)} in_block && /^left:/{sub(/^left: /,""); print; exit}' ./scoped/tree.md)
+    SAMP=$(awk -v ID="$ID" '/^---$/{in_block=0;next} /^id:/{in_block=($2==ID)} in_block && /^samples:/{print $2; exit}' ./scoped/tree.md)
+    printf 'op: %s\nleft: %s\n' "$OP" "$LEFT" > ./scoped/staged/thought.md
+
+    TH=$(sed 's/^/  /' ./scoped/staged/thought.md)
+
+The canonical push block this instruction emits into MEMORY is:
+
+```
+## Push
+dynamics/score.md
+## Push-Args
+thought: |
+  <staged thought, two-space indented>
+target: <target int>
+```
+
+Heredoc-form bash for the strategy:
+
+    cat > ./MEMORY.md << MEM_EOF
+    ## State
+    scoring
+    ## Matched Instruction
+    Score-push
+    ## Last Action
+    Pushed score.md for $ID (sample $((SAMP + 1)) of 3).
+    ## Result
+    Push queued.
+    ## Push
+    dynamics/score.md
+    ## Push-Args
+    thought: |
+    $TH
+    target: $TARGET
+    MEM_EOF
+
+The state value `scoring` is the returnState; on pop the shell sets state to `scoring_completed`, which `Score-absorb` matches.
+
+## Instruction: Score-absorb
+**Condition:** MEMORY state is "scoring_completed" and `## Value` is present in MEMORY
+**Action:** Read the cursor id and the returned label. Map label → weight per `{sure: 20, likely: 1, impossible: 0.001}` (R21). On malformed label, treat as `impossible` (R44) and append non-blocking `## Pending Questions`. Surgically increment samples and add weight to value. Drop `## Value`. Route via Phase-router.
+
+    ID=$(cat ./scoped/cursor.md)
+    LABEL=$(awk '/^## Value$/{f=1; next} /^## /{f=0} f && /[a-z]/{print; exit}' ./MEMORY.md | tr -d ' ')
+
+    case "$LABEL" in
+      sure)       WEIGHT=20      ;;
+      likely)     WEIGHT=1       ;;
+      impossible) WEIGHT=0.001   ;;
+      *)          WEIGHT=0.001
+                  MALFORMED=1   ;;
+    esac
+
+    CURRENT_VALUE=$(awk -v ID="$ID" '/^---$/{in_block=0;next} /^id:/{in_block=($2==ID)} in_block && /^value:/{print $2; exit}' ./scoped/tree.md)
+    NEW_VALUE=$(echo "$CURRENT_VALUE + $WEIGHT" | bc -l)
+    CURRENT_SAMPLES=$(awk -v ID="$ID" '/^---$/{in_block=0;next} /^id:/{in_block=($2==ID)} in_block && /^samples:/{print $2; exit}' ./scoped/tree.md)
+    NEW_SAMPLES=$((CURRENT_SAMPLES + 1))
+
+    awk -v ID="$ID" -v V="$NEW_VALUE" '
+      /^---$/ { in_block = 0; print; next }
+      /^id:/  { in_block = ($2 == ID); print; next }
+      in_block && /^value:/ { print "value: " V; next }
+      { print }
+    ' ./scoped/tree.md > ./scoped/tree.md.tmp && mv ./scoped/tree.md.tmp ./scoped/tree.md
+
+    awk -v ID="$ID" -v S="$NEW_SAMPLES" '
+      /^---$/ { in_block = 0; print; next }
+      /^id:/  { in_block = ($2 == ID); print; next }
+      in_block && /^samples:/ { print "samples: " S; next }
+      { print }
+    ' ./scoped/tree.md > ./scoped/tree.md.tmp && mv ./scoped/tree.md.tmp ./scoped/tree.md
+
+Decide next state via Phase-router (mirrors Expand-absorb's logic):
+
+    DEPTH=$(cat ./scoped/current_depth.md)
+    NEXT_DEPTH=$((DEPTH + 1))
+    HAS_CHILD=$(awk '/^parent_id:/ {print $2}' ./scoped/tree.md | sort -u)
+    UNEXPANDED=$(awk -v D="$DEPTH" -v EXCL="$HAS_CHILD" '
+      BEGIN { n=split(EXCL, arr, "\n"); for (i=1; i<=n; i++) excl[arr[i]] = 1 }
+      /^---$/ {
+        if (id != "" && d == D && s == "live" && !(id in excl)) { print id; exit }
+        id=""; d=""; s=""; next
+      }
+      /^id:/{id=$2} /^depth:/{d=$2} /^status:/{s=$2}
+    ' ./scoped/tree.md)
+    UNSCORED=$(awk -v D="$NEXT_DEPTH" '
+      /^---$/ {
+        if (id != "" && d == D && s == "live" && samp < 3) { print id; exit }
+        id=""; d=""; s=""; samp=0; next
+      }
+      /^id:/{id=$2} /^depth:/{d=$2} /^status:/{s=$2} /^samples:/{samp=$2}
+    ' ./scoped/tree.md)
+
+    if [ -n "$UNEXPANDED" ]; then
+      [ -n "$UNSCORED" ] && NEXT_STATE=scoring || NEXT_STATE=expanding
+    elif [ -n "$UNSCORED" ]; then
+      NEXT_STATE=scoring
+    else
+      NEXT_STATE=pruning
+    fi
+
+    if [ -n "$MALFORMED" ]; then
+      PQ_BLOCK=$(printf '\n## Pending Questions\n- Q: score.md returned label "%s" not in {sure, likely, impossible}; treated as impossible.' "$LABEL")
+    else
+      PQ_BLOCK=""
+    fi
+
+    cat > ./MEMORY.md << MEM_EOF
+    ## State
+    $NEXT_STATE
+    ## Matched Instruction
+    Score-absorb
+    ## Last Action
+    Updated $ID: samples=$NEW_SAMPLES, value=$NEW_VALUE; routing to $NEXT_STATE.
+    ## Result
+    Score absorbed.$PQ_BLOCK
+    MEM_EOF
+
+The R44 path: malformed labels are treated as `impossible` and a non-blocking `## Pending Questions` is appended; state is NEVER `waiting_for_user` here — the loop must keep progressing.
+
 # Sub-instructions
 
 (none — this interpreter needs none.)

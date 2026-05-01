@@ -290,3 +290,60 @@ describe("phase-6 a-tot: score.md dynamic (R41–R43)", () => {
     assert.doesNotMatch(s, /^## Push\s*\ndynamics\//m);
   });
 });
+
+describe("phase-6 a-tot: Score-push + Score-absorb (R19–R23, R44)", () => {
+  const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+
+  test("Score-push matches state == scoring (R19)", () => {
+    const sp = extractInstructionBody(s, "Score-push");
+    assert.ok(sp.length > 0, "Score-push missing");
+    assert.match(sp, /MEMORY state is "scoring"/);
+  });
+
+  test("Score-push selects child at current_depth+1 with samples<3 (R19)", () => {
+    const sp = extractInstructionBody(s, "Score-push");
+    assert.match(sp, /samples\s*<\s*3|samples\s*<\s*"3"|samples<3/);
+  });
+
+  test("Score-push pushes dynamics/score.md with thought + target (R20)", () => {
+    const sp = extractInstructionBody(s, "Score-push");
+    assert.match(sp, /## Push\s*\ndynamics\/score\.md/);
+    for (const a of ["thought", "target"]) {
+      assert.match(sp, new RegExp(`^\\s*${a}:`, "m"), `Score-push missing arg ${a}`);
+    }
+  });
+
+  test("Score-absorb matches state == scoring_completed with ## Value present (R21)", () => {
+    const sa = extractInstructionBody(s, "Score-absorb");
+    assert.ok(sa.length > 0, "Score-absorb missing");
+    assert.match(sa, /scoring_completed/);
+    assert.match(sa, /## Value/);
+  });
+
+  test("Score-absorb declares the weight mapping sure=20 likely=1 impossible=0.001 (R21)", () => {
+    const sa = extractInstructionBody(s, "Score-absorb");
+    assert.match(sa, /sure[^=]*=?[^0-9]*20\b/);
+    assert.match(sa, /likely[^=]*=?[^0-9]*1\b/);
+    assert.match(sa, /impossible[^=]*=?[^0-9]*0\.001/);
+  });
+
+  test("Score-absorb increments samples by 1 and adds weight to value (R21)", () => {
+    const sa = extractInstructionBody(s, "Score-absorb");
+    assert.match(sa, /samples\s*\+\s*1|\$\(\(\s*\$?CURRENT_SAMPLES\s*\+\s*1\s*\)\)|new_samples=/i);
+    assert.match(sa, /bc\b|awk.*\+/);
+  });
+
+  test("Score-absorb treats malformed label as impossible (R44)", () => {
+    const sa = extractInstructionBody(s, "Score-absorb");
+    assert.match(sa, /\bimpossible\b/);
+    assert.match(sa, /## Pending Questions/);
+    assert.doesNotMatch(sa, /## State\s*\n\s*waiting_for_user/);
+  });
+
+  test("Score-absorb routes via Phase-router (scoring | expanding | pruning) (R22, R23)", () => {
+    const sa = extractInstructionBody(s, "Score-absorb");
+    for (const target of ["scoring", "expanding", "pruning"]) {
+      assert.match(sa, new RegExp(`\\b${target}\\b`), `Score-absorb router missing target ${target}`);
+    }
+  });
+});
