@@ -502,3 +502,19 @@ describe("phase-6 a-tot: Solved instruction (R35, R36)", () => {
     }
   });
 });
+
+describe("phase-6 a-tot: demo PROGRAM.md (R48, R49)", () => {
+  test("PROGRAM.md exists", () => {
+    assert.ok(existsSync(resolve(INTERP, "PROGRAM.md")), "PROGRAM.md missing");
+  });
+  test("PROGRAM.md contains exactly four puzzle integers + the target 24 (R48)", () => {
+    const s = readFileSync(resolve(INTERP, "PROGRAM.md"), "utf-8");
+    const nums = (s.match(/\b\d+\b/g) || []).map(Number);
+    assert.equal(nums.length, 5, `expected 5 integers in PROGRAM.md prose, got ${nums.length}: ${nums.join(",")}`);
+    assert.equal(nums[nums.length - 1], 24, `last integer (target) must be 24, got ${nums[nums.length - 1]}`);
+  });
+  test("PROGRAM.md mentions Game of 24 or 'evaluates to 24' (R49)", () => {
+    const s = readFileSync(resolve(INTERP, "PROGRAM.md"), "utf-8");
+    assert.match(s, /Game of 24|evaluate(?:s)? to 24|equal(?:s)? 24/i);
+  });
+});
