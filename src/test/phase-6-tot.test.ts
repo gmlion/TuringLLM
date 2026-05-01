@@ -611,3 +611,23 @@ describe("phase-6 a-tot: leaf README content (R3, R50)", () => {
     assert.match(s, /scoped\/tree\.md/);
   });
 });
+
+describe("phase-6 source-spec dynamics-table (R4)", () => {
+  const SOURCE = resolve(REPO, "docs/agent-workflows/requirements.md");
+  test("source spec dynamics table has a row for expand-node.md returning ## Children only (R4)", () => {
+    const s = readFileSync(SOURCE, "utf-8");
+    assert.match(s, /\|\s*`expand-node\.md`\s*\|\s*6\s*\|[^|]*\|\s*`?##\s*Children`?\s*\|\s*1\s*\|/);
+  });
+  test("source spec dynamics table has a row for score.md returning ## Value (R4)", () => {
+    const s = readFileSync(SOURCE, "utf-8");
+    assert.match(s, /\|\s*`score\.md`\s*\|\s*6\s*\|[^|]*\|\s*`?##\s*Value`?\s*\|\s*1\s*\|/);
+  });
+  test("source spec no longer has the deprecated combined row 'expand-node.md … ## Children, ## Value … N' (R4)", () => {
+    const s = readFileSync(SOURCE, "utf-8");
+    assert.doesNotMatch(s, /\|\s*`expand-node\.md`\s*\|[^|]*\|[^|]*\|\s*`?##\s*Children`?\s*,\s*`?##\s*Value`?\s*\|/);
+  });
+  test("source spec includes a rationale paragraph mentioning evaluate.md and graded ranking (R4)", () => {
+    const s = readFileSync(SOURCE, "utf-8");
+    assert.match(s, /graded\s+ranking|grading.*pass\/fail|two\s+(?:single-purpose\s+)?dynamics/i);
+  });
+});

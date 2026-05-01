@@ -161,7 +161,8 @@ is copied wholesale by `new-instance.sh`. Names and contracts are normative.
 | `dialogue.md` | 4b | `## Topic`, `## Participants` | `## Dialogue Output` | 1 (acceptance=true: 2) |
 | `opine.md` | 5 | `## Question`, `## Round`, `## Persona`, `## Transcript` | `## Opinion` | 1 |
 | `propose.md` | 5b | `## Prompt`, `## Persona` | `## Proposal` (appended) | 1 |
-| `expand-node.md` | 6 | `## Parent Thought` | `## Children`, `## Value` | N |
+| `expand-node.md` | 6 | `## Parent Thought` | `## Children` | 1 |
+| `score.md`       | 6 | `## Thought`        | `## Value`    | 1 |
 | `evaluate-workflow.md` | 7 | `## Candidate Workflow` | `## Score`, `## Trace` | 2 |
 
 ---
@@ -446,6 +447,8 @@ Deepest stack in the codebase before the meta-framework. First meaningful
 use of the per-instance project git for parallel-branch snapshots.
 
 **Deliverable:** `interpreters/tot/` (Tree of Thoughts).
+
+**Why two dynamics, not one.** An earlier draft of the Phase 6 dynamics table conflated child-generation with graded ranking inside `expand-node.md`. During Phase 6 spec work the contracts were split: `expand-node.md` returns only `## Children`, and a new `score.md` returns `## Value` ∈ {sure, likely, impossible}. The split honours `evaluate.md`'s pass/fail contract (used by 1b, 1c, 4a, 4b — multiple consumers), avoids coercing a graded-ranking signal through a pass/fail-shaped channel, and exposes `score.md` as a candidate second-consumer surface for Phase 6b (LATS). Deviates deliberately from guiding principle 5 ("no speculative dynamics — promote only on second use"); LATS is expected to validate the deviation by adopting `score.md` for its rollout-value role.
 
 - Strategy: search controller holding the frontier and visited set in MEMORY.
 - New dynamic: `expand-node.md` — generates k children, evaluates each,
