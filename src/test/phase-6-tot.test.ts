@@ -401,3 +401,71 @@ describe("phase-6 a-tot: Advance instruction (R26, R27)", () => {
     assert.match(a, /\bgoal_checking\b/);
   });
 });
+
+describe("phase-6 a-tot: Goal-push + Goal-absorb (R28–R34)", () => {
+  const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+
+  test("Goal-push matches state == goal_checking (R28)", () => {
+    const gp = extractInstructionBody(s, "Goal-push");
+    assert.ok(gp.length > 0, "Goal-push missing");
+    assert.match(gp, /MEMORY state is "goal_checking"/);
+  });
+
+  test("Goal-push selects live node at depth == max_depth (R28)", () => {
+    const gp = extractInstructionBody(s, "Goal-push");
+    assert.match(gp, /scoped\/max_depth\.md/);
+    assert.match(gp, /\blive\b/);
+  });
+
+  test("Goal-push reconstructs expression by walking parent_id chain (R29)", () => {
+    const gp = extractInstructionBody(s, "Goal-push");
+    assert.match(gp, /parent_id|walk/i);
+    assert.match(gp, /scoped\/staged\/attempt\.md/);
+  });
+
+  test("Goal-push pushes dynamics/evaluate.md with attempt + criterion (R30)", () => {
+    const gp = extractInstructionBody(s, "Goal-push");
+    assert.match(gp, /## Push\s*\ndynamics\/evaluate\.md/);
+    for (const a of ["attempt", "criterion"]) {
+      assert.match(gp, new RegExp(`^\\s*${a}:`, "m"), `Goal-push missing arg ${a}`);
+    }
+  });
+
+  test("Goal-push criterion text mentions 'use each of' and 'evaluate to' (R30)", () => {
+    const gp = extractInstructionBody(s, "Goal-push");
+    assert.match(gp, /use each of/i);
+    assert.match(gp, /evaluate(?:s)? to/i);
+  });
+
+  test("Goal-absorb matches state == goal_checking_completed with ## Verdict (R31, R32)", () => {
+    const ga = extractInstructionBody(s, "Goal-absorb");
+    assert.ok(ga.length > 0, "Goal-absorb missing");
+    assert.match(ga, /goal_checking_completed/);
+    assert.match(ga, /## Verdict/);
+  });
+
+  test("Goal-absorb maps pass → terminal_pass and routes to solved (R31)", () => {
+    const ga = extractInstructionBody(s, "Goal-absorb");
+    assert.match(ga, /\bterminal_pass\b/);
+    assert.match(ga, /\bsolved\b/);
+  });
+
+  test("Goal-absorb maps fail → terminal_fail and stays in goal_checking (R32)", () => {
+    const ga = extractInstructionBody(s, "Goal-absorb");
+    assert.match(ga, /\bterminal_fail\b/);
+    assert.match(ga, /\bgoal_checking\b/);
+  });
+
+  test("Goal-absorb treats malformed verdict as fail with Pending Questions (R33)", () => {
+    const ga = extractInstructionBody(s, "Goal-absorb");
+    assert.match(ga, /## Pending Questions/);
+    assert.doesNotMatch(ga, /## State\s*\n\s*waiting_for_user/);
+  });
+
+  test("Exhaustion path emits ## No Solution Found and sets state done (R34)", () => {
+    const gp = extractInstructionBody(s, "Goal-push");
+    const ga = extractInstructionBody(s, "Goal-absorb");
+    const combined = gp + "\n" + ga;
+    assert.match(combined, /## No Solution Found/);
+  });
+});

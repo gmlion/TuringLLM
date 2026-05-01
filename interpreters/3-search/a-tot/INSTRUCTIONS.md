@@ -492,6 +492,136 @@ The R44 path: malformed labels are treated as `impossible` and a non-blocking `#
     Depth advanced.
     MEM_EOF
 
+## Instruction: Goal-push
+**Condition:** MEMORY state is "goal_checking"
+**Action:** Find first live terminal (`depth == max_depth` AND `status == live`). If none, emit `## No Solution Found` (R34). Otherwise reconstruct expression via parent-walk, synthesize criterion, push evaluate.md.
+
+The canonical push block this instruction emits into MEMORY is:
+
+```
+## Push
+dynamics/evaluate.md
+## Push-Args
+attempt: |
+  <reconstructed expression chain>
+criterion: |
+  Expression must use each of <numbers> exactly once and evaluate to <target>.
+```
+
+    MAX=$(cat ./scoped/max_depth.md)
+
+    ID=$(awk -v D="$MAX" '
+      /^---$/ {
+        if (id != "" && d == D && s == "live") { print id; exit }
+        id=""; d=""; s=""; next
+      }
+      /^id:/      { id = $2 }
+      /^depth:/   { d = $2 }
+      /^status:/  { s = $2 }
+    ' ./scoped/tree.md)
+
+    if [ -z "$ID" ]; then
+      FAILS=$(grep -c '^status: terminal_fail$' ./scoped/tree.md)
+      cat > ./MEMORY.md << EXH_EOF
+    ## State
+    done
+    ## Matched Instruction
+    Goal-push (exhausted)
+    ## Last Action
+    No live terminals remain; halting.
+    ## Result
+    Search exhausted without solution.
+    ## No Solution Found
+    $FAILS terminal candidates evaluated; none satisfied the criterion.
+    EXH_EOF
+      exit 0
+    fi
+
+    echo "$ID" > ./scoped/cursor.md
+
+    EXPR=""
+    CURRENT="$ID"
+    while [ "$CURRENT" != "n0" ] && [ -n "$CURRENT" ]; do
+      OP=$(awk -v X="$CURRENT" '/^---$/{in_block=0;next} /^id:/{in_block=($2==X)} in_block && /^op:/{sub(/^op: /,""); print; exit}' ./scoped/tree.md)
+      PARENT=$(awk -v X="$CURRENT" '/^---$/{in_block=0;next} /^id:/{in_block=($2==X)} in_block && /^parent_id:/{print $2; exit}' ./scoped/tree.md)
+      if [ -z "$EXPR" ]; then EXPR="($OP)"; else EXPR="($OP); $EXPR"; fi
+      CURRENT="$PARENT"
+    done
+
+    echo "$EXPR" > ./scoped/staged/attempt.md
+
+    NUMBERS=$(cat ./scoped/numbers.md)
+    TARGET=$(cat ./scoped/target.md)
+    printf 'Expression must use each of %s exactly once and evaluate to %s.\n' "$NUMBERS" "$TARGET" > ./scoped/staged/criterion.md
+
+    ATT=$(sed 's/^/  /' ./scoped/staged/attempt.md)
+    CRIT=$(sed 's/^/  /' ./scoped/staged/criterion.md)
+
+    cat > ./MEMORY.md << MEM_EOF
+    ## State
+    goal_checking
+    ## Matched Instruction
+    Goal-push
+    ## Last Action
+    Pushed evaluate.md for terminal $ID with attempt and criterion.
+    ## Result
+    Push queued.
+    ## Push
+    dynamics/evaluate.md
+    ## Push-Args
+    attempt: |
+    $ATT
+    criterion: |
+    $CRIT
+    MEM_EOF
+
+## Instruction: Goal-absorb
+**Condition:** MEMORY state is "goal_checking_completed" and `## Verdict` is present in MEMORY
+**Action:** Read cursor id and `## Verdict`. On `pass` → status `terminal_pass`, route `solved` (R31). On `fail` → status `terminal_fail`, route `goal_checking` (R32). On malformed verdict → treat as fail, append non-blocking `## Pending Questions` (R33).
+
+    ID=$(cat ./scoped/cursor.md)
+    VERDICT=$(awk '/^## Verdict$/{f=1; next} /^## /{f=0} f && /[a-z]/{print; exit}' ./MEMORY.md | tr -d ' ')
+
+    case "$VERDICT" in
+      pass)
+        NEW_STATUS=terminal_pass
+        NEXT_STATE=solved
+        ;;
+      fail)
+        NEW_STATUS=terminal_fail
+        NEXT_STATE=goal_checking
+        ;;
+      *)
+        NEW_STATUS=terminal_fail
+        NEXT_STATE=goal_checking
+        MALFORMED=1
+        ;;
+    esac
+
+    awk -v X="$ID" -v NS="$NEW_STATUS" '
+      /^---$/ { in_block = 0; print; next }
+      /^id:/  { in_block = ($2 == X); print; next }
+      in_block && /^status:/ { print "status: " NS; next }
+      { print }
+    ' ./scoped/tree.md > ./scoped/tree.md.tmp && mv ./scoped/tree.md.tmp ./scoped/tree.md
+
+    if [ -n "$MALFORMED" ]; then
+      PQ_BLOCK=$(printf '\n## Pending Questions\n- Q: evaluate.md returned verdict "%s" not in {pass, fail}; treated as fail.' "$VERDICT")
+    else
+      PQ_BLOCK=""
+    fi
+
+    cat > ./MEMORY.md << MEM_EOF
+    ## State
+    $NEXT_STATE
+    ## Matched Instruction
+    Goal-absorb
+    ## Last Action
+    Marked $ID as $NEW_STATUS; routing to $NEXT_STATE.
+    ## Result
+    Verdict absorbed.$PQ_BLOCK
+    MEM_EOF
+
 # Sub-instructions
 
 (none — this interpreter needs none.)
