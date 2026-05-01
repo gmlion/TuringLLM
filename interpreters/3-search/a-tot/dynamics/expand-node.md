@@ -1,20 +1,24 @@
 # Dynamic: Expand Node
 
-Receives push-args: `{{parent_thought}}`, `{{target}}`, `{{numbers_remaining}}`.
-Produces: `## State done` + `## Return` block with key `children`.
+Receives push-args: {{partial_state}}, {{task}}.
+Produces: ## State done + ## Return block with key `children`.
 
-This dynamic is invoked by the ToT strategy once per live unexpanded tree node. One invocation generates exactly k=5 candidate next moves, each consuming two of `{{numbers_remaining}}` and producing one new number from a binary op (`+`, `−`, `×`, `÷`). The resulting `left` set is the remaining numbers plus the new number.
+This dynamic is invoked by a search interpreter once per live unexpanded tree
+node. One invocation generates exactly k=5 candidate next states by reading the
+task definition in {{task}} and extending the partial state below by one
+forward step per candidate.
 
 ## Instruction: Generate children
 **Condition:** MEMORY state is "empty"
-**Action:** Generate exactly 5 candidate next moves for the parent state below, targeting `{{target}}`. For each move:
+**Action:** Read the task definition in {{task}}. Generate exactly k=5
+candidate next states that extend {{partial_state}} according to the task's
+rules. Each candidate is a single forward step from {{partial_state}}; the
+returned `state:` payload should describe the partial state *after* that step
+applies (in the same prose form the task uses). Prefer diverse next steps;
+avoid emitting five identical candidates.
 
-- Pick two distinct numbers from `{{numbers_remaining}}`.
-- Apply one of `+`, `−`, `×`, `÷`.
-- The new `left` set is the unused numbers plus the new result.
-- Avoid producing five identical entries; prefer diverse operations.
-
-Write `./MEMORY.md` with this EXACT single-heredoc shape (the `## Return` block MUST be in the same heredoc as the state change — without it the shell pops with no return value, breaking the caller):
+Write ./MEMORY.md with this EXACT shape (the ## Return block MUST be in the
+same heredoc as the state change):
 
 ```
 cat > ./MEMORY.md << 'MEMEOF'
@@ -23,29 +27,26 @@ done
 ## Matched Instruction
 Generate children
 ## Last Action
-Generated five candidate next moves for parent state {{parent_thought}}; popping back to controller.
+Generated five candidate next states for the partial state.
 ## Result
 Children produced.
 ## Return
 children: |
-  op: <a> <op> <b> = <result>
-  left: <space-separated remaining numbers + result>
-  op: <a> <op> <b> = <result>
-  left: <space-separated remaining numbers + result>
-  op: <a> <op> <b> = <result>
-  left: <space-separated remaining numbers + result>
-  op: <a> <op> <b> = <result>
-  left: <space-separated remaining numbers + result>
-  op: <a> <op> <b> = <result>
-  left: <space-separated remaining numbers + result>
+  state: |
+    <partial state after extension 1, every line indented four spaces>
+  state: |
+    <partial state after extension 2, every line indented four spaces>
+  state: |
+    <partial state after extension 3, every line indented four spaces>
+  state: |
+    <partial state after extension 4, every line indented four spaces>
+  state: |
+    <partial state after extension 5, every line indented four spaces>
 MEMEOF
 ```
 
-Parent state:
-{{parent_thought}}
+Task definition:
+{{task}}
 
-Numbers remaining:
-{{numbers_remaining}}
-
-Target:
-{{target}}
+Partial state to extend:
+{{partial_state}}

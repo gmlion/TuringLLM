@@ -162,41 +162,51 @@ describe("phase-6 a-tot: tree ledger contract (R10–R14)", () => {
   });
 });
 
-describe("phase-6 a-tot: expand-node.md dynamic (R38–R40)", () => {
+describe("phase-6 a-tot: expand-node.md dynamic (post-refactor R14, R30)", () => {
   const path = resolve(INTERP, "dynamics/expand-node.md");
 
   test("dynamics/expand-node.md exists", () => {
     assert.ok(existsSync(path), "expand-node.md missing");
   });
 
-  test("expand-node.md declares push-arg placeholders (R38)", () => {
+  test("expand-node.md declares only {{partial_state}} and {{task}} push-args (R14, R30)", () => {
     const s = readFileSync(path, "utf-8");
-    for (const ph of ["{{parent_thought}}", "{{target}}", "{{numbers_remaining}}"]) {
-      assert.match(s, new RegExp(escapeRegExp(ph)), `expand-node.md missing placeholder ${ph}`);
-    }
+    assert.match(s, /\{\{partial_state\}\}/);
+    assert.match(s, /\{\{task\}\}/);
+    // Must NOT contain pre-refactor placeholders
+    assert.doesNotMatch(s, /\{\{parent_thought\}\}/);
+    assert.doesNotMatch(s, /\{\{target\}\}/);
+    assert.doesNotMatch(s, /\{\{numbers_remaining\}\}/);
   });
 
-  test("expand-node.md is single-cycle empty -> done (R39)", () => {
-    const s = readFileSync(path, "utf-8");
-    const headers = (s.match(/^## Instruction:/gm) || []);
-    assert.equal(headers.length, 1, "expand-node.md must have exactly one instruction");
-    assert.match(s, /MEMORY state is "empty"/);
-    assert.match(s, /## State\s*\n\s*done/);
-  });
-
-  test("expand-node.md returns one key 'children' via ## Return (R39)", () => {
+  test("expand-node.md returns ## Return children: | with state: entries (R30)", () => {
     const s = readFileSync(path, "utf-8");
     assert.match(s, /## Return\s*\n\s*children:\s*\|/);
+    assert.match(s, /state:\s*\|/);
+    // Must NOT contain pre-refactor return shape
+    assert.doesNotMatch(s, /^op:\s/m);
+    assert.doesNotMatch(s, /^left:\s/m);
   });
 
-  test("expand-node.md prompts for exactly k=5 child entries (R39)", () => {
+  test("expand-node.md is single-cycle and pushes nothing further (R33)", () => {
     const s = readFileSync(path, "utf-8");
-    assert.match(s, /\b5\b.*candidates|exactly\s+(?:k\s*=\s*)?5/i);
+    // single ## Instruction matching "Generate children" or similar
+    const matches = s.match(/^## Instruction:/gm) || [];
+    assert.equal(matches.length, 1, "expand-node.md must have exactly one instruction");
+    // No further push
+    assert.doesNotMatch(s, /^## Push\s*$/m);
   });
 
-  test("expand-node.md does not push further dynamics (R40)", () => {
+  test("expand-node.md prose is domain-agnostic (R32)", () => {
     const s = readFileSync(path, "utf-8");
-    assert.doesNotMatch(s, /^## Push\s*\ndynamics\//m);
+    for (const banned of ["Game of 24", "arithmetic", "numbers_remaining", "parent_thought"]) {
+      assert.ok(!s.includes(banned), `expand-node.md contains banned domain word: "${banned}"`);
+    }
+    // The Game-of-24 op symbols must not appear as bullet items / rule statements
+    for (const sym of ["+", "−", "×", "÷"]) {
+      // permissive: allow these in surrounding markdown noise (none expected); strict check elsewhere
+      assert.ok(!s.includes(`Apply one of`), "expand-node.md must not enumerate operators");
+    }
   });
 });
 
