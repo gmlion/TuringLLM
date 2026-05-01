@@ -347,3 +347,35 @@ describe("phase-6 a-tot: Score-push + Score-absorb (R19–R23, R44)", () => {
     }
   });
 });
+
+describe("phase-6 a-tot: Prune instruction (R24, R25, R37)", () => {
+  const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+
+  test("Prune instruction exists and matches state == pruning", () => {
+    const p = extractInstructionBody(s, "Prune");
+    assert.ok(p.length > 0, "Prune missing");
+    assert.match(p, /MEMORY state is "pruning"/);
+  });
+
+  test("Prune sorts by value desc, id asc, retains top 5 (R24)", () => {
+    const p = extractInstructionBody(s, "Prune");
+    assert.match(p, /sort.*-k1,1nr.*-k2,2|sort.*-rn|sort.*--reverse/);
+    assert.match(p, /tail\s+-n\s+\+6|tail\s+-n6\b|head\s+-n\s+5/);
+  });
+
+  test("Prune marks losers as status: pruned (R24)", () => {
+    const p = extractInstructionBody(s, "Prune");
+    assert.match(p, /status:?\s*pruned|"pruned"/);
+  });
+
+  test("Prune transitions to advancing on success (R25)", () => {
+    const p = extractInstructionBody(s, "Prune");
+    assert.match(p, /## State\s*\n\s*advancing/);
+  });
+
+  test("Prune emits ## No Solution Found on empty frontier dead-end (R37)", () => {
+    const p = extractInstructionBody(s, "Prune");
+    assert.match(p, /## No Solution Found/);
+    assert.match(p, /## State\s*\n\s*done/);
+  });
+});

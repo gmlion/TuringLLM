@@ -410,6 +410,62 @@ Decide next state via Phase-router (mirrors Expand-absorb's logic):
 
 The R44 path: malformed labels are treated as `impossible` and a non-blocking `## Pending Questions` is appended; state is NEVER `waiting_for_user` here — the loop must keep progressing.
 
+## Instruction: Prune
+**Condition:** MEMORY state is "pruning"
+**Action:** Select all `live` nodes at `current_depth + 1`, sort by `value` descending then `id` ascending, retain top b=5, mark every other as `status: pruned`. If no live nodes exist at `current_depth + 1`, write `## No Solution Found` and halt (R37).
+
+    DEPTH=$(cat ./scoped/current_depth.md)
+    NEXT_DEPTH=$((DEPTH + 1))
+
+    LIVE_NODES=$(awk -v D="$NEXT_DEPTH" '
+      /^---$/ { id=""; d=""; v=""; s=""; next }
+      /^id:/      { id=$2 }
+      /^depth:/   { d=$2 }
+      /^value:/   { v=$2 }
+      /^status:/  { s=$2; if (id != "" && d == D && s == "live") printf "%s %s\n", v, id }
+    ' ./scoped/tree.md)
+
+    if [ -z "$LIVE_NODES" ]; then
+      cat > ./MEMORY.md << DEAD_EOF
+    ## State
+    done
+    ## Matched Instruction
+    Prune (dead-end)
+    ## Last Action
+    No live nodes at depth $NEXT_DEPTH; halting.
+    ## Result
+    Search exhausted without solution.
+    ## No Solution Found
+    Pruning at depth $NEXT_DEPTH found zero live candidates; aborting BFS.
+    DEAD_EOF
+      exit 0
+    fi
+
+    LOSERS=$(echo "$LIVE_NODES" | sort -k1,1nr -k2,2 | tail -n +6 | awk '{print $2}')
+
+    for L in $LOSERS; do
+      awk -v ID="$L" '
+        /^---$/ { in_block = 0; print; next }
+        /^id:/  { in_block = ($2 == ID); print; next }
+        in_block && /^status:/ { print "status: pruned"; next }
+        { print }
+      ' ./scoped/tree.md > ./scoped/tree.md.tmp && mv ./scoped/tree.md.tmp ./scoped/tree.md
+    done
+
+    KEPT=$(echo "$LIVE_NODES" | sort -k1,1nr -k2,2 | head -n 5 | wc -l)
+    TOTAL_LIVE=$(echo "$LIVE_NODES" | wc -l)
+
+    cat > ./MEMORY.md << MEM_EOF
+    ## State
+    advancing
+    ## Matched Instruction
+    Prune
+    ## Last Action
+    Pruned depth $NEXT_DEPTH from $TOTAL_LIVE live nodes to top $KEPT.
+    ## Result
+    Frontier reduced.
+    MEM_EOF
+
 # Sub-instructions
 
 (none — this interpreter needs none.)
