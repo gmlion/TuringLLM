@@ -52,3 +52,21 @@ describe("phase-6b b-lats: group README delta (R2)", () => {
     assert.match(groupReadme, /2310\.04406/);
   });
 });
+
+describe("phase-6b b-lats: reused dynamics byte-equality (R6, R7, R8)", () => {
+  test("dynamics/expand-node.md is byte-equal to a-tot post-refactor copy (R6)", () => {
+    const canon = readFileSync(resolve(REPO, "interpreters/3-search/a-tot/dynamics/expand-node.md"));
+    const here = readFileSync(resolve(INTERP, "dynamics/expand-node.md"));
+    assert.ok(canon.equals(here), "expand-node.md diverged from a-tot canonical");
+  });
+  test("dynamics/evaluate.md is byte-equal to canonical 1b copy (R7)", () => {
+    const canon = readFileSync(resolve(REPO, "interpreters/1-iterative-refinement/b-evaluator-optimizer/dynamics/evaluate.md"));
+    const here = readFileSync(resolve(INTERP, "dynamics/evaluate.md"));
+    assert.ok(canon.equals(here), "evaluate.md diverged from canonical");
+  });
+  test("dynamics/reflect.md is byte-equal to canonical 1c copy (R8)", () => {
+    const canon = readFileSync(resolve(REPO, "interpreters/1-iterative-refinement/c-reflexion/dynamics/reflect.md"));
+    const here = readFileSync(resolve(INTERP, "dynamics/reflect.md"));
+    assert.ok(canon.equals(here), "reflect.md diverged from canonical");
+  });
+});
