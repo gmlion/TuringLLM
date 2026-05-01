@@ -388,7 +388,25 @@ describe("phase-6 a-tot: Advance instruction (R26, R27)", () => {
   });
 });
 
-describe("phase-6 a-tot: Goal-push + Goal-absorb (R28–R34)", () => {
+describe("phase-6 a-tot: Goal-push post-refactor (R22)", () => {
+  const path = resolve(INTERP, "INSTRUCTIONS.md");
+  const s = readFileSync(path, "utf-8");
+  const gp = extractInstructionBody(s, "Goal-push");
+
+  test("Goal-push reads attempt from leaf state file (R22)", () => {
+    assert.match(gp, /\.\/scoped\/state-/);
+  });
+
+  test("Goal-push criterion is ./scoped/task.md (R22)", () => {
+    assert.match(gp, /\.\/scoped\/task\.md/);
+  });
+
+  test("Goal-push has no parent-walk while loop (R22)", () => {
+    assert.doesNotMatch(gp, /while\s+\[\s+"\$CURRENT"\s+!=\s+"n0"/);
+  });
+});
+
+describe("phase-6 a-tot: Goal-absorb (R31–R34)", () => {
   const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
 
   test("Goal-push matches state == goal_checking (R28)", () => {
@@ -403,24 +421,12 @@ describe("phase-6 a-tot: Goal-push + Goal-absorb (R28–R34)", () => {
     assert.match(gp, /\blive\b/);
   });
 
-  test("Goal-push reconstructs expression by walking parent_id chain (R29)", () => {
-    const gp = extractInstructionBody(s, "Goal-push");
-    assert.match(gp, /parent_id|walk/i);
-    assert.match(gp, /scoped\/staged\/attempt\.md/);
-  });
-
   test("Goal-push pushes dynamics/evaluate.md with attempt + criterion (R30)", () => {
     const gp = extractInstructionBody(s, "Goal-push");
     assert.match(gp, /## Push\s*\ndynamics\/evaluate\.md/);
     for (const a of ["attempt", "criterion"]) {
       assert.match(gp, new RegExp(`^\\s*${a}:`, "m"), `Goal-push missing arg ${a}`);
     }
-  });
-
-  test("Goal-push criterion text mentions 'use each of' and 'evaluate to' (R30)", () => {
-    const gp = extractInstructionBody(s, "Goal-push");
-    assert.match(gp, /use each of/i);
-    assert.match(gp, /evaluate(?:s)? to/i);
   });
 
   test("Goal-absorb matches state == goal_checking_completed with ## Verdict (R31, R32)", () => {
@@ -456,7 +462,27 @@ describe("phase-6 a-tot: Goal-push + Goal-absorb (R28–R34)", () => {
   });
 });
 
-describe("phase-6 a-tot: Solved instruction (R35, R36)", () => {
+describe("phase-6 a-tot: Solved post-refactor (R23)", () => {
+  const path = resolve(INTERP, "INSTRUCTIONS.md");
+  const s = readFileSync(path, "utf-8");
+  const so = extractInstructionBody(s, "Solved");
+
+  test("Solved reads solution from terminal_pass leaf state file (R23)", () => {
+    assert.match(so, /\.\/scoped\/state-/);
+  });
+
+  test("Solved has no parent-walk while loop (R23)", () => {
+    assert.doesNotMatch(so, /while\s+\[\s+"\$CURRENT"\s+!=\s+"n0"/);
+  });
+
+  test("Solved still emits ## Solution with node counts (R35, preserved per R84)", () => {
+    assert.match(so, /## Solution/);
+    assert.match(so, /Total nodes expanded:/);
+    assert.match(so, /Nodes pruned:/);
+  });
+});
+
+describe("phase-6 a-tot: Solved instruction baseline (R35, R36)", () => {
   const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
 
   test("Solved instruction exists and matches state == solved", () => {
@@ -465,7 +491,7 @@ describe("phase-6 a-tot: Solved instruction (R35, R36)", () => {
     assert.match(sv, /MEMORY state is "solved"/);
   });
 
-  test("Solved emits ## Solution containing winning expression and counts (R35)", () => {
+  test("Solved emits ## Solution with grep-derived counts (R35)", () => {
     const sv = extractInstructionBody(s, "Solved");
     assert.match(sv, /## Solution/);
     assert.match(sv, /grep\s+-c\s+'?\^id:\s*n'?/);

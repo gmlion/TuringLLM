@@ -51,8 +51,6 @@ Every instruction below uses these bash idioms when reading or writing `./scoped
 
 **Find first matching node** — see design.md §Interfaces — Update primitives. Two-pass awk (pass 1 collects parent_ids; pass 2 emits first id matching a depth/status/predicate filter).
 
-**Walk parent chain** — see design.md §Interfaces — Walk parents primitive. Iterates from a terminal id back to n0, concatenating `op:` lines.
-
 ## Instruction: Initialize
 **Condition:** MEMORY state is "empty"
 **Action:** Read `../../PROGRAM.md` and parse integers from prose. The convention is "puzzle numbers, then target": the LAST integer encountered is the target; the rest are the puzzle numbers.
@@ -505,7 +503,7 @@ The R44 path: malformed labels are treated as `impossible` and a non-blocking `#
 
 ## Instruction: Goal-push
 **Condition:** MEMORY state is "goal_checking"
-**Action:** Find first live terminal (`depth == max_depth` AND `status == live`). If none, emit `## No Solution Found` (R34). Otherwise reconstruct expression via parent-walk, synthesize criterion, push evaluate.md.
+**Action:** Find first live terminal (`depth == max_depth` AND `status == live`). If none, emit `## No Solution Found` (R34). Otherwise stage the leaf's `state-<id>.md` as the attempt and `task.md` as the criterion, then push evaluate.md.
 
 The canonical push block this instruction emits into MEMORY is:
 
@@ -514,9 +512,9 @@ The canonical push block this instruction emits into MEMORY is:
 dynamics/evaluate.md
 ## Push-Args
 attempt: |
-  <reconstructed expression chain>
+  <contents of ./scoped/state-<id>.md, two-space indented>
 criterion: |
-  Expression must use each of <numbers> exactly once and evaluate to <target>.
+  <contents of ./scoped/task.md, two-space indented>
 ```
 
     MAX=$(cat ./scoped/max_depth.md)
@@ -549,21 +547,8 @@ criterion: |
     fi
 
     echo "$ID" > ./scoped/cursor.md
-
-    EXPR=""
-    CURRENT="$ID"
-    while [ "$CURRENT" != "n0" ] && [ -n "$CURRENT" ]; do
-      OP=$(awk -v X="$CURRENT" '/^---$/{in_block=0;next} /^id:/{in_block=($2==X)} in_block && /^op:/{sub(/^op: /,""); print; exit}' ./scoped/tree.md)
-      PARENT=$(awk -v X="$CURRENT" '/^---$/{in_block=0;next} /^id:/{in_block=($2==X)} in_block && /^parent_id:/{print $2; exit}' ./scoped/tree.md)
-      if [ -z "$EXPR" ]; then EXPR="($OP)"; else EXPR="($OP); $EXPR"; fi
-      CURRENT="$PARENT"
-    done
-
-    echo "$EXPR" > ./scoped/staged/attempt.md
-
-    NUMBERS=$(cat ./scoped/numbers.md)
-    TARGET=$(cat ./scoped/target.md)
-    printf 'Expression must use each of %s exactly once and evaluate to %s.\n' "$NUMBERS" "$TARGET" > ./scoped/staged/criterion.md
+    cp ./scoped/state-${ID}.md ./scoped/staged/attempt.md
+    cp ./scoped/task.md        ./scoped/staged/criterion.md
 
     ATT=$(sed 's/^/  /' ./scoped/staged/attempt.md)
     CRIT=$(sed 's/^/  /' ./scoped/staged/criterion.md)
@@ -635,36 +620,27 @@ criterion: |
 
 ## Instruction: Solved
 **Condition:** MEMORY state is "solved"
-**Action:** Find the (single) terminal_pass node. Reconstruct its expression via parent-walk. Count total nodes and pruned nodes. Emit `## Solution` and set state `done` (R35).
+**Action:** Find the (single) terminal_pass node, read its `state-<id>.md` payload as the solution, count total nodes and pruned nodes, emit `## Solution`, and set state `done` (R35).
 
-    PASS_ID=$(awk '/^---$/{id=""; s=""; next} /^id:/{id=$2} /^status:/{s=$2; if (s=="terminal_pass") {print id; exit}}' ./scoped/tree.md)
-
-    EXPR=""
-    CURRENT="$PASS_ID"
-    while [ "$CURRENT" != "n0" ] && [ -n "$CURRENT" ]; do
-      OP=$(awk -v X="$CURRENT" '/^---$/{in_block=0;next} /^id:/{in_block=($2==X)} in_block && /^op:/{sub(/^op: /,""); print; exit}' ./scoped/tree.md)
-      PARENT=$(awk -v X="$CURRENT" '/^---$/{in_block=0;next} /^id:/{in_block=($2==X)} in_block && /^parent_id:/{print $2; exit}' ./scoped/tree.md)
-      if [ -z "$EXPR" ]; then EXPR="($OP)"; else EXPR="($OP); $EXPR"; fi
-      CURRENT="$PARENT"
-    done
-
+    PASS_ID=$(awk '/^---$/{id=""; s=""} /^id:/{id=$2} /^status:/{s=$2; if (s=="terminal_pass") {print id; exit}}' ./scoped/tree.md)
+    SOLUTION=$(cat ./scoped/state-${PASS_ID}.md)
     TOTAL=$(grep -c '^id: n' ./scoped/tree.md)
     PRUNED=$(grep -c '^status: pruned$' ./scoped/tree.md)
 
-    cat > ./MEMORY.md << MEM_EOF
+    cat > ./MEMORY.md << SOLVED_EOF
     ## State
     done
     ## Matched Instruction
     Solved
     ## Last Action
-    Reconstructed winning expression for $PASS_ID (total=$TOTAL nodes, pruned=$PRUNED).
+    Read winning state from state-${PASS_ID}.md.
     ## Result
     Search complete with verified solution.
     ## Solution
-    Expression: $EXPR
+    $SOLUTION
     Total nodes expanded: $TOTAL
     Nodes pruned: $PRUNED
-    MEM_EOF
+    SOLVED_EOF
 
 The shell intercepts `state == done` at stack depth 1 (R36) and halts.
 
