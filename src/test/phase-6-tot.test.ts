@@ -469,3 +469,36 @@ describe("phase-6 a-tot: Goal-push + Goal-absorb (R28–R34)", () => {
     assert.match(combined, /## No Solution Found/);
   });
 });
+
+describe("phase-6 a-tot: Solved instruction (R35, R36)", () => {
+  const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+
+  test("Solved instruction exists and matches state == solved", () => {
+    const sv = extractInstructionBody(s, "Solved");
+    assert.ok(sv.length > 0, "Solved missing");
+    assert.match(sv, /MEMORY state is "solved"/);
+  });
+
+  test("Solved emits ## Solution containing winning expression and counts (R35)", () => {
+    const sv = extractInstructionBody(s, "Solved");
+    assert.match(sv, /## Solution/);
+    assert.match(sv, /grep\s+-c\s+'?\^id:\s*n'?/);
+    assert.match(sv, /grep\s+-c\s+'?\^status:\s*pruned'?/);
+  });
+
+  test("Solved sets state done (R35, R36)", () => {
+    const sv = extractInstructionBody(s, "Solved");
+    assert.match(sv, /## State\s*\n\s*done/);
+  });
+
+  test("All eleven instructions are present (full state machine)", () => {
+    const expected = [
+      "Initialize", "Expand-push", "Expand-absorb",
+      "Score-push", "Score-absorb", "Prune", "Advance",
+      "Goal-push", "Goal-absorb", "Solved",
+    ];
+    for (const inst of expected) {
+      assert.match(s, new RegExp(`^## Instruction:\\s*${escapeRegExp(inst)}\\b`, "m"), `missing instruction: ${inst}`);
+    }
+  });
+});

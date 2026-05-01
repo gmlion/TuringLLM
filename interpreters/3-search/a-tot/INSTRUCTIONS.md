@@ -622,6 +622,41 @@ criterion: |
     Verdict absorbed.$PQ_BLOCK
     MEM_EOF
 
+## Instruction: Solved
+**Condition:** MEMORY state is "solved"
+**Action:** Find the (single) terminal_pass node. Reconstruct its expression via parent-walk. Count total nodes and pruned nodes. Emit `## Solution` and set state `done` (R35).
+
+    PASS_ID=$(awk '/^---$/{id=""; s=""; next} /^id:/{id=$2} /^status:/{s=$2; if (s=="terminal_pass") {print id; exit}}' ./scoped/tree.md)
+
+    EXPR=""
+    CURRENT="$PASS_ID"
+    while [ "$CURRENT" != "n0" ] && [ -n "$CURRENT" ]; do
+      OP=$(awk -v X="$CURRENT" '/^---$/{in_block=0;next} /^id:/{in_block=($2==X)} in_block && /^op:/{sub(/^op: /,""); print; exit}' ./scoped/tree.md)
+      PARENT=$(awk -v X="$CURRENT" '/^---$/{in_block=0;next} /^id:/{in_block=($2==X)} in_block && /^parent_id:/{print $2; exit}' ./scoped/tree.md)
+      if [ -z "$EXPR" ]; then EXPR="($OP)"; else EXPR="($OP); $EXPR"; fi
+      CURRENT="$PARENT"
+    done
+
+    TOTAL=$(grep -c '^id: n' ./scoped/tree.md)
+    PRUNED=$(grep -c '^status: pruned$' ./scoped/tree.md)
+
+    cat > ./MEMORY.md << MEM_EOF
+    ## State
+    done
+    ## Matched Instruction
+    Solved
+    ## Last Action
+    Reconstructed winning expression for $PASS_ID (total=$TOTAL nodes, pruned=$PRUNED).
+    ## Result
+    Search complete with verified solution.
+    ## Solution
+    Expression: $EXPR
+    Total nodes expanded: $TOTAL
+    Nodes pruned: $PRUNED
+    MEM_EOF
+
+The shell intercepts `state == done` at stack depth 1 (R36) and halts.
+
 # Sub-instructions
 
 (none — this interpreter needs none.)
