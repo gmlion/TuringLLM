@@ -124,3 +124,56 @@ describe("phase-6b b-lats: rollout.md dynamic (R10, R11, R12, R13)", () => {
     }
   });
 });
+
+describe("phase-6b b-lats: strategy preamble (structural)", () => {
+  const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+  test("strategy is bounded by # Strategy / # Sub-instructions and is verbatim-required", () => {
+    assert.match(s, /^# Strategy/m);
+    assert.match(s, /^# Sub-instructions/m);
+    assert.match(s, /VERBATIM/);
+  });
+});
+
+describe("phase-6b b-lats: Initialize (R34, R35, R36)", () => {
+  const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+  const init = extractInstructionBody(s, "Initialize");
+
+  test("Initialize copies PROGRAM.md to ./scoped/task.md (R34)", () => {
+    assert.match(init, /cp\s+\.\.\/\.\.\/PROGRAM\.md\s+\.\/scoped\/task\.md/);
+  });
+
+  test("Initialize writes max_iterations=30, uct_c=1.41421356, iter_count=0 (R34)", () => {
+    assert.match(init, /echo\s+30\b[^\n]*max_iterations\.md/);
+    assert.match(init, /echo\s+1\.41421356\b[^\n]*uct_c\.md/);
+    assert.match(init, /echo\s+0\b[^\n]*iter_count\.md/);
+  });
+
+  test("Initialize appends root n0 with q=0, n=0, status=live (R34)", () => {
+    const m = init.match(/<< ROOT_EOF([\s\S]+?)ROOT_EOF/);
+    assert.ok(m, "Initialize must contain a ROOT_EOF heredoc");
+    const body = m[1];
+    for (const line of [
+      /id:\s*n0/,
+      /parent_id:\s*-/,
+      /depth:\s*0/,
+      /q:\s*0/,
+      /n:\s*0/,
+      /status:\s*live/,
+    ]) {
+      assert.match(body, line);
+    }
+  });
+
+  test("Initialize creates empty ./scoped/state-n0.md (R34)", () => {
+    assert.match(init, />\s*\.\/scoped\/state-n0\.md/);
+  });
+
+  test("Initialize transitions to selecting (R35)", () => {
+    assert.match(init, /## State\s*\n\s*selecting/);
+  });
+
+  test("Initialize does NOT validate PROGRAM.md (R36)", () => {
+    assert.doesNotMatch(init, /grep\s+-oE\s+'\\b\[0-9\]/);
+    assert.doesNotMatch(init, /waiting_for_user/);
+  });
+});
