@@ -6,9 +6,9 @@ Pattern family: explicit exploration over alternative partial solutions, distinc
 
 | Variant                      | Status              | Pattern                       | Source                                                  |
 | ---------------------------- | ------------------- | ----------------------------- | ------------------------------------------------------- |
-| `a-tot/`                     | Shipped (Phase 6)   | Tree of Thoughts              | Yao et al., NeurIPS 2023, arXiv:2305.10601              |
-| `b-got/`                     | Deferred            | Graph of Thoughts             | Besta et al., 2023, arXiv:2308.09687                    |
-| `interpreters/lats/` (out)   | Planned (Phase 6b)  | Language Agent Tree Search    | Zhou et al., 2023, arXiv:2310.04406                     |
+| `a-tot/`  | Shipped (Phase 6)   | Tree of Thoughts            | Yao et al., NeurIPS 2023, arXiv:2305.10601 |
+| `b-lats/` | Shipped (Phase 6b)  | Language Agent Tree Search  | Zhou et al., 2023, arXiv:2310.04406        |
+| `b-got/`  | Deferred            | Graph of Thoughts           | Besta et al., 2023, arXiv:2308.09687       |
 
 ## Shared dynamics
 
