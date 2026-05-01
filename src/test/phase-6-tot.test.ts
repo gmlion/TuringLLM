@@ -835,3 +835,59 @@ describe("phase-6 a-tot: Expand-absorb executable parser (R21, R47)", () => {
     );
   });
 });
+
+describe("phase-6 a-tot: README post-refactor delta (R27, R29)", () => {
+  const readme = readFileSync(resolve(INTERP, "README.md"), "utf-8");
+
+  test("README has 'Refactored in Phase 6b' bullet (R29)", () => {
+    assert.match(readme, /Refactored in Phase 6b/);
+    assert.match(readme, /docs\/specs\/2026-05-01-implement-phase-6b/);
+  });
+
+  test("README dynamics table uses post-refactor push-arg names (R27)", () => {
+    assert.match(readme, /partial_state/);
+    assert.match(readme, /task/);
+    assert.doesNotMatch(readme, /numbers_remaining/);
+    assert.doesNotMatch(readme, /parent_thought/);
+  });
+});
+
+describe("phase-6 a-tot: BFS semantics preserved (R84 regression)", () => {
+  const path = resolve(INTERP, "INSTRUCTIONS.md");
+  const s = readFileSync(path, "utf-8");
+
+  test("k=5 still hardcoded in expand-node related logic (R84)", () => {
+    assert.match(s, /\b5\b/);
+  });
+
+  test("b=5 still in pruning logic (R84)", () => {
+    const pr = extractInstructionBody(s, "Prune");
+    assert.match(pr, /tail\s+-n\s+\+6/);
+  });
+
+  test("3-sample scoring still in Phase-router routing (R84)", () => {
+    assert.match(s, /samples\s*<\s*3/);
+  });
+
+  test("weighted sum (sure=20, likely=1, impossible=0.001) preserved (R84)", () => {
+    const sa = extractInstructionBody(s, "Score-absorb");
+    assert.match(sa, /WEIGHT=20/);
+    assert.match(sa, /WEIGHT=1\b/);
+    assert.match(sa, /WEIGHT=0\.001/);
+  });
+
+  test("R6 (PROGRAM.md insufficient input → waiting_for_user) preserved (R84)", () => {
+    const init = extractInstructionBody(s, "Initialize");
+    assert.match(init, /waiting_for_user/);
+  });
+
+  test("R37 dead-end branch preserved in Prune (R84)", () => {
+    const pr = extractInstructionBody(s, "Prune");
+    assert.match(pr, /## No Solution Found/);
+  });
+
+  test("R34 exhaustion branch preserved in Goal-push (R84)", () => {
+    const gp = extractInstructionBody(s, "Goal-push");
+    assert.match(gp, /## No Solution Found/);
+  });
+});

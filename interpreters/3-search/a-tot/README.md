@@ -32,8 +32,8 @@ Tree state lives in the strategy frame's `./scoped/tree.md` as an append-only YA
 
 | File | Push-args | Returns | Stack depth from caller |
 | ---- | --------- | ------- | ----------------------- |
-| `dynamics/expand-node.md` | `parent_thought`, `target`, `numbers_remaining` | `children` (5 op/left pairs) | 1 |
-| `dynamics/score.md` | `thought`, `target` | `value` ∈ {`sure`, `likely`, `impossible`} | 1 (pushed 3× per child) |
+| `dynamics/expand-node.md` | `partial_state`, `task` | `children` (5 state entries) | 1 |
+| `dynamics/score.md` | `partial_state`, `task` | `value` ∈ {`sure`, `likely`, `impossible`} | 1 (pushed 3× per child) |
 | `dynamics/evaluate.md` | `attempt`, `criterion` | `verdict` ∈ {`pass`, `fail`}, `feedback` | 1 |
 
 `evaluate.md` is the canonical 1b copy, byte-equal — pinned by `src/test/phase-dynamics-identity.test.ts`.
@@ -56,6 +56,7 @@ After completion, inspect:
 
 ## Notable behaviour
 
+- **Refactored in Phase 6b** (`docs/specs/2026-05-01-implement-phase-6b/`). Both dynamics now take the canonical push-arg pair `partial_state`/`task` (replacing the prior Game-of-24-flavoured arg names). The ledger no longer carries op/left fields — partial states live in `./scoped/state-<id>.md` instead. BFS semantics (k=5, b=5, max_depth, 3-sample scoring, weighted-sum aggregation, pruning, goal-checking) are unchanged.
 - **Cycle cost (~540 LLM cycles per puzzle worst case).** The bounded BFS schedule is k=5 children, b=5 retained, depth=N−1, plus 3 score samples per child and the two-cycle push/absorb dispatch pattern. Worst case: ~11 expand dispatches + ~165 score dispatches + ≤5 evaluate dispatches ≈ 181 dispatches × 3 LLM cycles each ≈ 540 cycles. The "~200" figure cited in spec requirement R3 refers to *dispatches*, not LLM cycles — both numbers are stated here so the discrepancy doesn't bite later readers.
 - **3× value-sampling fidelity** per Yao et al. 2023. Each child node is scored with three samples by `score.md` (three samples per node, drawn independently); the three label outputs are aggregated by weighted sum (`sure=20`, `likely=1`, `impossible=0.001`). Range: `[0.003, 60]`. This matches the reference implementation at github.com/princeton-nlp/tree-of-thought-llm verbatim.
 - **No retry, no early termination beyond BFS.** A failed puzzle just halts with `## No Solution Found`. The bounded depth means there is no infinite-loop risk; conversely, there is no second-pass, no tree restart, no temperature ramp.
