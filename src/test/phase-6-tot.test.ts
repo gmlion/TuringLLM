@@ -566,3 +566,48 @@ describe("phase-6 a-tot: negative requirements (R52–R57)", () => {
     }
   });
 });
+
+describe("phase-6 a-tot: leaf README content (R3, R50)", () => {
+  const path = resolve(INTERP, "README.md");
+  test("leaf README cites Yao et al. arXiv:2305.10601 (R3)", () => {
+    const s = readFileSync(path, "utf-8");
+    assert.match(s, /Yao\s+et\s+al/i);
+    assert.match(s, /2305\.10601/);
+  });
+  test("leaf README contains a state-machine summary (R3)", () => {
+    const s = readFileSync(path, "utf-8");
+    assert.match(s, /Initialize/);
+    assert.match(s, /Expand-push|expanding/);
+    assert.match(s, /Score-push|scoring/);
+    assert.match(s, /Prune|pruning/);
+    assert.match(s, /Advance|advancing/);
+    assert.match(s, /Goal-push|goal_checking/);
+    assert.match(s, /Solved|solved/);
+  });
+  test("leaf README contains the dynamics-and-contracts table (R3)", () => {
+    const s = readFileSync(path, "utf-8");
+    assert.match(s, /expand-node\.md/);
+    assert.match(s, /score\.md/);
+    assert.match(s, /evaluate\.md/);
+  });
+  test("leaf README contains run instructions (R3)", () => {
+    const s = readFileSync(path, "utf-8");
+    assert.match(s, /new-instance\.sh/);
+    assert.match(s, /run\.sh/);
+  });
+  test("leaf README has Notable behaviour section with cycle-cost note (R3)", () => {
+    const s = readFileSync(path, "utf-8");
+    assert.match(s, /Notable behaviour/i);
+    assert.match(s, /cycle|dispatch/);
+  });
+  test("leaf README mentions 3× sampling fidelity choice and the weight mapping (R3)", () => {
+    const s = readFileSync(path, "utf-8");
+    assert.match(s, /3[× ]\s*sampl|3\s*samples?|three samples/i);
+    assert.match(s, /sure\s*=\s*20|sure.*20/);
+  });
+  test("leaf README includes Run-it smoke check covering R50 demo end-state shape", () => {
+    const s = readFileSync(path, "utf-8");
+    assert.match(s, /## Solution|## No Solution Found/);
+    assert.match(s, /scoped\/tree\.md/);
+  });
+});
