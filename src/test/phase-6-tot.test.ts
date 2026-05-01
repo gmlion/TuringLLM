@@ -172,54 +172,58 @@ describe("phase-6 a-tot: expand-node.md dynamic (post-refactor R14, R30)", () =>
   });
 });
 
-describe("phase-6 a-tot: Expand-push + Expand-absorb + Phase-router (R15–R18, R47)", () => {
-  const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+describe("phase-6 a-tot: Expand-push post-refactor (R20)", () => {
+  const path = resolve(INTERP, "INSTRUCTIONS.md");
+  const s = readFileSync(path, "utf-8");
+  const ep = extractInstructionBody(s, "Expand-push");
 
-  test("Expand-push instruction exists and matches state == expanding (R15)", () => {
-    const ep = extractInstructionBody(s, "Expand-push");
-    assert.ok(ep.length > 0, "Expand-push missing");
-    assert.match(ep, /MEMORY state is "expanding"/);
+  test("Expand-push push-args are partial_state and task only (R20)", () => {
+    assert.match(ep, /partial_state:\s*\|/);
+    assert.match(ep, /task:\s*\|/);
+    assert.doesNotMatch(ep, /parent_thought:/);
+    assert.doesNotMatch(ep, /numbers_remaining:/);
+    assert.doesNotMatch(ep, /^\s*target:\s/m);
   });
 
-  test("Expand-push pushes dynamics/expand-node.md with the three push-args (R16)", () => {
-    const ep = extractInstructionBody(s, "Expand-push");
-    assert.match(ep, /## Push\s*\ndynamics\/expand-node\.md/);
-    for (const a of ["parent_thought", "target", "numbers_remaining"]) {
-      assert.match(ep, new RegExp(`^\\s*${a}:`, "m"), `Expand-push missing arg ${a}`);
+  test("Expand-push reads partial_state from ./scoped/state-${ID}.md (R20)", () => {
+    assert.match(ep, /\.\/scoped\/state-\$\{?ID\}?\.md/);
+  });
+
+  test("Expand-push reads task from ./scoped/task.md (R20)", () => {
+    assert.match(ep, /\.\/scoped\/task\.md/);
+  });
+});
+
+describe("phase-6 a-tot: Expand-absorb post-refactor (R21)", () => {
+  const path = resolve(INTERP, "INSTRUCTIONS.md");
+  const s = readFileSync(path, "utf-8");
+  const ea = extractInstructionBody(s, "Expand-absorb");
+
+  test("Expand-absorb parses ## Children as state: entries (R21)", () => {
+    assert.match(ea, /state:/);
+    assert.doesNotMatch(ea, /op:/);
+    assert.doesNotMatch(ea, /left:/);
+  });
+
+  test("Expand-absorb writes per-node state files for each child (R19, R21)", () => {
+    assert.match(ea, /\.\/scoped\/state-/);
+  });
+
+  test("Expand-absorb appends ledger blocks without op/left fields (R18, R21)", () => {
+    const m = ea.match(/<< (?:NODE_EOF|CHILD_EOF)([\s\S]+?)(?:NODE_EOF|CHILD_EOF)/);
+    assert.ok(m, "Expand-absorb must contain a node-block heredoc");
+    const body = m[1];
+    for (const k of ["id:", "parent_id:", "depth:", "value:", "samples:", "status:"]) {
+      assert.ok(body.includes(k), `child block missing field: ${k}`);
+    }
+    for (const k of ["op:", "left:"]) {
+      assert.ok(!body.includes(k), `child block must NOT contain pre-refactor field: ${k}`);
     }
   });
 
-  test("Expand-push selects unexpanded live node at current_depth (R15)", () => {
-    const ep = extractInstructionBody(s, "Expand-push");
-    assert.match(ep, /scoped\/current_depth\.md/);
-    assert.match(ep, /parent_id/);
-  });
-
-  test("Expand-absorb matches state == expanding_completed with ## Children present (R17)", () => {
-    const ea = extractInstructionBody(s, "Expand-absorb");
-    assert.ok(ea.length > 0, "Expand-absorb missing");
-    assert.match(ea, /expanding_completed/);
-    assert.match(ea, /## Children/);
-  });
-
-  test("Expand-absorb appends children with value 0, samples 0, status live (R17)", () => {
-    const ea = extractInstructionBody(s, "Expand-absorb");
-    assert.match(ea, /value:\s*0/);
-    assert.match(ea, /samples:\s*0/);
-    assert.match(ea, /status:\s*live/);
-  });
-
-  test("Expand-absorb appends Pending Questions on malformed children (R47)", () => {
-    const ea = extractInstructionBody(s, "Expand-absorb");
+  test("Expand-absorb still appends ## Pending Questions on malformed (R47, preserved per R84)", () => {
     assert.match(ea, /## Pending Questions/);
     assert.doesNotMatch(ea, /## State\s*\n\s*waiting_for_user/);
-  });
-
-  test("Phase-router routes to expanding | scoring | pruning (R18)", () => {
-    const ea = extractInstructionBody(s, "Expand-absorb");
-    for (const target of ["expanding", "scoring", "pruning"]) {
-      assert.match(ea, new RegExp(`\\b${target}\\b`), `Expand-absorb router missing target ${target}`);
-    }
   });
 });
 
@@ -261,27 +265,37 @@ describe("phase-6 a-tot: score.md dynamic (post-refactor R15, R31)", () => {
   });
 });
 
-describe("phase-6 a-tot: Score-push + Score-absorb (R19–R23, R44)", () => {
-  const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+describe("phase-6 a-tot: Score-push post-refactor (R20)", () => {
+  const path = resolve(INTERP, "INSTRUCTIONS.md");
+  const s = readFileSync(path, "utf-8");
+  const sp = extractInstructionBody(s, "Score-push");
 
-  test("Score-push matches state == scoring (R19)", () => {
-    const sp = extractInstructionBody(s, "Score-push");
-    assert.ok(sp.length > 0, "Score-push missing");
-    assert.match(sp, /MEMORY state is "scoring"/);
+  test("Score-push push-args are partial_state and task only (R20)", () => {
+    assert.match(sp, /partial_state:\s*\|/);
+    assert.match(sp, /task:\s*\|/);
+    assert.doesNotMatch(sp, /thought:/);
+    assert.doesNotMatch(sp, /^\s*target:\s/m);
   });
+});
 
-  test("Score-push selects child at current_depth+1 with samples<3 (R19)", () => {
-    const sp = extractInstructionBody(s, "Score-push");
-    assert.match(sp, /samples\s*<\s*3|samples\s*<\s*"3"|samples<3/);
-  });
-
-  test("Score-push pushes dynamics/score.md with thought + target (R20)", () => {
-    const sp = extractInstructionBody(s, "Score-push");
-    assert.match(sp, /## Push\s*\ndynamics\/score\.md/);
-    for (const a of ["thought", "target"]) {
-      assert.match(sp, new RegExp(`^\\s*${a}:`, "m"), `Score-push missing arg ${a}`);
+describe("phase-6 a-tot: refactored dynamics vocabulary check (R26)", () => {
+  test("expand-node.md prose has no Game-of-24 vocabulary (R26)", () => {
+    const s = readFileSync(resolve(INTERP, "dynamics/expand-node.md"), "utf-8");
+    for (const banned of ["Game of 24", "arithmetic", "numbers_remaining", "parent_thought", "target"]) {
+      assert.ok(!s.includes(banned), `expand-node.md contains: ${banned}`);
     }
   });
+
+  test("score.md prose has no Game-of-24 vocabulary (R26)", () => {
+    const s = readFileSync(resolve(INTERP, "dynamics/score.md"), "utf-8");
+    for (const banned of ["Game of 24", "arithmetic", "thought", "target"]) {
+      assert.ok(!s.includes(banned), `score.md contains: ${banned}`);
+    }
+  });
+});
+
+describe("phase-6 a-tot: Score-absorb (R21–R23, R44)", () => {
+  const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
 
   test("Score-absorb matches state == scoring_completed with ## Value present (R21)", () => {
     const sa = extractInstructionBody(s, "Score-absorb");

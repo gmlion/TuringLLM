@@ -14,7 +14,7 @@ Scoped files (in this strategy frame's `./scoped/`):
 - `./scoped/tree.md` — the YAML-block ledger (R10–R14).
 - `./scoped/task.md` — byte-equal copy of `../../PROGRAM.md` written once at Initialize.
 - `./scoped/state-<id>.md` — per-node partial state, write-once at node creation.
-- `./scoped/staged/{parent_thought,numbers_remaining,thought,attempt,criterion}.md` — push-arg staging files.
+- `./scoped/staged/{partial_state,task,attempt,criterion}.md` — push-arg staging files.
 
 ### Tree ledger primitives
 
@@ -27,8 +27,6 @@ Every instruction below uses these bash idioms when reading or writing `./scoped
     id: $NEW_ID
     parent_id: $PARENT_ID
     depth: $DEPTH
-    op: $OP
-    left: $LEFT
     value: 0
     samples: 0
     status: live
@@ -130,15 +128,13 @@ The canonical push block this instruction emits into MEMORY is:
 ## Push
 dynamics/expand-node.md
 ## Push-Args
-parent_thought: |
-  op: <parent op>
-  left: <parent left>
-target: <target int>
-numbers_remaining: <space-separated remaining numbers>
+partial_state: |
+  <contents of ./scoped/state-<id>.md, two-space indented>
+task: |
+  <contents of ./scoped/task.md, two-space indented>
 ```
 
     DEPTH=$(cat ./scoped/current_depth.md)
-    TARGET=$(cat ./scoped/target.md)
 
     HAS_CHILD=$(awk '/^parent_id:/ {print $2}' ./scoped/tree.md | sort -u)
 
@@ -156,15 +152,13 @@ numbers_remaining: <space-separated remaining numbers>
 If `$ID` is empty, defer to Phase-router via the absorb cycle (skip emitting `## Push`). Otherwise:
 
     echo "$ID" > ./scoped/cursor.md
-    OP=$(awk -v ID="$ID" '/^---$/{in_block=0;next} /^id:/{in_block=($2==ID)} in_block && /^op:/{sub(/^op: /,""); print; exit}' ./scoped/tree.md)
-    LEFT=$(awk -v ID="$ID" '/^---$/{in_block=0;next} /^id:/{in_block=($2==ID)} in_block && /^left:/{sub(/^left: /,""); print; exit}' ./scoped/tree.md)
-    printf 'op: %s\nleft: %s\n' "$OP" "$LEFT" > ./scoped/staged/parent_thought.md
-    echo "$LEFT" > ./scoped/staged/numbers_remaining.md
+    cp ./scoped/state-${ID}.md ./scoped/staged/partial_state.md
+    cp ./scoped/task.md        ./scoped/staged/task.md
 
 Then emit MEMORY:
 
-    PT=$(sed 's/^/  /' ./scoped/staged/parent_thought.md)
-    NR=$(cat ./scoped/staged/numbers_remaining.md)
+    PS=$(sed 's/^/  /' ./scoped/staged/partial_state.md)
+    TK=$(sed 's/^/  /' ./scoped/staged/task.md)
 
     cat > ./MEMORY.md << MEM_EOF
     ## State
@@ -178,17 +172,17 @@ Then emit MEMORY:
     ## Push
     dynamics/expand-node.md
     ## Push-Args
-    parent_thought: |
-    $PT
-    target: $TARGET
-    numbers_remaining: $NR
+    partial_state: |
+    $PS
+    task: |
+    $TK
     MEM_EOF
 
 The state value `expanding` is the returnState; on pop the shell sets state to `expanding_completed`, which `Expand-absorb` matches.
 
 ## Instruction: Expand-absorb
 **Condition:** MEMORY state is "expanding_completed" and `## Children` is present in MEMORY
-**Action:** Parse the spliced `## Children` block as alternating `op:` / `left:` lines. For each well-formed pair, append a node block to `./scoped/tree.md` using the "Append a node block" primitive with `parent_id = $(cat ./scoped/cursor.md)`, `depth = current_depth + 1`, `value: 0`, `samples: 0`, `status: live`, and `op`/`left` parsed from the pair.
+**Action:** Parse the spliced `## Children` block as a sequence of `state: |` block-scalar entries. For each entry, allocate the next monotonic id, append a node block to `./scoped/tree.md` using the post-refactor 6-field schema (id, parent_id, depth, value, samples, status) with `parent_id = $(cat ./scoped/cursor.md)`, `depth = current_depth + 1`, `value: 0`, `samples: 0`, `status: live`, and write the entry's payload to `./scoped/state-<NEW_ID>.md`.
 
     DEPTH=$(cat ./scoped/current_depth.md)
     NEXT_DEPTH=$((DEPTH + 1))
@@ -196,30 +190,31 @@ The state value `expanding` is the returnState; on pop the shell sets state to `
 
     awk '/^## Children$/{f=1; next} /^## [A-Z]/ && f {exit} f' ./MEMORY.md > ./scoped/_children.txt
 
+    ENTRIES=$(awk 'BEGIN{state=0; buf=""}
+      /^  state:[[:space:]]*\|[[:space:]]*$/ { if (state==1) print "<<<EOE>>>" buf; buf=""; state=1; next }
+      state==1 && /^    / { sub(/^    /, ""); buf=buf $0 "\n"; next }
+      END { if (state==1) print "<<<EOE>>>" buf }
+    ' ./scoped/_children.txt)
+
     WELL_FORMED=0
-    op=""
-    while IFS= read -r line; do
-      if [[ "$line" =~ ^op:\ (.+)$ ]]; then
-        op="${BASH_REMATCH[1]}"
-      elif [[ "$line" =~ ^left:\ (.+)$ ]] && [ -n "$op" ]; then
-        left="${BASH_REMATCH[1]}"
-        NEXT_INDEX=$(grep -c '^id: n' ./scoped/tree.md)
-        NEW_ID="n$NEXT_INDEX"
-        cat >> ./scoped/tree.md << NODE_EOF
+    OLD_IFS="$IFS"; IFS="$(printf '\n')"
+    for ENTRY in $ENTRIES; do
+      [ -z "$ENTRY" ] && continue
+      PAYLOAD=$(echo "$ENTRY" | sed 's/^<<<EOE>>>//')
+      NEW_ID="n$(grep -c '^id: n' ./scoped/tree.md)"
+      cat >> ./scoped/tree.md << CHILD_EOF
     ---
     id: $NEW_ID
     parent_id: $PARENT
     depth: $NEXT_DEPTH
-    op: $op
-    left: $left
     value: 0
     samples: 0
     status: live
-    NODE_EOF
-        WELL_FORMED=$((WELL_FORMED + 1))
-        op=""
-      fi
-    done < ./scoped/_children.txt
+    CHILD_EOF
+      printf '%s' "$PAYLOAD" > "./scoped/state-${NEW_ID}.md"
+      WELL_FORMED=$((WELL_FORMED + 1))
+    done
+    IFS="$OLD_IFS"
 
     MISSING=$((5 - WELL_FORMED))
 
@@ -277,7 +272,6 @@ The R47 path: `## Pending Questions` is appended; state is NEVER `waiting_for_us
 
     DEPTH=$(cat ./scoped/current_depth.md)
     NEXT_DEPTH=$((DEPTH + 1))
-    TARGET=$(cat ./scoped/target.md)
 
     ID=$(awk -v D="$NEXT_DEPTH" '
       /^---$/ {
@@ -290,15 +284,15 @@ The R47 path: `## Pending Questions` is appended; state is NEVER `waiting_for_us
       /^samples:/ { samp = $2 }
     ' ./scoped/tree.md)
 
-If `$ID` is empty, route via Phase-router on the next cycle (no push). Otherwise stage the thought and emit `## Push`:
+If `$ID` is empty, route via Phase-router on the next cycle (no push). Otherwise stage the partial state and emit `## Push`:
 
     echo "$ID" > ./scoped/cursor.md
-    OP=$(awk -v ID="$ID" '/^---$/{in_block=0;next} /^id:/{in_block=($2==ID)} in_block && /^op:/{sub(/^op: /,""); print; exit}' ./scoped/tree.md)
-    LEFT=$(awk -v ID="$ID" '/^---$/{in_block=0;next} /^id:/{in_block=($2==ID)} in_block && /^left:/{sub(/^left: /,""); print; exit}' ./scoped/tree.md)
     SAMP=$(awk -v ID="$ID" '/^---$/{in_block=0;next} /^id:/{in_block=($2==ID)} in_block && /^samples:/{print $2; exit}' ./scoped/tree.md)
-    printf 'op: %s\nleft: %s\n' "$OP" "$LEFT" > ./scoped/staged/thought.md
+    cp ./scoped/state-${ID}.md ./scoped/staged/partial_state.md
+    cp ./scoped/task.md        ./scoped/staged/task.md
 
-    TH=$(sed 's/^/  /' ./scoped/staged/thought.md)
+    PS=$(sed 's/^/  /' ./scoped/staged/partial_state.md)
+    TK=$(sed 's/^/  /' ./scoped/staged/task.md)
 
 The canonical push block this instruction emits into MEMORY is:
 
@@ -306,9 +300,10 @@ The canonical push block this instruction emits into MEMORY is:
 ## Push
 dynamics/score.md
 ## Push-Args
-thought: |
-  <staged thought, two-space indented>
-target: <target int>
+partial_state: |
+  <contents of ./scoped/state-<id>.md, two-space indented>
+task: |
+  <contents of ./scoped/task.md, two-space indented>
 ```
 
 Heredoc-form bash for the strategy:
@@ -325,9 +320,10 @@ Heredoc-form bash for the strategy:
     ## Push
     dynamics/score.md
     ## Push-Args
-    thought: |
-    $TH
-    target: $TARGET
+    partial_state: |
+    $PS
+    task: |
+    $TK
     MEM_EOF
 
 The state value `scoring` is the returnState; on pop the shell sets state to `scoring_completed`, which `Score-absorb` matches.
