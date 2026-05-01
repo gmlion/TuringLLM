@@ -83,82 +83,44 @@ describe("phase-6 a-tot: strategy preamble (structural)", () => {
   });
 });
 
-describe("phase-6 a-tot: Initialize instruction (R5–R9)", () => {
-  test("Initialize matches state == empty (R5)", () => {
-    const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
-    const init = extractInstructionBody(s, "Initialize");
-    assert.ok(init.length > 0, "Initialize instruction missing");
-    assert.match(init, /MEMORY state is "empty"/);
+describe("phase-6 a-tot: Initialize post-refactor (R17, R18, R19)", () => {
+  const path = resolve(INTERP, "INSTRUCTIONS.md");
+  const s = readFileSync(path, "utf-8");
+  const init = extractInstructionBody(s, "Initialize");
+
+  test("Initialize copies PROGRAM.md to ./scoped/task.md (R17)", () => {
+    assert.match(init, /cp\s+\.\.\/\.\.\/PROGRAM\.md\s+\.\/scoped\/task\.md/);
   });
-  test("Initialize references PROGRAM.md (R5)", () => {
-    const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
-    const init = extractInstructionBody(s, "Initialize");
-    assert.match(init, /\.\.\/\.\.\/PROGRAM\.md/);
-  });
-  test("Initialize handles insufficient input via Pending Questions + waiting_for_user (R6)", () => {
-    const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
-    const init = extractInstructionBody(s, "Initialize");
-    assert.match(init, /## Pending Questions/);
-    assert.match(init, /waiting_for_user/);
-  });
-  test("Initialize writes scoped/{numbers,target,max_depth,current_depth}.md (R7)", () => {
-    const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
-    const init = extractInstructionBody(s, "Initialize");
-    for (const f of ["numbers.md", "target.md", "max_depth.md", "current_depth.md"]) {
-      assert.match(init, new RegExp(`scoped/${escapeRegExp(f)}`), `Initialize missing scoped/${f}`);
+
+  test("Initialize root node block has only post-refactor schema fields (R18)", () => {
+    const m = init.match(/<< ROOT_EOF([\s\S]+?)ROOT_EOF/);
+    assert.ok(m, "Initialize must contain a ROOT_EOF heredoc for tree.md root block");
+    const body = m[1];
+    for (const k of ["id:", "parent_id:", "depth:", "value:", "samples:", "status:"]) {
+      assert.ok(body.includes(k), `root block missing field: ${k}`);
+    }
+    for (const k of ["op:", "left:"]) {
+      assert.ok(!body.includes(k), `root block must NOT contain pre-refactor field: ${k}`);
     }
   });
-  test("Initialize derives max_depth = N − 1 (R7)", () => {
-    const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
-    const init = extractInstructionBody(s, "Initialize");
-    assert.match(init, /N\s*-\s*1|count\s*-\s*1|wc\s+-w/);
-  });
-  test("Initialize appends root node n0 with parent_id=- depth=0 status=live (R8)", () => {
-    const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
-    const init = extractInstructionBody(s, "Initialize");
-    assert.match(init, /id:\s*n0/);
-    assert.match(init, /parent_id:\s*-/);
-    assert.match(init, /depth:\s*0/);
-    assert.match(init, /status:\s*live/);
-  });
-  test("Initialize transitions to expanding with current_depth 0 (R9)", () => {
-    const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
-    const init = extractInstructionBody(s, "Initialize");
-    assert.match(init, /## State\s*\n\s*expanding/);
+
+  test("Initialize creates ./scoped/state-n0.md (R19)", () => {
+    assert.match(init, /\.\/scoped\/state-n0\.md/);
   });
 });
 
-describe("phase-6 a-tot: tree ledger contract (R10–R14)", () => {
-  const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+describe("phase-6 a-tot: tree ledger schema post-refactor (R24)", () => {
+  const path = resolve(INTERP, "INSTRUCTIONS.md");
+  const s = readFileSync(path, "utf-8");
+  const init = extractInstructionBody(s, "Initialize");
 
-  test("INSTRUCTIONS.md declares all 8 required node-block keys (R11)", () => {
-    for (const key of ["id:", "parent_id:", "depth:", "op:", "left:", "value:", "samples:", "status:"]) {
-      assert.match(s, new RegExp(escapeRegExp(key)), `tree.md schema missing key ${key}`);
-    }
+  test("Initialize body does not mention `op:` or `left:` as ledger fields (R18, R24, scoped to T3)", () => {
+    assert.doesNotMatch(init, /^\s*op:\s/m);
+    assert.doesNotMatch(init, /^\s*left:\s/m);
   });
 
-  test("INSTRUCTIONS.md declares the four status values (R14)", () => {
-    for (const status of ["live", "pruned", "terminal_pass", "terminal_fail"]) {
-      assert.match(s, new RegExp(`\\b${escapeRegExp(status)}\\b`), `status value ${status} not declared`);
-    }
-  });
-
-  test("INSTRUCTIONS.md uses --- block separator in tree.md (R10)", () => {
-    const init = extractInstructionBody(s, "Initialize");
-    assert.match(init, /^---$/m, "Initialize must seed tree.md with a --- separator before the root block");
-  });
-
-  test("INSTRUCTIONS.md uses awk for surgical updates of tree.md after Initialize (R12)", () => {
-    // Strategy outside Initialize must use awk (or sed) for in-place tree.md updates.
-    // We assert at least one awk pipeline that writes back to ./scoped/tree.md.
-    assert.match(s, /awk[^>]*\.\/scoped\/tree\.md[^|]*>\s*\.\/scoped\/tree\.md\.tmp/);
-    assert.match(s, /mv\s+\.\/scoped\/tree\.md\.tmp\s+\.\/scoped\/tree\.md/);
-  });
-
-  test("INSTRUCTIONS.md computes monotonic n<index> ids (R13)", () => {
-    // Look for the pattern that derives a new id from the count of existing ids.
-    assert.match(s, /grep\s+-c\s+'?\^id:\s*n'?[^\n]*\.\/scoped\/tree\.md/);
-    assert.match(s, /n"?\$/, "INSTRUCTIONS.md should construct new id as n<counter>");
+  test("INSTRUCTIONS.md references ./scoped/state-<id> per-node files (R25)", () => {
+    assert.match(s, /\.\/scoped\/state-/);
   });
 });
 

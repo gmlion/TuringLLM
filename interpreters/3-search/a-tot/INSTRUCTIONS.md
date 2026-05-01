@@ -12,6 +12,8 @@ Scoped files (in this strategy frame's `./scoped/`):
 - `./scoped/current_depth.md` — single integer; bumped by Advance.
 - `./scoped/cursor.md` — id of the node being acted on this dispatch.
 - `./scoped/tree.md` — the YAML-block ledger (R10–R14).
+- `./scoped/task.md` — byte-equal copy of `../../PROGRAM.md` written once at Initialize.
+- `./scoped/state-<id>.md` — per-node partial state, write-once at node creation.
 - `./scoped/staged/{parent_thought,numbers_remaining,thought,attempt,criterion}.md` — push-arg staging files.
 
 ### Tree ledger primitives
@@ -91,17 +93,19 @@ Otherwise, persist parsed values, derive max_depth, write the root node. Each no
     echo "$MAX_DEPTH" > ./scoped/max_depth.md
     echo 0            > ./scoped/current_depth.md
 
+    cp ../../PROGRAM.md ./scoped/task.md
+
     cat > ./scoped/tree.md << ROOT_EOF
     ---
     id: n0
     parent_id: -
     depth: 0
-    op: -
-    left: $PUZZLE
     value: 0
     samples: 0
     status: live
     ROOT_EOF
+
+    > ./scoped/state-n0.md
 
 Then wholesale-rewrite MEMORY (R9):
 
