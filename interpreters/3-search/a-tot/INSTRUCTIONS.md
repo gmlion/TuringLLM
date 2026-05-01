@@ -190,17 +190,28 @@ The state value `expanding` is the returnState; on pop the shell sets state to `
 
     awk '/^## Children$/{f=1; next} /^## [A-Z]/ && f {exit} f' ./MEMORY.md > ./scoped/_children.txt
 
-    ENTRIES=$(awk 'BEGIN{state=0; buf=""}
-      /^  state:[[:space:]]*\|[[:space:]]*$/ { if (state==1) print "<<<EOE>>>" buf; buf=""; state=1; next }
-      state==1 && /^    / { sub(/^    /, ""); buf=buf $0 "\n"; next }
-      END { if (state==1) print "<<<EOE>>>" buf }
-    ' ./scoped/_children.txt)
+    rm -f ./scoped/_entry-*.txt
+    awk 'BEGIN{n=0; buf=""}
+      /^  state:[[:space:]]*\|[[:space:]]*$/ {
+        if (n > 0) { printf "%s", buf > ("./scoped/_entry-" n ".txt") }
+        n++; buf=""; next
+      }
+      n > 0 && /^(    |$)/ {
+        sub(/^    /, "")
+        buf = buf $0 "\n"
+        next
+      }
+      END {
+        if (n > 0) { printf "%s", buf > ("./scoped/_entry-" n ".txt") }
+      }
+    ' ./scoped/_children.txt
 
     WELL_FORMED=0
-    OLD_IFS="$IFS"; IFS="$(printf '\n')"
-    for ENTRY in $ENTRIES; do
-      [ -z "$ENTRY" ] && continue
-      PAYLOAD=$(echo "$ENTRY" | sed 's/^<<<EOE>>>//')
+    for f in ./scoped/_entry-*.txt; do
+      [ -e "$f" ] || continue
+      # Preserve trailing newlines: $(...) strips them, so append a sentinel
+      # byte and trim it back off after capture.
+      PAYLOAD=$(cat "$f"; printf x); PAYLOAD=${PAYLOAD%x}
       NEW_ID="n$(grep -c '^id: n' ./scoped/tree.md)"
       cat >> ./scoped/tree.md << CHILD_EOF
     ---
@@ -214,7 +225,7 @@ The state value `expanding` is the returnState; on pop the shell sets state to `
       printf '%s' "$PAYLOAD" > "./scoped/state-${NEW_ID}.md"
       WELL_FORMED=$((WELL_FORMED + 1))
     done
-    IFS="$OLD_IFS"
+    rm -f ./scoped/_entry-*.txt
 
     MISSING=$((5 - WELL_FORMED))
 

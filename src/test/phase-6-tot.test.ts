@@ -1,8 +1,10 @@
 import { test, describe } from "node:test";
 import { strict as assert } from "node:assert";
-import { existsSync, readFileSync, readdirSync } from "fs";
-import { resolve, dirname } from "path";
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "fs";
+import { tmpdir } from "os";
+import { resolve, dirname, join } from "path";
 import { fileURLToPath } from "url";
+import { execFileSync } from "child_process";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -613,5 +615,197 @@ describe("phase-6 source-spec dynamics-table (R4)", () => {
   test("source spec includes a rationale paragraph mentioning evaluate.md and graded ranking (R4)", () => {
     const s = readFileSync(SOURCE, "utf-8");
     assert.match(s, /graded\s+ranking|grading.*pass\/fail|two\s+(?:single-purpose\s+)?dynamics/i);
+  });
+});
+
+// -----------------------------------------------------------------------------
+// Executable parser test (R21, R47): runs the actual Expand-absorb bash against
+// a fixture ## Children block. Guards against regressions in the bash bodies
+// that pure markdown-shape tests can't catch (e.g. the IFS=$(printf '\n')
+// subshell-strips-trailing-newline bug, line-vs-entry walk, and dropped blank
+// lines in block-scalar payloads).
+// -----------------------------------------------------------------------------
+
+/**
+ * Extract the parser-and-loop bash from the Expand-absorb instruction body.
+ * The bash is fenced as an indented (4-space) markdown code block. We grab
+ * everything from the first `awk '/^## Children$/...` line through the
+ * `MISSING=$((5 - WELL_FORMED))` line, then strip the 4-space indent.
+ */
+function extractExpandAbsorbParserBash(): string {
+  const path = resolve(INTERP, "INSTRUCTIONS.md");
+  const src = readFileSync(path, "utf-8");
+  const ea = extractInstructionBody(src, "Expand-absorb");
+  // Find start of the parser bash block.
+  const startMarker = /^    awk '\/\^## Children\$\/.*$/m;
+  const startMatch = ea.match(startMarker);
+  assert.ok(startMatch, "could not locate parser start in Expand-absorb body");
+  const startIdx = startMatch.index!;
+  // Find end (the `MISSING=` line, inclusive).
+  const endMarker = /^    MISSING=\$\(\(5 - WELL_FORMED\)\)\s*$/m;
+  const endMatch = ea.slice(startIdx).match(endMarker);
+  assert.ok(endMatch, "could not locate parser end (MISSING line)");
+  const block = ea.slice(startIdx, startIdx + endMatch.index! + endMatch[0].length);
+  // Strip the 4-space indent from each line.
+  return block
+    .split(/\r?\n/)
+    .map((ln) => (ln.startsWith("    ") ? ln.slice(4) : ln))
+    .join("\n");
+}
+
+describe("phase-6 a-tot: Expand-absorb executable parser (R21, R47)", () => {
+  test("parser ingests 3 multi-line state: | entries (one with blank line); preserves payloads exactly", () => {
+    // Sanity: bash must be available.
+    let bashAvailable = true;
+    try {
+      execFileSync("bash", ["-c", "true"], { stdio: "ignore" });
+    } catch {
+      bashAvailable = false;
+    }
+    if (!bashAvailable) {
+      console.warn("bash unavailable; skipping executable parser test");
+      return;
+    }
+
+    const tmp = mkdtempSync(join(tmpdir(), "tot-parser-"));
+    try {
+      // Build a fixture frame layout: ./scoped/, ./MEMORY.md, ./scoped/tree.md.
+      const scoped = join(tmp, "scoped");
+      execFileSync("bash", ["-c", `mkdir -p "${scoped.replace(/\\/g, "/")}"`], {
+        stdio: "ignore",
+      });
+
+      // Fixture payloads. Entry 2 contains a deliberately blank line in the
+      // middle of its payload to verify blank-line preservation.
+      const entry1 = "{1, 2, 3}\nstep: start with three numbers\nremaining: 3\n";
+      const entry2 = "{4, 5}\n\nstep: combined two numbers\nremaining: 2\n";
+      const entry3 = "{6}\nstep: terminal single number\nremaining: 1\n";
+
+      // Build the ## Children block with each payload 4-space indented under
+      // its `state: |` block-scalar header (per the dynamics' return shape).
+      const indent = (s: string) =>
+        s
+          .split("\n")
+          .map((ln) => (ln.length === 0 ? "" : "    " + ln))
+          .join("\n");
+
+      // Strip trailing newline so the indenter doesn't emit a stray "    " line.
+      const stripTrail = (s: string) => s.replace(/\n+$/, "");
+
+      const childrenBlock =
+        "## Children\n" +
+        "children: |\n" +
+        "  state: |\n" +
+        indent(stripTrail(entry1)) +
+        "\n" +
+        "  state: |\n" +
+        indent(stripTrail(entry2)) +
+        "\n" +
+        "  state: |\n" +
+        indent(stripTrail(entry3)) +
+        "\n" +
+        "## Sentinel\n" +
+        "trailing-section-after-children\n";
+
+      writeFileSync(join(tmp, "MEMORY.md"), childrenBlock, "utf-8");
+
+      // Seed cursor + tree with a root node n0 (parent for these children).
+      writeFileSync(join(scoped, "cursor.md"), "n0\n", "utf-8");
+      writeFileSync(join(scoped, "current_depth.md"), "0\n", "utf-8");
+      writeFileSync(
+        join(scoped, "tree.md"),
+        "---\nid: n0\nparent_id: -\ndepth: 0\nvalue: 0\nsamples: 0\nstatus: live\n",
+        "utf-8",
+      );
+
+      // Build the runnable script: prelude (DEPTH/NEXT_DEPTH/PARENT) + parser.
+      const parser = extractExpandAbsorbParserBash();
+      const script =
+        "set -e\n" +
+        'cd "$1"\n' +
+        "DEPTH=$(cat ./scoped/current_depth.md)\n" +
+        "NEXT_DEPTH=$((DEPTH + 1))\n" +
+        "PARENT=$(cat ./scoped/cursor.md)\n" +
+        parser +
+        "\n" +
+        'echo "WELL_FORMED=$WELL_FORMED" > ./_result.txt\n' +
+        'echo "MISSING=$MISSING" >> ./_result.txt\n';
+
+      const scriptPath = join(tmp, "_run.sh");
+      writeFileSync(scriptPath, script, "utf-8");
+
+      // Convert Windows path to forward-slash form for bash.
+      const tmpFwd = tmp.replace(/\\/g, "/");
+      const scriptFwd = scriptPath.replace(/\\/g, "/");
+      execFileSync("bash", [scriptFwd, tmpFwd], { stdio: "pipe" });
+
+      // Verify: WELL_FORMED == 3, MISSING == 2.
+      const resultTxt = readFileSync(join(tmp, "_result.txt"), "utf-8");
+      assert.match(resultTxt, /WELL_FORMED=3\b/, `expected WELL_FORMED=3, got: ${resultTxt}`);
+      assert.match(resultTxt, /MISSING=2\b/, `expected MISSING=2, got: ${resultTxt}`);
+
+      // Verify: tree.md gained 3 child blocks (n1, n2, n3) with the 6-field
+      // post-refactor schema and parent_id=n0, depth=1.
+      const tree = readFileSync(join(scoped, "tree.md"), "utf-8");
+      for (const id of ["n1", "n2", "n3"]) {
+        assert.ok(
+          new RegExp(`^id: ${id}$`, "m").test(tree),
+          `tree.md missing node id: ${id}\n${tree}`,
+        );
+      }
+      // Each new child must declare parent_id: n0, depth: 1, value: 0,
+      // samples: 0, status: live. There must be at least 3 occurrences of each.
+      const countLines = (re: RegExp) => (tree.match(re) || []).length;
+      assert.ok(
+        countLines(/^parent_id: n0$/gm) >= 3,
+        "expected >= 3 child nodes with parent_id: n0",
+      );
+      assert.ok(countLines(/^depth: 1$/gm) >= 3, "expected >= 3 child nodes at depth 1");
+      // Pre-refactor fields must NOT appear.
+      assert.doesNotMatch(tree, /^op:/m);
+      assert.doesNotMatch(tree, /^left:/m);
+
+      // Verify: state-n1.md, state-n2.md, state-n3.md exist with EXACT payloads
+      // (including blank lines).
+      const expected = [entry1, entry2, entry3];
+      for (let i = 0; i < expected.length; i++) {
+        const stateFile = join(scoped, `state-n${i + 1}.md`);
+        assert.ok(existsSync(stateFile), `state-n${i + 1}.md missing`);
+        const got = readFileSync(stateFile, "utf-8");
+        assert.equal(
+          got,
+          expected[i],
+          `state-n${i + 1}.md payload mismatch.\nexpected (${expected[i].length} bytes):\n${JSON.stringify(expected[i])}\ngot (${got.length} bytes):\n${JSON.stringify(got)}`,
+        );
+      }
+
+      // Verify: blank-line preservation specifically in entry 2.
+      const got2 = readFileSync(join(scoped, "state-n2.md"), "utf-8");
+      assert.match(got2, /\n\n/, "entry-2 blank line was dropped");
+
+      // Verify: scratch _entry-*.txt files were cleaned up.
+      const leftover = readdirSync(scoped).filter((f) => /^_entry-\d+\.txt$/.test(f));
+      assert.equal(leftover.length, 0, `scratch entry files not cleaned: ${leftover.join(",")}`);
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  test("parser does NOT contain the IFS=$(printf '\\n') subshell bug", () => {
+    const path = resolve(INTERP, "INSTRUCTIONS.md");
+    const src = readFileSync(path, "utf-8");
+    const ea = extractInstructionBody(src, "Expand-absorb");
+    // The buggy idiom must be gone.
+    assert.doesNotMatch(
+      ea,
+      /IFS\s*=\s*"\$\(printf\s+'\\n'\)"/,
+      'Expand-absorb still uses the buggy IFS="$(printf \'\\n\')" idiom',
+    );
+    // The sentinel idiom must be gone too.
+    assert.doesNotMatch(
+      ea,
+      /<<<EOE>>>/,
+      "Expand-absorb still uses the <<<EOE>>> sentinel idiom",
+    );
   });
 });
