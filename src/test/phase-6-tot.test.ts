@@ -261,43 +261,41 @@ describe("phase-6 a-tot: Expand-push + Expand-absorb + Phase-router (R15–R18, 
   });
 });
 
-describe("phase-6 a-tot: score.md dynamic (R41–R43)", () => {
+describe("phase-6 a-tot: score.md dynamic (post-refactor R15, R31)", () => {
   const path = resolve(INTERP, "dynamics/score.md");
 
   test("dynamics/score.md exists", () => {
     assert.ok(existsSync(path), "score.md missing");
   });
 
-  test("score.md declares two push-arg placeholders (R41)", () => {
+  test("score.md declares only {{partial_state}} and {{task}} push-args (R15, R31)", () => {
     const s = readFileSync(path, "utf-8");
-    for (const ph of ["{{thought}}", "{{target}}"]) {
-      assert.match(s, new RegExp(escapeRegExp(ph)), `score.md missing placeholder ${ph}`);
+    assert.match(s, /\{\{partial_state\}\}/);
+    assert.match(s, /\{\{task\}\}/);
+    assert.doesNotMatch(s, /\{\{thought\}\}/);
+    assert.doesNotMatch(s, /\{\{target\}\}/);
+  });
+
+  test("score.md returns ## Return value: with sure/likely/impossible enum (R31)", () => {
+    const s = readFileSync(path, "utf-8");
+    assert.match(s, /## Return\s*\n\s*value:/);
+    for (const lbl of ["sure", "likely", "impossible"]) {
+      assert.ok(s.includes(lbl), `score.md missing label: ${lbl}`);
     }
   });
 
-  test("score.md is single-cycle empty -> done (R42)", () => {
+  test("score.md is single-cycle and pushes nothing further (R33)", () => {
     const s = readFileSync(path, "utf-8");
-    const headers = (s.match(/^## Instruction:/gm) || []);
-    assert.equal(headers.length, 1, "score.md must have exactly one instruction");
-    assert.match(s, /MEMORY state is "empty"/);
-    assert.match(s, /## State\s*\n\s*done/);
+    const matches = s.match(/^## Instruction:/gm) || [];
+    assert.equal(matches.length, 1);
+    assert.doesNotMatch(s, /^## Push\s*$/m);
   });
 
-  test("score.md returns one key 'value' via ## Return (R42)", () => {
+  test("score.md prose is domain-agnostic (R32)", () => {
     const s = readFileSync(path, "utf-8");
-    assert.match(s, /## Return\s*\n\s*value:/);
-  });
-
-  test("score.md prompts for one of sure/likely/impossible (R42)", () => {
-    const s = readFileSync(path, "utf-8");
-    assert.match(s, /\bsure\b/);
-    assert.match(s, /\blikely\b/);
-    assert.match(s, /\bimpossible\b/);
-  });
-
-  test("score.md does not push further dynamics (R43)", () => {
-    const s = readFileSync(path, "utf-8");
-    assert.doesNotMatch(s, /^## Push\s*\ndynamics\//m);
+    for (const banned of ["Game of 24", "arithmetic", "thought", "{1, 1, 1}", "{12, 2}"]) {
+      assert.ok(!s.includes(banned), `score.md contains banned domain word: "${banned}"`);
+    }
   });
 });
 
