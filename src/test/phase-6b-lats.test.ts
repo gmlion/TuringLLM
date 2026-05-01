@@ -70,3 +70,11 @@ describe("phase-6b b-lats: reused dynamics byte-equality (R6, R7, R8)", () => {
     assert.ok(canon.equals(here), "reflect.md diverged from canonical");
   });
 });
+
+describe("phase-6b b-lats: demo PROGRAM.md (R69)", () => {
+  test("b-lats/PROGRAM.md is byte-equal to a-tot/PROGRAM.md (R69)", () => {
+    const canon = readFileSync(resolve(REPO, "interpreters/3-search/a-tot/PROGRAM.md"));
+    const here  = readFileSync(resolve(INTERP, "PROGRAM.md"));
+    assert.ok(canon.equals(here), "PROGRAM.md diverged from a-tot");
+  });
+});
