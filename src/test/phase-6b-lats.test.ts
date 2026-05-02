@@ -243,3 +243,34 @@ describe("phase-6b b-lats: lessons append-only convention (R64, R65)", () => {
     }
   });
 });
+
+describe("phase-6b b-lats: Select (R44, R45, R46)", () => {
+  const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+  const sel = extractInstructionBody(s, "Select");
+
+  test("Select declares condition state == selecting (R44)", () => {
+    assert.match(s, /## Instruction:\s*Select\b[\s\S]+?\*\*Condition:\*\*[^\n]*"selecting"/);
+  });
+
+  test("Select reads uct_c from ./scoped/uct_c.md (R44)", () => {
+    assert.match(sel, /\.\/scoped\/uct_c\.md/);
+  });
+
+  test("Select uses bc -l for UCT computation (R44)", () => {
+    assert.match(sel, /bc\s+-l/);
+  });
+
+  test("Select picks leftmost unvisited (n == 0) child first (R45)", () => {
+    assert.match(sel, /\bn\s*=\s*0\b|\bn\s*==\s*0\b|\bN\s*=\s*"?0"?/);
+    assert.match(sel, /sort[^\n]*head\s+-n\s+1/);
+  });
+
+  test("Select terminates at childless leaf and writes ./scoped/cursor.md (R46)", () => {
+    assert.match(sel, /\.\/scoped\/cursor\.md/);
+    assert.match(sel, /while\s+true|while\s+\[/);
+  });
+
+  test("Select transitions to expanding (R46)", () => {
+    assert.match(sel, /## State\s*\n\s*expanding/);
+  });
+});
