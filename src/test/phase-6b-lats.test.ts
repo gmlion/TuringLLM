@@ -335,3 +335,46 @@ describe("phase-6b b-lats: Expand-absorb (R49, R50)", () => {
     assert.doesNotMatch(ea, /<<<EOE>>>/);
   });
 });
+
+describe("phase-6b b-lats: Simulate-push (R51)", () => {
+  const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+  const sp = extractInstructionBody(s, "Simulate-push");
+
+  test("Simulate-push pushes dynamics/rollout.md (R51)", () => {
+    assert.match(sp, /## Push\s*\n\s*dynamics\/rollout\.md/);
+  });
+
+  test("Simulate-push reads from chosen_child not cursor (R51)", () => {
+    assert.match(sp, /\.\/scoped\/chosen_child\.md/);
+  });
+
+  test("Simulate-push push-args are partial_state and task only (R51)", () => {
+    assert.match(sp, /partial_state:\s*\|/);
+    assert.match(sp, /task:\s*\|/);
+  });
+});
+
+describe("phase-6b b-lats: Simulate-absorb (R52, R53)", () => {
+  const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+  const sa = extractInstructionBody(s, "Simulate-absorb");
+
+  test("Simulate-absorb persists ## Terminal State to ./scoped/last_terminal.md (R52)", () => {
+    assert.match(sa, /\.\/scoped\/last_terminal\.md/);
+  });
+
+  test("Simulate-absorb pushes evaluate.md with attempt and criterion (R52)", () => {
+    assert.match(sa, /## Push\s*\n\s*dynamics\/evaluate\.md/);
+    assert.match(sa, /attempt:\s*\|/);
+    assert.match(sa, /criterion:\s*\|/);
+  });
+
+  test("Simulate-absorb criterion is ./scoped/task.md (R67)", () => {
+    assert.match(sa, /\.\/scoped\/task\.md/);
+    assert.doesNotMatch(sa, /\.\.\/\.\.\/workspace/);
+  });
+
+  test("Simulate-absorb R53 malformed branch synthesises fail verdict + Pending Questions", () => {
+    assert.match(sa, /## Pending Questions/);
+    assert.doesNotMatch(sa, /## State\s*\n\s*waiting_for_user/);
+  });
+});

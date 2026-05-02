@@ -321,6 +321,87 @@ R50 routing — branch by `WELL_FORMED`. Each branch emits the literal next-stat
 
 R50: `## Pending Questions` is appended; state is NEVER `waiting_for_user` here — the loop must keep progressing.
 
+## Instruction: Simulate-push
+**Condition:** MEMORY state is "simulating"
+**Action:** Stage push-args from chosen_child (not cursor); emit `## Push dynamics/rollout.md`.
+
+    CC=$(cat ./scoped/chosen_child.md)
+    compose_partial_state "$CC" > ./scoped/staged/partial_state.md
+    cp ./scoped/task.md ./scoped/staged/task.md
+
+Then emit MEMORY:
+
+    PS=$(sed 's/^/  /' ./scoped/staged/partial_state.md)
+    TK=$(sed 's/^/  /' ./scoped/staged/task.md)
+
+    cat > ./MEMORY.md << SIM_EOF
+    ## State
+    simulating
+    ## Matched Instruction
+    Simulate-push
+    ## Last Action
+    Pushed rollout.md for $CC.
+    ## Result
+    Push queued.
+    ## Push
+    dynamics/rollout.md
+    ## Push-Args
+    partial_state: |
+    $PS
+    task: |
+    $TK
+    SIM_EOF
+
+The state value `simulating` is the returnState; on pop the shell sets state to `simulating_completed`.
+
+## Instruction: Simulate-absorb
+**Condition:** MEMORY state is "simulating_completed"
+**Action:** Persist `## Terminal State` to `./scoped/last_terminal.md`. If non-empty, push `dynamics/evaluate.md` with `attempt` = last_terminal and `criterion` = task. If empty/missing, synthesise a `fail` verdict directly and route to `evaluating_completed` (R53).
+
+    # Extract body of ## Terminal State (or empty if missing)
+    awk '/^## Terminal State$/{f=1; next} /^## /{f=0} f' ./MEMORY.md > ./scoped/last_terminal.md
+
+    if [ ! -s ./scoped/last_terminal.md ]; then
+      # R53 malformed branch: synthesize fail verdict, skip evaluate push
+      PQ=$(printf '\n## Pending Questions\n- Q: rollout.md returned empty or missing ## Terminal State; treating as failed rollout.')
+      cat > ./MEMORY.md << SYN_EOF
+    ## State
+    evaluating_completed
+    ## Matched Instruction
+    Simulate-absorb (malformed)
+    ## Last Action
+    rollout.md returned malformed output; synthesising fail verdict.
+    ## Result
+    Synthetic verdict written.
+    ## Verdict
+    fail
+    ## Feedback
+    rollout returned malformed output$PQ
+    SYN_EOF
+    else
+      cp ./scoped/last_terminal.md ./scoped/staged/attempt.md
+      cp ./scoped/task.md ./scoped/staged/criterion.md
+      AT=$(sed 's/^/  /' ./scoped/staged/attempt.md)
+      CR=$(sed 's/^/  /' ./scoped/staged/criterion.md)
+      cat > ./MEMORY.md << EVAL_EOF
+    ## State
+    evaluating
+    ## Matched Instruction
+    Simulate-absorb
+    ## Last Action
+    Persisted terminal state; pushing evaluate.md.
+    ## Result
+    Push queued.
+    ## Push
+    dynamics/evaluate.md
+    ## Push-Args
+    attempt: |
+    $AT
+    criterion: |
+    $CR
+    EVAL_EOF
+    fi
+
 # Sub-instructions
 
 (none — this interpreter needs none.)
