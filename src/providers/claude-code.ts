@@ -20,6 +20,35 @@ export function isQuotaError(text: string): boolean {
   return QUOTA_PATTERNS.some((p) => p.test(text));
 }
 
+/**
+ * Decide whether a claude-code subprocess result represents a real quota error
+ * worth retrying. Only signals true when the API or the subprocess itself
+ * actually failed — never on a successful response that happens to contain
+ * quota-shaped words in its prose. Protects in-flight MEMORY mutations from
+ * being discarded by needless retries.
+ */
+export function shouldThrowQuotaForResponse(
+  parsed: { result?: string; is_error?: boolean; api_error_status?: unknown } | null,
+  exitCode: number,
+  stdout: string,
+  stderr: string,
+): boolean {
+  const apiFailed = parsed !== null && (parsed.is_error === true || parsed.api_error_status != null);
+  const subprocessFailed = exitCode !== 0;
+  const responseInvalid = parsed === null && exitCode === 0 && stdout.length > 0;
+
+  if (!(apiFailed || subprocessFailed || responseInvalid)) {
+    // Successful, parseable response — trust it. Side effects already landed.
+    return false;
+  }
+
+  const errorText =
+    (parsed && typeof parsed.api_error_status === "string" ? parsed.api_error_status : "") ||
+    stderr ||
+    (apiFailed ? (parsed?.result || "") : stdout);
+  return isQuotaError(errorText);
+}
+
 export async function runCycle(
   instructionsPath: string,
   memoryPath: string
@@ -93,25 +122,30 @@ export async function runCycle(
       logRaw(`  [claude-code stdout]\n${stdout}`);
       if (stderr) logRaw(`  [claude-code stderr]\n${stderr}`);
 
-      if (isQuotaError(stdout) || isQuotaError(stderr)) {
-        throw new QuotaExceededError(`Quota exceeded: ${(stderr || stdout).slice(0, 200)}`);
-      }
-
       let resultText = "";
       let durationMs = Date.now() - t0Llm;
+      let parsed: { result?: string; cost_usd?: number; duration_ms?: number; is_error?: boolean; api_error_status?: unknown } | null = null;
       try {
-        const parsed = JSON.parse(stdout);
-        resultText = parsed.result || "";
+        parsed = JSON.parse(stdout);
+        resultText = parsed?.result || "";
 
-        if (parsed.cost_usd) {
+        if (parsed?.cost_usd) {
           log(`  [cost] $${parsed.cost_usd.toFixed(4)}`);
         }
-        if (parsed.duration_ms) {
+        if (parsed?.duration_ms) {
           durationMs = parsed.duration_ms;
           log(`  [duration] ${(parsed.duration_ms / 1000).toFixed(1)}s`);
         }
       } catch {
         resultText = stdout;
+      }
+
+      // Quota detection: only treat as quota when API/subprocess signals real
+      // failure (never on a successful response that happens to contain
+      // quota-shaped prose). Protects in-flight MEMORY mutations from being
+      // discarded by needless retries. See shouldThrowQuotaForResponse jsdoc.
+      if (shouldThrowQuotaForResponse(parsed, exitCode, stdout, stderr)) {
+        throw new QuotaExceededError(`Quota exceeded: ${(stderr || stdout).slice(0, 200)}`);
       }
 
       events.push({ type: "llm_response", output: resultText, durationMs });
