@@ -177,3 +177,35 @@ describe("phase-6b b-lats: Initialize (R34, R35, R36)", () => {
     assert.doesNotMatch(init, /waiting_for_user/);
   });
 });
+
+describe("phase-6b b-lats: tree ledger primitives (R37, R38, R39, R40, R41)", () => {
+  const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+
+  test("strategy preamble documents the six required ledger keys (R38)", () => {
+    for (const k of ["id", "parent_id", "depth", "q", "n", "status"]) {
+      assert.match(s, new RegExp(`\\b${k}\\b`));
+    }
+  });
+
+  test("status enum is {live, terminal_pass, terminal_fail} — no 'pruned' (R41, R78)", () => {
+    for (const v of ["live", "terminal_pass", "terminal_fail"]) {
+      assert.match(s, new RegExp(`\\b${v}\\b`));
+    }
+    assert.doesNotMatch(s, /status:\s*pruned/);
+  });
+
+  test("monotonic id primitive uses grep -c '^id: n' (R40)", () => {
+    assert.match(s, /grep\s+-c\s+'\^id:\s*n'/);
+  });
+
+  test("INSTRUCTIONS.md uses awk-based surgical edits (R39)", () => {
+    const initBody = extractInstructionBody(s, "Initialize");
+    const sWithoutInit = s.replace(initBody, "");
+    assert.doesNotMatch(sWithoutInit, /cat\s*>\s*\.\/scoped\/tree\.md\b/);
+    assert.match(s, /awk[^\n]*tree\.md\.tmp/);
+  });
+
+  test("per-node state files referenced (R42, R43)", () => {
+    assert.match(s, /\.\/scoped\/state-/);
+  });
+});

@@ -18,6 +18,49 @@ Scoped files (in this strategy frame's `./scoped/`):
 - `./scoped/lessons-<id>.md` — per-node accumulated lessons, lazy + append-only.
 - `./scoped/staged/{partial_state,task,attempt,criterion,verdict,feedback}.md` — push-arg staging files.
 
+### Tree ledger schema (R37, R38, R41)
+
+Every node block in `./scoped/tree.md` contains exactly the keys: `id`, `parent_id`, `depth`, `q`, `n`, `status`. Status enum: `live`, `terminal_pass`, `terminal_fail` — once a node leaves `live`, it never returns. There is no `pruned` status (LATS uses UCT for exploration/exploitation; explicit pruning would conflate ToT and MCTS semantics).
+
+### Tree ledger primitives
+
+Every instruction below uses these bash idioms when reading or writing `./scoped/tree.md`. They are stated once here and referenced by name from each Instruction body.
+
+**Append a node block** (used by Initialize for n0, by Expand-absorb for children):
+
+    cat >> ./scoped/tree.md << NODE_EOF
+    ---
+    id: $NEW_ID
+    parent_id: $PARENT_ID
+    depth: $DEPTH
+    q: 0
+    n: 0
+    status: live
+    NODE_EOF
+
+**Next monotonic id** (R40):
+
+    NEXT_INDEX=$(grep -c '^id: n' ./scoped/tree.md)
+    NEW_ID="n$NEXT_INDEX"
+
+**Update one field of one node** (R39, surgical edit):
+
+    # Args: $1 = id, $2 = field name, $3 = new value
+    awk -v ID="$1" -v F="$2" -v V="$3" '
+      /^---$/ { in_block = 0; print; next }
+      /^id:/  { in_block = ($2 == ID); print; next }
+      in_block && $1 == F":" { print F": " V; next }
+      { print }
+    ' ./scoped/tree.md > ./scoped/tree.md.tmp && mv ./scoped/tree.md.tmp ./scoped/tree.md
+
+Compact one-line form, used inline by Back-prop and other instructions where the field name is a literal:
+
+    awk -v X="$ID" -v V="$NEWV" '/^---$/{ib=0;print;next} /^id:/{ib=($2==X);print;next} ib && /^q:/{print "q: " V;next} {print}' ./scoped/tree.md > ./scoped/tree.md.tmp && mv ./scoped/tree.md.tmp ./scoped/tree.md
+
+**Per-node state file** (R42, R43): created at node-creation time as `./scoped/state-<id>.md`; **write-once**, never modified after creation. Read whenever the strategy needs to push that node's state into a dynamic.
+
+**Per-node lessons file** (R64, R65): `./scoped/lessons-<id>.md` is **lazy** (created only on first append) and **append-only** (always `>>`, never `>`). Used by the Compose-partial-state primitive (below) to thread accumulated lessons into expansion and rollout.
+
 ## Instruction: Initialize
 **Condition:** MEMORY state is "empty"
 **Action:** Persist scoped files, write the root node, transition to `selecting`.
