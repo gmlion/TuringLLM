@@ -274,3 +274,64 @@ describe("phase-6b b-lats: Select (R44, R45, R46)", () => {
     assert.match(sel, /## State\s*\n\s*expanding/);
   });
 });
+
+describe("phase-6b b-lats: Expand-push (R47)", () => {
+  const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+  const ep = extractInstructionBody(s, "Expand-push");
+
+  test("Expand-push pushes dynamics/expand-node.md (R47)", () => {
+    assert.match(ep, /## Push\s*\n\s*dynamics\/expand-node\.md/);
+  });
+
+  test("Expand-push push-args are partial_state and task only (R47)", () => {
+    assert.match(ep, /partial_state:\s*\|/);
+    assert.match(ep, /task:\s*\|/);
+    assert.doesNotMatch(ep, /target:/);
+    assert.doesNotMatch(ep, /numbers_remaining:/);
+  });
+
+  test("Expand-push uses compose_partial_state primitive (R47, R48)", () => {
+    assert.match(ep, /compose_partial_state\b/);
+  });
+});
+
+describe("phase-6b b-lats: Expand-absorb (R49, R50)", () => {
+  const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+  const ea = extractInstructionBody(s, "Expand-absorb");
+
+  test("Expand-absorb writes ./scoped/state-${NEW_ID}.md per child (R49)", () => {
+    assert.match(ea, /\.\/scoped\/state-\$\{?[A-Z_]+\}?\.md/);
+  });
+
+  test("Expand-absorb appends ledger blocks with q=0, n=0, status=live (R49)", () => {
+    const m = ea.match(/<< (?:NODE_EOF|CHILD_EOF|ENTRY_EOF)([\s\S]+?)(?:NODE_EOF|CHILD_EOF|ENTRY_EOF)/);
+    assert.ok(m, "Expand-absorb must contain a node-block heredoc");
+    const body = m[1];
+    for (const line of [/q:\s*0/, /n:\s*0/, /status:\s*live/]) {
+      assert.match(body, line);
+    }
+  });
+
+  test("Expand-absorb sets chosen_child to leftmost new child (R49)", () => {
+    assert.match(ea, /\.\/scoped\/chosen_child\.md/);
+  });
+
+  test("Expand-absorb transitions to simulating on success (R49)", () => {
+    assert.match(ea, /## State\s*\n\s*simulating/);
+  });
+
+  test("Expand-absorb R50 zero-children fallback marks cursor terminal_fail and re-enters selecting", () => {
+    assert.match(ea, /terminal_fail/);
+    assert.match(ea, /## State\s*\n\s*selecting/);
+  });
+
+  test("Expand-absorb appends ## Pending Questions on malformed (R50)", () => {
+    assert.match(ea, /## Pending Questions/);
+    assert.doesNotMatch(ea, /## State\s*\n\s*waiting_for_user/);
+  });
+
+  test("Expand-absorb does NOT use buggy IFS=$(printf newline) idiom", () => {
+    assert.doesNotMatch(ea, /IFS=["']\$\(printf/);
+    assert.doesNotMatch(ea, /<<<EOE>>>/);
+  });
+});

@@ -189,6 +189,138 @@ Then wholesale-rewrite MEMORY:
     Cursor set; ready to expand.
     SEL_EOF
 
+## Instruction: Expand-push
+**Condition:** MEMORY state is "expanding"
+**Action:** Stage push-args via the Compose-partial-state primitive; emit `## Push dynamics/expand-node.md`.
+
+    ID=$(cat ./scoped/cursor.md)
+    compose_partial_state "$ID" > ./scoped/staged/partial_state.md
+    cp ./scoped/task.md ./scoped/staged/task.md
+
+Then emit MEMORY:
+
+    PS=$(sed 's/^/  /' ./scoped/staged/partial_state.md)
+    TK=$(sed 's/^/  /' ./scoped/staged/task.md)
+
+    cat > ./MEMORY.md << EXP_EOF
+    ## State
+    expanding
+    ## Matched Instruction
+    Expand-push
+    ## Last Action
+    Pushed expand-node.md for $ID.
+    ## Result
+    Push queued.
+    ## Push
+    dynamics/expand-node.md
+    ## Push-Args
+    partial_state: |
+    $PS
+    task: |
+    $TK
+    EXP_EOF
+
+The state value `expanding` is the returnState; on pop the shell sets state to `expanding_completed`, which `Expand-absorb` matches.
+
+## Instruction: Expand-absorb
+**Condition:** MEMORY state is "expanding_completed" and `## Children` is present in MEMORY
+**Action:** Parse the spliced `## Children` block as a sequence of `state:` block-scalar entries (k=5 expected). For each well-formed entry, allocate the next monotonic id, append a node block to `./scoped/tree.md` with `parent_id = cursor`, `depth = cursor_depth + 1`, `q: 0, n: 0, status: live`, and write the entry's payload verbatim to `./scoped/state-<new_id>.md`. Record the lowest-id newly created child to `./scoped/chosen_child.md`. Drop `## Children`. Transition to `simulating`.
+
+    CURSOR=$(cat ./scoped/cursor.md)
+    CURSOR_DEPTH=$(awk -v X="$CURSOR" '/^---$/{ib=0;next} /^id:/{ib=($2==X)} ib && /^depth:/{print $2; exit}' ./scoped/tree.md)
+    NEXT_DEPTH=$((CURSOR_DEPTH + 1))
+
+    # Extract body of ## Children
+    awk '/^## Children$/{f=1; next} /^## [A-Z]/ && f {exit} f' ./MEMORY.md > ./scoped/_children.txt
+
+    # Awk writes one file per entry. Blank-line-preserving continuation: matches
+    # 4-space-indented lines OR fully blank lines (yaml block-scalar semantics).
+    rm -f ./scoped/_entry-*.txt
+    awk 'BEGIN{n=0; buf=""}
+      /^  state:[[:space:]]*\|[[:space:]]*$/ {
+        if (n > 0) { printf "%s", buf > ("./scoped/_entry-" n ".txt") }
+        n++; buf=""; next
+      }
+      n > 0 && /^(    |$)/ {
+        sub(/^    /, "")
+        buf = buf $0 "\n"
+        next
+      }
+      END {
+        if (n > 0) { printf "%s", buf > ("./scoped/_entry-" n ".txt") }
+      }
+    ' ./scoped/_children.txt
+
+    WELL_FORMED=0
+    FIRST_NEW=""
+    for f in ./scoped/_entry-*.txt; do
+      [ -e "$f" ] || continue
+      # Capture trailing-newline-preserving payload
+      PAYLOAD=$(cat "$f"; printf x); PAYLOAD=${PAYLOAD%x}
+      NEW_ID="n$(grep -c '^id: n' ./scoped/tree.md)"
+      cat >> ./scoped/tree.md << CHILD_EOF
+    ---
+    id: $NEW_ID
+    parent_id: $CURSOR
+    depth: $NEXT_DEPTH
+    q: 0
+    n: 0
+    status: live
+    CHILD_EOF
+      printf '%s' "$PAYLOAD" > "./scoped/state-${NEW_ID}.md"
+      [ -z "$FIRST_NEW" ] && FIRST_NEW="$NEW_ID"
+      WELL_FORMED=$((WELL_FORMED + 1))
+    done
+    rm -f ./scoped/_entry-*.txt
+
+    MISSING=$((5 - WELL_FORMED))
+
+R50 routing — branch by `WELL_FORMED`. Each branch emits the literal next-state value into the MEMORY heredoc:
+
+    if [ "$WELL_FORMED" -eq 0 ]; then
+      # All malformed: mark cursor terminal_fail and re-enter selecting.
+      awk -v X="$CURSOR" '
+        /^---$/ { in_block = 0; print; next }
+        /^id:/  { in_block = ($2 == X); print; next }
+        in_block && /^status:/ { print "status: terminal_fail"; next }
+        { print }
+      ' ./scoped/tree.md > ./scoped/tree.md.tmp && mv ./scoped/tree.md.tmp ./scoped/tree.md
+
+      cat > ./MEMORY.md << ABSORB_FAIL_EOF
+    ## State
+    selecting
+    ## Matched Instruction
+    Expand-absorb
+    ## Last Action
+    Absorbed 0 children for $CURSOR; marked terminal_fail and routing to selecting.
+    ## Result
+    Children appended to scoped/tree.md.
+
+    ## Pending Questions
+    - Q: expand-node.md returned zero well-formed state entries for cursor $CURSOR; marked terminal_fail.
+    ABSORB_FAIL_EOF
+    else
+      echo "$FIRST_NEW" > ./scoped/chosen_child.md
+      if [ "$MISSING" -gt 0 ]; then
+        PQ=$(printf '\n## Pending Questions\n- Q: expand-node.md returned %d well-formed state entries (expected 5).' "$WELL_FORMED")
+      else
+        PQ=""
+      fi
+
+      cat > ./MEMORY.md << ABSORB_OK_EOF
+    ## State
+    simulating
+    ## Matched Instruction
+    Expand-absorb
+    ## Last Action
+    Absorbed $WELL_FORMED children for $CURSOR; chose $FIRST_NEW; routing to simulating.
+    ## Result
+    Children appended to scoped/tree.md.$PQ
+    ABSORB_OK_EOF
+    fi
+
+R50: `## Pending Questions` is appended; state is NEVER `waiting_for_user` here — the loop must keep progressing.
+
 # Sub-instructions
 
 (none — this interpreter needs none.)
