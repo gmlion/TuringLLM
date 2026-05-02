@@ -533,3 +533,75 @@ describe("phase-6b b-lats: leaf README content (R3)", () => {
     assert.match(readme, /## No Solution Found/);
   });
 });
+
+describe("phase-6b b-lats: negative-requirement pins (R76–R83)", () => {
+  const inst = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+
+  test("strategy never references workspace/ (R76)", () => {
+    assert.doesNotMatch(inst, /\.\.\/\.\.\/workspace/);
+    assert.doesNotMatch(inst, /\bworkspace\//);
+  });
+
+  test("dynamics/ does not contain score.md (R77)", () => {
+    assert.ok(!existsSync(resolve(INTERP, "dynamics/score.md")));
+  });
+
+  test("strategy declares no Prune instruction (R78)", () => {
+    assert.doesNotMatch(inst, /^## Instruction:\s*Prune\b/m);
+  });
+
+  test("strategy never uses 'pruning' as a state (R78)", () => {
+    assert.doesNotMatch(inst, /## State\s*\n\s*pruning/);
+  });
+
+  test("hyperparameters not parsed from PROGRAM.md (R79)", () => {
+    const init = extractInstructionBody(inst, "Initialize");
+    assert.doesNotMatch(init, /grep[^\n]*max_iterations[^\n]*PROGRAM\.md/);
+    assert.doesNotMatch(init, /grep[^\n]*uct_c[^\n]*PROGRAM\.md/);
+    const lines = init.split("\n").filter((l) => l.includes("PROGRAM.md"));
+    for (const l of lines) {
+      assert.ok(/cp\s+\.\.\/\.\.\/PROGRAM\.md/.test(l) || l.trim().startsWith("#"),
+        `PROGRAM.md touched by non-cp instruction: ${l}`);
+    }
+  });
+
+  test("strategy uses no concurrency primitives (R80)", () => {
+    assert.doesNotMatch(inst, /xargs\s+-P\b/);
+    assert.doesNotMatch(inst, /\sparallel\b/);
+    const lines = inst.split("\n");
+    for (const l of lines) {
+      if (/\s&\s*$/.test(l) && !/&&\s*$/.test(l)) {
+        assert.fail(`Line ends with backgrounding &: ${l}`);
+      }
+    }
+  });
+
+  test("strategy never reads/writes ../scoped or ../../scoped (R81)", () => {
+    assert.doesNotMatch(inst, /\.\.\/scoped/);
+    assert.doesNotMatch(inst, /\.\.\/\.\.\/scoped/);
+    assert.doesNotMatch(inst, /frames\/f\d+/);
+  });
+
+  test("INSTRUCTIONS.md vocabulary check (R83)", () => {
+    const banned = [
+      "Game of 24", "arithmetic", "+", "−", "×", "÷",
+      "maze", "code", "function", "test suite", "puzzle numbers",
+    ];
+    for (const word of banned) {
+      if (word.length > 1) {
+        assert.ok(!inst.includes(word), `INSTRUCTIONS.md contains banned domain word: "${word}"`);
+      }
+    }
+  });
+
+  test("dynamics/ vocabulary check — none of the four contains domain vocab (R83)", () => {
+    const dyns = ["expand-node.md", "rollout.md", "evaluate.md", "reflect.md"];
+    const banned = ["Game of 24", "Game-of-24", "arithmetic", "maze", "function", "test suite"];
+    for (const dy of dyns) {
+      const s = readFileSync(resolve(INTERP, "dynamics", dy), "utf-8");
+      for (const word of banned) {
+        assert.ok(!s.includes(word), `${dy} contains banned domain word: "${word}"`);
+      }
+    }
+  });
+});
