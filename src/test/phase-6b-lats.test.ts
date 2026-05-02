@@ -430,3 +430,67 @@ describe("phase-6b b-lats: Evaluate-absorb (R54, R56, R57, R82)", () => {
     assert.doesNotMatch(ea, />>\s*\.\/scoped\/tree\.md/);
   });
 });
+
+describe("phase-6b b-lats: Reflect-push (R58)", () => {
+  const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+  const rp = extractInstructionBody(s, "Reflect-push");
+
+  test("Reflect-push pushes dynamics/reflect.md (R58)", () => {
+    assert.match(rp, /## Push\s*\n\s*dynamics\/reflect\.md/);
+  });
+
+  test("Reflect-push push-args attempt + verdict=fail + feedback (R58)", () => {
+    assert.match(rp, /attempt:\s*\|/);
+    assert.match(rp, /verdict:\s*fail/);
+    assert.match(rp, /feedback:\s*\|/);
+  });
+});
+
+describe("phase-6b b-lats: Reflect-absorb (R59, R60, R61, R63)", () => {
+  const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+  const ra = extractInstructionBody(s, "Reflect-absorb");
+
+  test("Reflect-absorb appends to ./scoped/lessons-${CC}.md with >> (R59, R65)", () => {
+    assert.match(ra, />>\s*"?\.\/scoped\/lessons-/);
+  });
+
+  test("Reflect-absorb increments iter_count and writes back (R61)", () => {
+    assert.match(ra, /\.\/scoped\/iter_count\.md/);
+    assert.match(ra, /ITER\s*\+\s*1|\$\(\(\s*ITER\s*\+\s*1\s*\)\)/);
+  });
+
+  test("Reflect-absorb compares iter_count vs max_iterations (R61)", () => {
+    assert.match(ra, /\.\/scoped\/max_iterations\.md/);
+    assert.match(ra, /-ge\s+"\$MAX"|\bge\b/);
+  });
+
+  test("Budget exhaustion emits ## No Solution Found and done (R61, R63)", () => {
+    assert.match(ra, /## No Solution Found/);
+    assert.match(ra, /## State\s*\n\s*done/);
+  });
+
+  test("Non-exhausted path transitions to selecting for next iteration (R61)", () => {
+    assert.match(ra, /## State\s*\n\s*selecting/);
+  });
+
+  test("Malformed Lesson handling: Pending Questions, no waiting_for_user (R60)", () => {
+    assert.match(ra, /## Pending Questions/);
+    assert.doesNotMatch(ra, /## State\s*\n\s*waiting_for_user/);
+  });
+});
+
+describe("phase-6b b-lats: termination invariants (R62, R63)", () => {
+  const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+
+  test("every state==done write co-occurs with Solution or No Solution Found (R63)", () => {
+    const heredocs = s.match(/cat\s*>\s*\.\/MEMORY\.md\s*<<\s*[A-Z_]+_EOF[\s\S]+?[A-Z_]+_EOF/g) || [];
+    for (const h of heredocs) {
+      if (/## State\s*\n\s*done/.test(h)) {
+        assert.ok(
+          /## Solution/.test(h) || /## No Solution Found/.test(h),
+          "found state==done heredoc without Solution/No-Solution-Found: " + h.slice(0, 200),
+        );
+      }
+    }
+  });
+});

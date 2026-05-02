@@ -482,6 +482,89 @@ The state value `simulating` is the returnState; on pop the shell sets state to 
     REFLECT_EOF
     fi
 
+## Instruction: Reflect-push
+**Condition:** MEMORY state is "reflecting"
+**Action:** Stage push-args; emit `## Push dynamics/reflect.md`.
+
+    cp ./scoped/last_terminal.md ./scoped/staged/attempt.md
+    echo "fail" > ./scoped/staged/verdict.md
+    awk '/^## Feedback$/{f=1; next} /^## /{f=0} f' ./MEMORY.md > ./scoped/staged/feedback.md
+    [ -s ./scoped/staged/feedback.md ] || echo "rollout judged fail" > ./scoped/staged/feedback.md
+
+Then emit MEMORY:
+
+    AT=$(sed 's/^/  /' ./scoped/staged/attempt.md)
+    FB=$(sed 's/^/  /' ./scoped/staged/feedback.md)
+
+    cat > ./MEMORY.md << REF_EOF
+    ## State
+    reflecting
+    ## Matched Instruction
+    Reflect-push
+    ## Last Action
+    Pushed reflect.md for failed rollout.
+    ## Result
+    Push queued.
+    ## Push
+    dynamics/reflect.md
+    ## Push-Args
+    attempt: |
+    $AT
+    verdict: fail
+    feedback: |
+    $FB
+    REF_EOF
+
+The state value `reflecting` is the returnState; on pop the shell sets state to `reflecting_completed`.
+
+## Instruction: Reflect-absorb
+**Condition:** MEMORY state is "reflecting_completed"
+**Action:** Append `## Lesson` (if non-empty, R59) to `./scoped/lessons-<chosen_child>.md` lazily and append-only (R64, R65). Increment iter_count. Budget check: if exhausted, emit `## No Solution Found` and set state `done` (R61, R63); else transition to `selecting`.
+
+    CC=$(cat ./scoped/chosen_child.md)
+
+    LESSON=$(awk '/^## Lesson$/{f=1; next} /^## /{f=0} f' ./MEMORY.md)
+    if [ -n "$(echo "$LESSON" | tr -d ' \n')" ]; then
+      LESSON_FLAT=$(echo "$LESSON" | tr '\n' ' ' | sed 's/  */ /g; s/^ *//; s/ *$//')
+      echo "- $LESSON_FLAT" >> "./scoped/lessons-${CC}.md"
+      PQ=""
+    else
+      PQ=$(printf '\n## Pending Questions\n- Q: reflect.md returned empty or missing ## Lesson; no lesson recorded for chosen_child %s.' "$CC")
+    fi
+
+    ITER=$(cat ./scoped/iter_count.md)
+    NEW_ITER=$((ITER + 1))
+    echo "$NEW_ITER" > ./scoped/iter_count.md
+
+    MAX=$(cat ./scoped/max_iterations.md)
+    if [ "$NEW_ITER" -ge "$MAX" ]; then
+      FAILS=$(grep -c '^status: terminal_fail$' ./scoped/tree.md)
+      cat > ./MEMORY.md << EXH_EOF
+    ## State
+    done
+    ## Matched Instruction
+    Reflect-absorb (budget exhausted)
+    ## Last Action
+    Iteration $NEW_ITER reached max_iterations $MAX without reward 1.
+    ## Result
+    Search exhausted.
+    ## No Solution Found
+    Iterations: $NEW_ITER
+    terminal_fail nodes: $FAILS$PQ
+    EXH_EOF
+    else
+      cat > ./MEMORY.md << SEL_EOF
+    ## State
+    selecting
+    ## Matched Instruction
+    Reflect-absorb
+    ## Last Action
+    Lesson appended; iter_count=$NEW_ITER; routing to selecting.
+    ## Result
+    Iteration complete.$PQ
+    SEL_EOF
+    fi
+
 # Sub-instructions
 
 (none — this interpreter needs none.)
