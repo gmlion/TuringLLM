@@ -161,8 +161,9 @@ is copied wholesale by `new-instance.sh`. Names and contracts are normative.
 | `dialogue.md` | 4b | `## Topic`, `## Participants` | `## Dialogue Output` | 1 (acceptance=true: 2) |
 | `opine.md` | 5 | `## Question`, `## Round`, `## Persona`, `## Transcript` | `## Opinion` | 1 |
 | `propose.md` | 5b | `## Prompt`, `## Persona` | `## Proposal` (appended) | 1 |
-| `expand-node.md` | 6 | `## Parent Thought` | `## Children` | 1 |
-| `score.md`       | 6 | `## Thought`        | `## Value`    | 1 |
+| `expand-node.md` | 6 | ## Partial State, ## Task | `## Children` | 1 |
+| `score.md`       | 6 | ## Partial State, ## Task | `## Value`    | 1 |
+| `rollout.md`     | 6b | ## Partial State, ## Task | ## Terminal State | 1 |
 | `evaluate-workflow.md` | 7 | `## Candidate Workflow` | `## Score`, `## Trace` | 2 |
 
 ---
@@ -464,6 +465,8 @@ use of the per-instance project git for parallel-branch snapshots.
   different strategy bookkeeping. Worth building only if a demo requires
   cross-branch join (ToT's tree is usually enough).
 
+**Generalised in Phase 6b.** As of `docs/specs/2026-05-01-implement-phase-6b/`, Phase 6's `expand-node.md` and `score.md` are domain-agnostic — push-args are the canonical pair `partial_state`/`task`; the strategy persists per-node partial states in `./scoped/state-<id>.md` files; the ledger no longer carries `op`/`left`. BFS semantics (k=5, b=5, max_depth, 3-sample scoring, weighted-sum aggregation, pruning, goal-checking) are unchanged.
+
 ---
 
 ## Phase 6b — Search + refinement + meta: LATS (patterns.md Group 3 × 1 × 7)
@@ -479,12 +482,11 @@ Phase 7 also needs.
 - Strategy: MCTS controller (selection / expansion / simulation /
   back-prop). Persists the tree + per-node statistics in MEMORY
   (`## Search Tree`, `## N / Q / V`).
-- **Reuse (no new dynamics):**
-  - `expand-node.md` (Phase 6) — unchanged, for node expansion.
-  - `evaluate.md` (Phase 1b) — as the simulation/rollout value.
-  - `reflect.md` (Phase 1c) — pushed on simulation failure to harvest a
-    lesson propagated into the tree's `## Lessons` section, consumed on
-    future expansions at the same node.
+- **Reuse:**
+  - `expand-node.md` (Phase 6, generalised in this same phase) — for node expansion.
+  - `evaluate.md` (Phase 1b) — text-only mode, as the rollout reward signal.
+  - `reflect.md` (Phase 1c) — pushed on rollout failure to harvest a per-node lesson, propagated into future expansions of the same subtree via ancestor-walk concatenation into `partial_state`.
+- **One new dynamic:** `rollout.md` — paper-faithful LLM-policy single-shot rollout. Receives `partial_state` and `task`; returns a `terminal_state` reached by playing forward in one LLM call. The earlier zero-dynamic plan was aspirational: paper-faithful rollout has no honest implementation in the existing dynamic contracts (the rollout's job — "play forward to terminal in one shot, return only the endpoint" — is structurally distinct from `expand-node.md`'s "generate k siblings" and from `evaluate.md`'s "judge a complete attempt"); bundling rollout into either would distort their contracts and break their reuse by other interpreters. The deviation is the same shape as Phase 6's R4 deviation (split of `expand-node.md` / `score.md`) and is justified for the same reason: contract preservation over count minimisation.
 - **New infrastructure:** MCTS helper code in the strategy (not a
   dynamic) — reusable by Phase 7.
 - Demo `PROGRAM.md`: a task with executable feedback (write a function

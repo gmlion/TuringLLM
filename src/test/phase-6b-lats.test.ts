@@ -605,3 +605,38 @@ describe("phase-6b b-lats: negative-requirement pins (R76–R83)", () => {
     }
   });
 });
+
+describe("phase-6b: parent doc updates (R73, R74, R75)", () => {
+  const parent = readFileSync(resolve(REPO, "docs/agent-workflows/requirements.md"), "utf-8");
+
+  test("dynamics table has expand-node.md row with Partial State and Task (R73)", () => {
+    assert.match(parent, /\|\s*`expand-node\.md`\s*\|\s*6\s*\|\s*## Partial State[^|]*## Task/);
+  });
+
+  test("dynamics table has score.md row with Partial State and Task (R73)", () => {
+    assert.match(parent, /\|\s*`score\.md`\s*\|\s*6\s*\|\s*## Partial State[^|]*## Task/);
+  });
+
+  test("dynamics table has rollout.md row at Phase 6b (R73)", () => {
+    assert.match(parent, /\|\s*`rollout\.md`\s*\|\s*6b\s*\|\s*## Partial State[^|]*## Task[^|]*\|\s*## Terminal State/);
+  });
+
+  test("Phase 6b section mentions rollout.md as a new dynamic (R74)", () => {
+    const m6b = parent.match(/## Phase 6b[^]+?(?=^## Phase 7|\z)/m);
+    assert.ok(m6b, "Phase 6b section missing");
+    assert.match(m6b[0], /rollout\.md/);
+    assert.match(m6b[0], /one new dynamic/i);
+  });
+
+  test("Phase 6b section no longer claims 'no new dynamics' (R74)", () => {
+    const m6b = parent.match(/## Phase 6b[^]+?(?=^## Phase 7|\z)/m);
+    assert.ok(m6b, "Phase 6b section missing");
+    assert.doesNotMatch(m6b[0], /no new dynamics/i);
+  });
+
+  test("Phase 6 section mentions generalisation in Phase 6b (R75)", () => {
+    const m6 = parent.match(/## Phase 3 — Planning[^]*?## Phase 6 —[^]+?(?=^## Phase 6b|\z)/m);
+    assert.ok(m6, "Phase 6 section missing");
+    assert.match(m6[0], /Generalised in Phase 6b|generalised in Phase 6b/i);
+  });
+});
