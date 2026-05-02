@@ -209,3 +209,37 @@ describe("phase-6b b-lats: tree ledger primitives (R37, R38, R39, R40, R41)", ()
     assert.match(s, /\.\/scoped\/state-/);
   });
 });
+
+describe("phase-6b b-lats: Compose-partial-state primitive (R48, R66)", () => {
+  const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+
+  test("preamble defines a compose_partial_state function or primitive (R48)", () => {
+    assert.match(s, /compose_partial_state/);
+  });
+
+  test("primitive walks parent chain (while … parent_id) (R48, R66)", () => {
+    assert.match(s, /while[\s\S]+parent_id/);
+  });
+
+  test("primitive concatenates lessons from all ancestors including cursor (R66)", () => {
+    assert.match(s, /lessons-\$\{?[A-Z_]+\}?\.md/);
+  });
+
+  test("primitive emits 'Lessons learned along this branch' header (R48)", () => {
+    assert.match(s, /Lessons learned along this branch/);
+  });
+});
+
+describe("phase-6b b-lats: lessons append-only convention (R64, R65)", () => {
+  const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+
+  test("lessons files are written with >> (append) anywhere they're touched (R65)", () => {
+    const lessonWriteLines = s.split("\n").filter((l) => l.includes("lessons-"));
+    for (const l of lessonWriteLines) {
+      if (/>\s*[\.\$]/.test(l) && !/>>\s*[\.\$]/.test(l) && !l.trim().startsWith("#")) {
+        assert.ok(!/^[^#]*\s>\s*['"]?[\.\$]/.test(l),
+          `lessons file written with single > (clobber): ${l}`);
+      }
+    }
+  });
+});

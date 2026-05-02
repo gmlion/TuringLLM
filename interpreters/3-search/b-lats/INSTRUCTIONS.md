@@ -61,6 +61,47 @@ Compact one-line form, used inline by Back-prop and other instructions where the
 
 **Per-node lessons file** (R64, R65): `./scoped/lessons-<id>.md` is **lazy** (created only on first append) and **append-only** (always `>>`, never `>`). Used by the Compose-partial-state primitive (below) to thread accumulated lessons into expansion and rollout.
 
+### Compose-partial-state primitive (R48, R66)
+
+A bash helper invoked by Expand-push and Simulate-push. Input: a node id `X`. Output: the contents of a string suitable as the `partial_state` push-arg.
+
+    compose_partial_state() {
+      local X="$1"
+
+      # 1. Begin with the node's own state (write-once payload, R43)
+      cat "./scoped/state-${X}.md"
+
+      # 2. Walk parent chain root → X; for each ancestor (including X
+      #    itself, R66) with a lessons file, emit the lessons.
+      ANCESTORS=()
+      CURRENT="$X"
+      while [ -n "$CURRENT" ] && [ "$CURRENT" != "-" ]; do
+        ANCESTORS=("$CURRENT" "${ANCESTORS[@]}")   # prepend → root-first order
+        CURRENT=$(awk -v ID="$CURRENT" '
+          /^---$/ { in_block=0; next }
+          /^id:/  { in_block=($2==ID) }
+          in_block && /^parent_id:/ { print $2; exit }
+        ' ./scoped/tree.md)
+      done
+
+      HAS_LESSONS=0
+      for A in "${ANCESTORS[@]}"; do
+        if [ -s "./scoped/lessons-${A}.md" ]; then
+          HAS_LESSONS=1
+          break
+        fi
+      done
+
+      if [ "$HAS_LESSONS" -eq 1 ]; then
+        printf '\n\nLessons learned along this branch:\n'
+        for A in "${ANCESTORS[@]}"; do
+          [ -s "./scoped/lessons-${A}.md" ] && cat "./scoped/lessons-${A}.md"
+        done
+      fi
+    }
+
+Order is root-to-cursor (R48); within a single ancestor's file, original write order (= chronological reflection order) is preserved by the append-only invariant (R65). The "Lessons learned along this branch:" header is omitted when no ancestor has lessons (avoiding gratuitous prompt overhead in the 0-failure case).
+
 ## Instruction: Initialize
 **Condition:** MEMORY state is "empty"
 **Action:** Persist scoped files, write the root node, transition to `selecting`.
