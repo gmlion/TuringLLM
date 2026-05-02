@@ -39,14 +39,21 @@ The current sub-task to address:
 
     {{goal}}
 
+**Architectural constraint you MUST honour when choosing composite.** Every child tackle runs in *complete isolation*. Each child receives only its own `goal` plus the same anchors (`original_goal`, `parent_chain`, `role`) — it cannot see its siblings' results, intermediate work, or this frame's accumulating notes. Sibling outputs are synthesized HERE, in this frame's Synthesize step, after all children have returned.
+
+Consequence: composite is only valid if the proposed sub-tasks are **mutually independent**. Sequential workflow splits — "gather sources → analyse → write up", "design → implement → test", "collect data → visualise" — are *structurally broken* under this architecture: the second sub-task lands in a frame with no access to the first's output and will hallucinate or stall. If your decomposition has cross-sub-task dependencies, it is wrong; restructure into independent components, or choose atomic if no independent decomposition exists.
+
 **Justify before choosing.** Wholesale-write `./scoped/justification.md` (short blob) framing the decision in terms of the FINAL ARTIFACT the {{role}} is producing for the original_goal:
 
 - If you intend atomic: name the concrete output this single tool call will produce, and the specific part of the final artifact it advances.
-- If you intend composite: name each proposed sub-task as a structural component of the final artifact — whatever {{role}} naturally builds with (a section in a document, a file in a project, an entry in a list, a step in a procedure).
+- If you intend composite: name each proposed sub-task as a **parallel structural component** of the final artifact — whatever {{role}} naturally builds with (a section in a document, a file in a project, an entry in a list, an item in a comparison, a dimension to investigate). Each component must stand on its own without referring to its siblings.
 
-Re-read your justification. If your composite sub-tasks read as sub-divisions inside a single component a {{role}} would naturally produce in one pass — that's over-decomposition; choose atomic. If your atomic case can't point to a specific part of the final artifact it serves, you may be at the wrong granularity (try composite, or reconsider whether this sub-task should exist at all).
+Re-read your justification and check three failure modes:
+- **Sequential phases:** if your sub-tasks form a workflow (do A, then with A's output do B) — invalid; the children run in isolation and B will not see A. Restructure into independent components, or choose atomic if no independent decomposition exists.
+- **Over-decomposition:** if your composite sub-tasks read as sub-divisions inside a single component a {{role}} would naturally produce in one pass — choose atomic.
+- **Wrong granularity (atomic case):** if your atomic case can't point to a specific part of the final artifact it serves, reconsider whether this sub-task should exist at all (or try composite if there really are independent components).
 
-Now decide as {{role}} would: produce this now (atomic — one tool call yields the artefact), or split into sub-tasks (composite — push plan.md to decompose)? Professional judgement appropriate to the role.
+Now decide as {{role}} would: produce this now (atomic — one tool call yields the artefact), or split into mutually-independent sub-tasks (composite — push plan.md to decompose)? Professional judgement appropriate to the role.
 
 If your decision is **atomic**: perform the single tool call. Capture its relevant output. Then wholesale-rewrite MEMORY (single heredoc — the `## Return` block MUST be in the same write as the state change):
 

@@ -398,7 +398,7 @@ The state value `simulating` is the returnState; on pop the shell sets state to 
     ## Verdict
     fail
     ## Feedback
-    rollout returned malformed output$PQ
+    rollout.md returned malformed or empty output, so the partial state could not be played forward to a terminal state. Treat this as a fail. When reflecting, also attempt domain-level diagnosis: examine the chosen partial state and infer plausibly why the rollout was unable to complete it (constraints, dead-end intermediate values, a missing strategy step) so future expansions in this branch can avoid the same shape, not just the same format slip.$PQ
     SYN_EOF
     else
       cp ./scoped/last_terminal.md ./scoped/staged/attempt.md

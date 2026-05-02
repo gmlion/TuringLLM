@@ -26,6 +26,8 @@ The current sub-task to decompose:
 
 As {{role}}, what 3–7 sub-tasks would you break the current sub-task into to advance the original goal? Use professional judgement appropriate to the role — the same way the role would actually structure this work. Each sub-task must be self-contained (a downstream agent given that sub-task plus the same anchors must be able to act on it or recurse on it). All sub-tasks at the same layer should have similar scope.
 
+**Sub-tasks must be mutually independent.** Each one will be tackled by an isolated agent that sees only its own goal plus the same anchors — never its siblings' results, working state, or notes. Synthesis across siblings happens at the *parent* level after all children return, not inside any child. So decompose into **parallel structural components of the final artefact** — sections of a report, dimensions of a comparison, files in a project, items in a list, algorithms being studied. Do NOT decompose into **sequential workflow phases** (e.g. "gather sources → analyse → write up", "design → implement → test"); a phase-style split puts later children in frames with no access to earlier children's output, and produces hallucinated or empty sub-results. If sub-task B can't be addressed without sub-task A's output, your decomposition is structurally invalid.
+
 Write `./MEMORY.md` with this EXACT single-heredoc shape (the `## Return` block MUST be in the same heredoc as the state change — without it the shell pops with no return value, breaking the caller):
 
 ```
