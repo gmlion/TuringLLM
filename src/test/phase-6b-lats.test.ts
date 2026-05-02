@@ -378,3 +378,55 @@ describe("phase-6b b-lats: Simulate-absorb (R52, R53)", () => {
     assert.doesNotMatch(sa, /## State\s*\n\s*waiting_for_user/);
   });
 });
+
+describe("phase-6b b-lats: Back-prop primitive (R55)", () => {
+  const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+
+  test("preamble defines a backprop function (R55)", () => {
+    assert.match(s, /\bbackprop\b/);
+  });
+
+  test("backprop walks parent chain (while … parent_id) (R55)", () => {
+    const m = s.match(/backprop\s*\(\)\s*\{[\s\S]+?\n\}/);
+    assert.ok(m, "backprop function body missing");
+    assert.match(m[0], /while/);
+    assert.match(m[0], /parent_id/);
+  });
+
+  test("backprop increments n and adds reward to q (R55)", () => {
+    const m = s.match(/backprop\s*\(\)\s*\{[\s\S]+?\n\}/);
+    assert.ok(m, "backprop function body missing");
+    assert.match(m[0], /N\s*\+\s*1|n\s*=\s*N\s*\+\s*1|\$\(\(\s*N\s*\+\s*1\s*\)\)/);
+    assert.match(m[0], /Q\s*\+\s*\$REWARD|\$Q\s*\+\s*\$REWARD/);
+  });
+});
+
+describe("phase-6b b-lats: Evaluate-absorb (R54, R56, R57, R82)", () => {
+  const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+  const ea = extractInstructionBody(s, "Evaluate-absorb");
+
+  test("Evaluate-absorb maps verdict to reward 0/1 (R54)", () => {
+    assert.match(ea, /pass\)\s+REWARD=1/);
+    assert.match(ea, /fail\)\s+REWARD=0/);
+  });
+
+  test("Evaluate-absorb invokes backprop with chosen_child (R55)", () => {
+    assert.match(ea, /backprop\s+"\$CC"\s+"\$REWARD"|backprop\s+\$CC\s+\$REWARD/);
+  });
+
+  test("reward=1 marks chosen_child terminal_pass and emits ## Solution + done (R56)", () => {
+    assert.match(ea, /terminal_pass/);
+    assert.match(ea, /## Solution/);
+    assert.match(ea, /## State\s*\n\s*done/);
+  });
+
+  test("reward=0 transitions to reflecting and does NOT mark terminal_fail (R57)", () => {
+    assert.match(ea, /reflecting/);
+    assert.match(ea, /NEXT_STATE\s*=\s*reflecting|state\s*\n\s*reflecting/);
+  });
+
+  test("Record-A: no rollout intermediate states are appended to tree.md (R82)", () => {
+    assert.doesNotMatch(ea, /cat\s*>>\s*\.\/scoped\/tree\.md/);
+    assert.doesNotMatch(ea, />>\s*\.\/scoped\/tree\.md/);
+  });
+});

@@ -102,6 +102,28 @@ A bash helper invoked by Expand-push and Simulate-push. Input: a node id `X`. Ou
 
 Order is root-to-cursor (R48); within a single ancestor's file, original write order (= chronological reflection order) is preserved by the append-only invariant (R65). The "Lessons learned along this branch:" header is omitted when no ancestor has lessons (avoiding gratuitous prompt overhead in the 0-failure case).
 
+### Back-prop primitive (R55)
+
+Walks the parent chain from a starting node up to and including the root, surgically incrementing `n` by 1 and adding `reward` to `q` at every node on the path.
+
+```bash
+backprop() {
+  local START="$1"
+  local REWARD="$2"
+  local CURRENT="$START"
+  while [ -n "$CURRENT" ] && [ "$CURRENT" != "-" ]; do
+    Q=$(awk -v X="$CURRENT" '/^---$/{ib=0;next} /^id:/{ib=($2==X)} ib && /^q:/{print $2; exit}' ./scoped/tree.md)
+    N=$(awk -v X="$CURRENT" '/^---$/{ib=0;next} /^id:/{ib=($2==X)} ib && /^n:/{print $2; exit}' ./scoped/tree.md)
+    NEW_Q=$(echo "$Q + $REWARD" | bc -l)
+    NEW_N=$((N + 1))
+    awk -v X="$CURRENT" -v V="$NEW_Q" '/^---$/{ib=0;print;next} /^id:/{ib=($2==X);print;next} ib && /^q:/{print "q: " V;next} {print}' ./scoped/tree.md > ./scoped/tree.md.tmp && mv ./scoped/tree.md.tmp ./scoped/tree.md
+    awk -v X="$CURRENT" -v V="$NEW_N" '/^---$/{ib=0;print;next} /^id:/{ib=($2==X);print;next} ib && /^n:/{print "n: " V;next} {print}' ./scoped/tree.md > ./scoped/tree.md.tmp && mv ./scoped/tree.md.tmp ./scoped/tree.md
+    CURRENT=$(awk -v X="$CURRENT" '/^---$/{ib=0;next} /^id:/{ib=($2==X)} ib && /^parent_id:/{print $2; exit}' ./scoped/tree.md)
+  done
+}
+```
+
+
 ## Instruction: Initialize
 **Condition:** MEMORY state is "empty"
 **Action:** Persist scoped files, write the root node, transition to `selecting`.
@@ -400,6 +422,64 @@ The state value `simulating` is the returnState; on pop the shell sets state to 
     criterion: |
     $CR
     EVAL_EOF
+    fi
+
+## Instruction: Evaluate-absorb
+**Condition:** MEMORY state is "evaluating_completed" and `## Verdict` is present in MEMORY
+**Action:** Parse verdict; map to reward (R54). Back-propagate (R55). On reward=1: mark chosen_child terminal_pass (record-A: no intermediate materialisation, R82), emit `## Solution`, set state `done` (R56). On reward=0: transition to `reflecting` (R57; do NOT mark terminal_fail here).
+
+    CC=$(cat ./scoped/chosen_child.md)
+    VERDICT=$(awk '/^## Verdict$/{f=1; next} /^## /{f=0} f && /[a-z]/{print; exit}' ./MEMORY.md | tr -d ' ')
+
+    case "$VERDICT" in
+      pass) REWARD=1 ;;
+      fail) REWARD=0 ;;
+      *)    REWARD=0; MALFORMED=1 ;;
+    esac
+
+    backprop "$CC" "$REWARD"
+
+    if [ "$REWARD" = "1" ]; then
+      awk -v X="$CC" '
+        /^---$/ { in_block = 0; print; next }
+        /^id:/  { in_block = ($2 == X); print; next }
+        in_block && /^status:/ { print "status: terminal_pass"; next }
+        { print }
+      ' ./scoped/tree.md > ./scoped/tree.md.tmp && mv ./scoped/tree.md.tmp ./scoped/tree.md
+
+      ITER=$(cat ./scoped/iter_count.md)
+      TERMINAL=$(cat ./scoped/last_terminal.md)
+      cat > ./MEMORY.md << SOLUTION_EOF
+    ## State
+    done
+    ## Matched Instruction
+    Evaluate-absorb (solved)
+    ## Last Action
+    Reward 1 from chosen_child $CC at iteration $ITER.
+    ## Result
+    Solution found.
+    ## Solution
+    Iteration: $ITER
+    Terminal state:
+    $TERMINAL
+    SOLUTION_EOF
+    else
+      NEXT_STATE=reflecting
+      if [ -n "$MALFORMED" ]; then
+        PQ=$(printf '\n## Pending Questions\n- Q: evaluate.md returned verdict "%s" not in {pass, fail}; treated as fail.' "$VERDICT")
+      else
+        PQ=""
+      fi
+      cat > ./MEMORY.md << REFLECT_EOF
+    ## State
+    $NEXT_STATE
+    ## Matched Instruction
+    Evaluate-absorb
+    ## Last Action
+    Reward 0; back-propagated; routing to reflecting.
+    ## Result
+    Failure registered.$PQ
+    REFLECT_EOF
     fi
 
 # Sub-instructions
