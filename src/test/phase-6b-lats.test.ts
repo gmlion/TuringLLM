@@ -494,3 +494,42 @@ describe("phase-6b b-lats: termination invariants (R62, R63)", () => {
     }
   });
 });
+
+describe("phase-6b b-lats: leaf README content (R3)", () => {
+  const readme = readFileSync(resolve(INTERP, "README.md"), "utf-8");
+
+  test("README cites Zhou et al. arXiv:2310.04406 (R3)", () => {
+    assert.match(readme, /Zhou\s+et\s+al/i);
+    assert.match(readme, /2310\.04406/);
+  });
+
+  test("README has state-machine summary (R3)", () => {
+    for (const st of ["selecting", "expanding", "simulating", "evaluating", "reflecting", "done"]) {
+      assert.match(readme, new RegExp(`\\b${st}\\b`));
+    }
+  });
+
+  test("README has dynamics-and-contracts table (R3)", () => {
+    for (const dy of ["expand-node.md", "rollout.md", "evaluate.md", "reflect.md"]) {
+      assert.match(readme, new RegExp(escapeRegExp(dy)));
+    }
+  });
+
+  test("README has Run-it section with new-instance.sh and run.sh (R3)", () => {
+    assert.match(readme, /new-instance\.sh.*b-lats/);
+    assert.match(readme, /run\.sh/);
+  });
+
+  test("README has Notable behaviour section (R3)", () => {
+    assert.match(readme, /## Notable behaviour/);
+    assert.match(readme, /score\.md/i);
+    assert.match(readme, /pruning/i);
+    assert.match(readme, /ancestor/i);
+    assert.match(readme, /record-A|materiali[sz]e/i);
+  });
+
+  test("README mentions Solution / No Solution Found terminal sections (R70 witness)", () => {
+    assert.match(readme, /## Solution/);
+    assert.match(readme, /## No Solution Found/);
+  });
+});
