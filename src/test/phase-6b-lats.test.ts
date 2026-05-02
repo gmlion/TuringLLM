@@ -640,3 +640,28 @@ describe("phase-6b: parent doc updates (R73, R74, R75)", () => {
     assert.match(m6[0], /Generalised in Phase 6b|generalised in Phase 6b/i);
   });
 });
+
+describe("phase-6b: backwards compatibility (R28, R85, R86)", () => {
+  const PHASE6_SPEC = resolve(REPO, "docs/specs/2026-04-30-agent-workflows-phase-6");
+
+  test("Phase 6 spec dir still has all three artefacts (R28, R85)", () => {
+    for (const f of ["requirements.md", "design.md", "tasks.md"]) {
+      assert.ok(existsSync(resolve(PHASE6_SPEC, f)), `Phase 6 spec ${f} missing`);
+    }
+  });
+
+  test("Phase 6 spec requirements.md still mentions its own R IDs unchanged (R28, R85)", () => {
+    const s = readFileSync(resolve(PHASE6_SPEC, "requirements.md"), "utf-8");
+    assert.match(s, /\*\*R11\*\*/);
+    assert.match(s, /\*\*R29\*\*/);
+    assert.match(s, /\*\*R35\*\*/);
+    assert.match(s, /\*\*R51\*\*/);
+    assert.match(s, /\*\*R57\*\*/);
+    assert.match(s, /LATS \(Phase 6b\)/);
+  });
+
+  test("new-instance.sh copies dynamics at creation (R86 supports backward compat)", () => {
+    const sh = readFileSync(resolve(REPO, "new-instance.sh"), "utf-8");
+    assert.match(sh, /cp\s+-r\s+"\$INTERP_DIR\/dynamics"\s+"\$DIR\/dynamics"/);
+  });
+});
