@@ -57,20 +57,16 @@ Prior answer (mode 2 — substituted at push-time, may be empty):
 
 ## Instruction: Handle verdict
 **Condition:** MEMORY state is "attempted_completed" and `## Verdict` is present
-**Action:** If `## Verdict` is literally "pass", set state to "done". Otherwise (literal "fail" or any malformed value), use `## Feedback` to rewrite `./scoped/attempt.md` wholesale (`cat > ./scoped/attempt.md << EOF ... EOF` is fine — a single blob). When rewriting MEMORY, omit the `## Verdict` and `## Feedback` sections (they were already consumed) and set state to "attempted" (which re-enters "Request evaluation" on the next cycle). If `## Verdict` was neither literally "pass" nor literally "fail", additionally append a non-blocking `## Pending Questions` item flagging the malformed verdict before transitioning — do NOT set state to "waiting_for_user" (the loop must continue so the machine makes progress).
-
-## Instruction: Finish
-**Condition:** MEMORY state is "done"
-**Action:** Read `./scoped/attempt.md`. Write `./MEMORY.md` with this EXACT single-heredoc shape (the `## Return` block MUST be in the same heredoc as the state change — without it the caller receives no return value):
+**Action:** If `## Verdict` is literally "pass", write `./MEMORY.md` with the FULL done state in a SINGLE heredoc (the `## Return` block MUST be in the same heredoc as the state change — at depth>=2 the shell pops on state is "done" BEFORE any subsequent instruction runs, so a separate Finish instruction would be unreachable):
 
 ```
 cat > ./MEMORY.md << FINEOF
 ## State
 done
 ## Matched Instruction
-Finish
+Handle verdict
 ## Last Action
-Finalized accepted attempt.
+Accepted attempt.
 ## Result
 Evaluator-optimizer accepted.
 ## Refined
@@ -80,3 +76,5 @@ answer: |
 $(cat ./scoped/attempt.md | sed 's/^/  /')
 FINEOF
 ```
+
+Otherwise (literal "fail" or any malformed value), use `## Feedback` to rewrite `./scoped/attempt.md` wholesale (`cat > ./scoped/attempt.md << EOF ... EOF` is fine — a single blob). When rewriting MEMORY, omit the `## Verdict` and `## Feedback` sections (they were already consumed) and set state to "attempted" (which re-enters "Request evaluation" on the next cycle). If `## Verdict` was neither literally "pass" nor literally "fail", additionally append a non-blocking `## Pending Questions` item flagging the malformed verdict before transitioning — do NOT set state to "waiting_for_user" (the loop must continue so the machine makes progress).

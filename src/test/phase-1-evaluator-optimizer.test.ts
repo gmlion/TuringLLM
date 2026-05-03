@@ -18,14 +18,14 @@ describe("1b evaluator-optimizer", () => {
     assert.ok(existsSync(resolve(INTERP, "operators/evaluate.md")), "operators/evaluate.md missing");
   });
 
-  test("strategy declares the four required states", () => {
+  test("strategy declares the three required states", () => {
     // After Phase-7 migration INSTRUCTIONS.md is a marker; the strategy lives in the operator file.
+    // Note: "done" is no longer a condition (Finish was dead code removed by F3 fix).
     const strategy = readFileSync(resolve(INTERP, "operators/refine.md"), "utf-8");
     for (const needle of [
       'state is "empty"',
       'state is "attempted"',
       'state is "attempted_completed"',
-      'state is "done"',
     ]) {
       assert.match(strategy, new RegExp(needle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `strategy missing condition: ${needle}`);
     }
