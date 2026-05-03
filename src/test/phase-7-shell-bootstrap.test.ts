@@ -43,3 +43,37 @@ describe("R11/R12/R17: shell bootstrap reads .root-operator and creates frame f0
     }
   });
 });
+
+describe("R12: {{program}} substitution at bootstrap — edge cases", () => {
+  test("multi-line PROGRAM.md substitutes correctly", async () => {
+    const dir = makeTmpInstance(
+      "operators/test-op.md\n",
+      "Line one\nLine two\nLine three",
+      "# Op\nThe program is:\n{{program}}\n",
+    );
+    try {
+      const { startupBootstrap } = await import(pathToFileURL(resolve(REPO, "dist/main.js")).href);
+      startupBootstrap(dir);
+      const inst = readFileSync(join(dir, "frames/f000-test-op/INSTRUCTIONS.md"), "utf-8");
+      assert.match(inst, /Line one\nLine two\nLine three/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+  test("operator file with no {{program}} placeholder is left intact", async () => {
+    const dir = makeTmpInstance(
+      "operators/test-op.md\n",
+      "anything",
+      "# Op\nNo placeholder here.\n",
+    );
+    try {
+      const { startupBootstrap } = await import(pathToFileURL(resolve(REPO, "dist/main.js")).href);
+      startupBootstrap(dir);
+      const inst = readFileSync(join(dir, "frames/f000-test-op/INSTRUCTIONS.md"), "utf-8");
+      assert.match(inst, /No placeholder here\./);
+      assert.doesNotMatch(inst, /\{\{program\}\}/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
