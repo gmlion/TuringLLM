@@ -10,6 +10,7 @@ import { applyPop, applyPush, type CallStack } from "../call-stack.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const INTERP = resolve(__dirname, "../../interpreters/1-iterative-refinement/d-cove");
+const REPO = resolve(__dirname, "../..");
 
 // Module-level helper: creates the root frame directory structure and returns a
 // pre-populated call stack pointing at frames/f000-strategy. `tmp` is passed
@@ -34,6 +35,7 @@ describe("d-cove", () => {
       "INSTRUCTIONS.md",
       "PROGRAM.md",
       "README.md",
+      "operators/cove.md",
       "operators/verify.md",
       "operators/answer-independently.md",
     ]) {
@@ -42,7 +44,8 @@ describe("d-cove", () => {
   });
 
   test("strategy declares the four required states", () => {
-    const strategy = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+    // After Phase-7 migration INSTRUCTIONS.md is a marker; the strategy lives in the operator file.
+    const strategy = readFileSync(resolve(INTERP, "operators/cove.md"), "utf-8");
     for (const needle of [
       'state is "empty"',
       'state is "drafted"',
@@ -58,7 +61,8 @@ describe("d-cove", () => {
   });
 
   test("strategy uses ./scoped/draft.md and ## Return splicing", () => {
-    const strategy = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+    // After Phase-7 migration INSTRUCTIONS.md is a marker; the strategy lives in the operator file.
+    const strategy = readFileSync(resolve(INTERP, "operators/cove.md"), "utf-8");
     assert.match(strategy, /\.\/scoped\/draft\.md/, "strategy should reference ./scoped/draft.md");
     assert.match(strategy, /## Return/, "strategy should mention ## Return");
     assert.doesNotMatch(strategy, /^## Draft\b/m, "strategy should not use ## Draft as a MEMORY section");
@@ -331,5 +335,54 @@ describe("d-cove", () => {
       assert.match(lines[1], /^- V2: q2; pending$/, "V2 should still be pending");
       assert.match(lines[2], /^- V3: q3; pending$/, "V3 should still be pending");
     });
+  });
+});
+
+describe("R20-R27 Phase 7 migration: marker + canonical operator", () => {
+  const LEAF = "interpreters/1-iterative-refinement/d-cove";
+
+  test("R21: INSTRUCTIONS.md is single-line marker pointing at operators/cove.md", () => {
+    const inst = readFileSync(resolve(REPO, LEAF, "INSTRUCTIONS.md"), "utf-8").trim();
+    assert.equal(inst, "operators/cove.md");
+  });
+
+  test("R20/R22: operators/cove.md exists and is the canonical strategy", () => {
+    const op = resolve(REPO, LEAF, "operators/cove.md");
+    assert.ok(existsSync(op));
+    const content = readFileSync(op, "utf-8");
+    assert.match(content, /# (Operator|Strategy):.*Chain-of-Verification/i);
+  });
+
+  test("R47: bimodal Initialize detects {{program}} vs {{task}}", () => {
+    const op = readFileSync(resolve(REPO, LEAF, "operators/cove.md"), "utf-8");
+    // Both literal tokens must be present somewhere in the file
+    assert.match(op, /\{\{program\}\}/, "operators/cove.md must contain {{program}} placeholder");
+    assert.match(op, /\{\{task\}\}/, "operators/cove.md must contain {{task}} placeholder");
+    // Detection mechanism: grep -qF '{{task}}' or similar literal-token check
+    assert.match(op, /grep.*-qF.*\{\{task\}\}/, "bimodal detect must use grep -qF '{{task}}'");
+  });
+
+  test("R23/R45: terminal cycle emits ## Return\\nanswer: and ## Revised preserved", () => {
+    const op = readFileSync(resolve(REPO, LEAF, "operators/cove.md"), "utf-8");
+    assert.match(op, /## Return\s*\n\s*answer:/, "operators/cove.md must emit ## Return with answer key");
+    assert.match(op, /## Revised/, "operators/cove.md must write ## Revised for human inspection");
+  });
+
+  test("R25: internal push uses operators/verify.md path (not legacy paths)", () => {
+    const op = readFileSync(resolve(REPO, LEAF, "operators/cove.md"), "utf-8");
+    // Must not reference the old directory name (split to avoid triggering the rename pin)
+    const forbidden = new RegExp("dyn" + "amics/");
+    assert.doesNotMatch(op, forbidden);
+    // verify sub-operator is pushed
+    assert.match(op, /operators\/verify\.md/);
+  });
+
+  test("R27: AFlow-lite {{prior_answer}} non-empty treats it as draft to verify", () => {
+    const op = readFileSync(resolve(REPO, LEAF, "operators/cove.md"), "utf-8");
+    // prior_answer placeholder must exist
+    assert.match(op, /\{\{prior_answer\}\}/, "operators/cove.md must contain {{prior_answer}} placeholder");
+    // In AFlow-lite mode, if prior_answer is non-empty, it is used as the draft
+    assert.match(op, /prior_answer.*non-empty|non-empty.*prior_answer/i,
+      "operators/cove.md must mention using prior_answer as draft when non-empty");
   });
 });
