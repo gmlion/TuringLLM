@@ -9,6 +9,7 @@ import { applyPop, applyPush, type CallStack } from "../call-stack.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+const REPO = resolve(__dirname, "../..");
 const INTERP = resolve(__dirname, "../../interpreters/1-iterative-refinement/c-reflexion");
 
 // Module-level helper: creates the root frame directory structure and returns a
@@ -38,7 +39,8 @@ describe("1c reflexion", () => {
   });
 
   test("strategy declares every required state", () => {
-    const strategy = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+    // After Phase-7 migration INSTRUCTIONS.md is a marker; the strategy lives in the operator file.
+    const strategy = readFileSync(resolve(INTERP, "operators/reflexion.md"), "utf-8");
     for (const needle of [
       'state is "empty"',
       'state is "attempting"',
@@ -53,14 +55,16 @@ describe("1c reflexion", () => {
   });
 
   test("strategy uses all three scoped files", () => {
-    const strategy = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+    // After Phase-7 migration INSTRUCTIONS.md is a marker; the strategy lives in the operator file.
+    const strategy = readFileSync(resolve(INTERP, "operators/reflexion.md"), "utf-8");
     assert.match(strategy, /\.\/scoped\/attempt\.md/, "strategy should reference ./scoped/attempt.md");
     assert.match(strategy, /\.\/scoped\/criterion\.md/, "strategy should reference ./scoped/criterion.md");
     assert.match(strategy, /\.\/scoped\/lessons\.md/, "strategy should reference ./scoped/lessons.md");
   });
 
   test("strategy uses surgical append for lessons.md (R23)", () => {
-    const strategy = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+    // After Phase-7 migration INSTRUCTIONS.md is a marker; the strategy lives in the operator file.
+    const strategy = readFileSync(resolve(INTERP, "operators/reflexion.md"), "utf-8");
     // Must have echo + >> for surgical append
     assert.match(strategy, /echo/, "strategy must use echo for lessons.md append");
     assert.match(strategy, />>.*\.\/scoped\/lessons\.md|\.\/scoped\/lessons\.md.*>>/, "strategy must use >> (append) for lessons.md");
@@ -70,12 +74,19 @@ describe("1c reflexion", () => {
       "strategy header must explicitly forbid wholesale rewrites of lessons.md");
   });
 
-  test("strategy does not use ## Lessons or ## Attempt or ## Criterion as MEMORY sections", () => {
-    const strategy = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
-    // The strategy should reference ## Verdict and ## Feedback (spliced from evaluate.md) but not ## Attempt/## Criterion/## Lessons
-    assert.doesNotMatch(strategy, /^## Lessons\b/m, "strategy should not use ## Lessons in MEMORY");
+  test("strategy does not use ## Attempt or ## Criterion as intermediate MEMORY sections", () => {
+    // After Phase-7 migration INSTRUCTIONS.md is a marker; the strategy lives in the operator file.
+    const strategy = readFileSync(resolve(INTERP, "operators/reflexion.md"), "utf-8");
+    // ## Attempt and ## Criterion must never appear as MEMORY sections in the strategy
+    // (they live exclusively in ./scoped/ files during execution).
+    // Note: ## Lessons IS written by the Finish instruction as terminal output — that is intentional.
     assert.doesNotMatch(strategy, /^## Attempt\b/m, "strategy should not use ## Attempt in MEMORY");
     assert.doesNotMatch(strategy, /^## Criterion\b/m, "strategy should not use ## Criterion in MEMORY");
+    // Verify ## Lessons only appears in the Finish instruction (terminal output), not in intermediate states.
+    // Split off everything before the Finish instruction and check no ## Lessons there.
+    const beforeFinish = strategy.split(/^## Instruction: Finish/m)[0] ?? "";
+    assert.doesNotMatch(beforeFinish, /^## Lessons\b/m,
+      "strategy should not use ## Lessons as an intermediate MEMORY section (only terminal output in Finish)");
   });
 
   test("evaluate dynamic uses {{attempt}} and {{criterion}} and writes ## Return (byte-equal with b)", () => {
@@ -279,7 +290,8 @@ describe("1c reflexion", () => {
       // not via actual bash, but by verifying the strategy's shell instructions
       // call for surgical echo >> appends and that lessons.md grows correctly.
 
-      const strategy = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+      // After Phase-7 migration INSTRUCTIONS.md is a marker; the strategy lives in the operator file.
+      const strategy = readFileSync(resolve(INTERP, "operators/reflexion.md"), "utf-8");
 
       // Verify surgical append is specified in the Accumulate lesson instruction.
       const accumulateSection = strategy.split(/^## Instruction: Accumulate lesson/m)[1] ?? "";
@@ -459,5 +471,50 @@ describe("1c reflexion", () => {
       assert.match(r2.memoryAfterAccumulate, /^## State\nattempting/m,
         "second cycle memory should transition to attempting after accumulate");
     });
+  });
+});
+
+describe("R20-R27 Phase 7 migration: marker + canonical operator", () => {
+  const LEAF = "interpreters/1-iterative-refinement/c-reflexion";
+
+  test("R21: INSTRUCTIONS.md is single-line marker pointing at operators/reflexion.md", () => {
+    const inst = readFileSync(resolve(REPO, LEAF, "INSTRUCTIONS.md"), "utf-8").trim();
+    assert.equal(inst, "operators/reflexion.md");
+  });
+
+  test("R20/R22: operators/reflexion.md exists and is the canonical strategy", () => {
+    const op = resolve(REPO, LEAF, "operators/reflexion.md");
+    assert.ok(existsSync(op));
+    const content = readFileSync(op, "utf-8");
+    assert.match(content, /# (Operator|Strategy):.*Reflexion/i);
+  });
+
+  test("R47: bimodal Initialize detects standalone vs AFlow-lite mode", () => {
+    const op = readFileSync(resolve(REPO, LEAF, "operators/reflexion.md"), "utf-8");
+    assert.match(op, /\{\{program\}\}/, "operators/reflexion.md must contain {{program}} placeholder");
+    assert.match(op, /\{\{task\}\}/, "operators/reflexion.md must contain {{task}} placeholder");
+    assert.match(op, /grep.*-qF.*\{\{task\}\}/, "bimodal detect must use grep -qF '{{task}}'");
+  });
+
+  test("R45/R46: terminal cycle emits ## Return\\nanswer: and ## Refined + ## Lessons", () => {
+    const op = readFileSync(resolve(REPO, LEAF, "operators/reflexion.md"), "utf-8");
+    assert.match(op, /## Return\s*\n\s*answer:/, "operators/reflexion.md must emit ## Return with answer key");
+    assert.match(op, /## Refined/, "operators/reflexion.md must write ## Refined for human inspection");
+    assert.match(op, /## Lessons/, "operators/reflexion.md must write ## Lessons for human inspection");
+  });
+
+  test("R27: internal pushes use operators/ paths (not the old dyn/ prefix)", () => {
+    const op = readFileSync(resolve(REPO, LEAF, "operators/reflexion.md"), "utf-8");
+    assert.doesNotMatch(op, new RegExp("dyn" + "amics/"));
+    assert.match(op, /operators\/evaluate\.md/);
+    assert.match(op, /operators\/reflect\.md/);
+  });
+
+  test("R25: malformed-verdict path keeps the loop alive (no waiting_for_user)", () => {
+    const op = readFileSync(resolve(REPO, LEAF, "operators/reflexion.md"), "utf-8");
+    const section = op.split(/^## Instruction: Route on verdict/m)[1] ?? "";
+    assert.match(section, /Pending Questions/, "malformed-verdict path must add a Pending Questions item");
+    assert.match(section, /do NOT set state to "waiting_for_user"/i,
+      "malformed-verdict path must explicitly forbid waiting_for_user");
   });
 });
