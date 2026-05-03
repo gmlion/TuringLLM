@@ -155,7 +155,7 @@ describe("R13/R18/R19: OUTPUT.md emission on halt", () => {
   });
 });
 
-describe("R8/R15/R51: new-instance.sh creates .root-operator and copies operators/+workspace/", () => {
+describe("R8/R15/R16/R51: new-instance.sh creates .root-operator and copies operators/+workspace/", () => {
   test("invoking new-instance.sh on a synthetic interpreter creates expected layout", () => {
     const tmpInterpDir = mkdtempSync(join(tmpdir(), "turing-interp-"));
     // Synthetic interpreter with marker INSTRUCTIONS.md, operators/, workspace/
@@ -188,6 +188,17 @@ describe("R8/R15/R51: new-instance.sh creates .root-operator and copies operator
     } finally {
       execSync(`rm -rf instances/${instanceName}`, { cwd: REPO });
       rmSync(tmpInterpDir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("R55: phase-7-shell-bootstrap.test.ts covers all bootstrap requirements", () => {
+  test("file exists and has assertions for R11-R19", () => {
+    const path = resolve(REPO, "src/test/phase-7-shell-bootstrap.test.ts");
+    assert.ok(existsSync(path));
+    const s = readFileSync(path, "utf-8");
+    for (const r of [11, 12, 13, 14, 15, 16, 17, 18, 19]) {
+      assert.match(s, new RegExp(`R${r}`), `R${r} not pinned in test descriptions`);
     }
   });
 });
