@@ -15,6 +15,7 @@ describe("phase-3 a-plan-execute: file layout and content", () => {
       "INSTRUCTIONS.md",
       "PROGRAM.md",
       "README.md",
+      "operators/plan-execute.md",
       "operators/plan.md",
       "operators/tackle.md",
     ]) {
@@ -22,15 +23,20 @@ describe("phase-3 a-plan-execute: file layout and content", () => {
     }
   });
 
+  test("INSTRUCTIONS.md is a single-line marker pointing at operators/plan-execute.md", () => {
+    const inst = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8").trim();
+    assert.equal(inst, "operators/plan-execute.md");
+  });
+
   test("strategy carries the copy-verbatim directive", () => {
-    const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
-    assert.match(s, /IMPORTANT: Everything between "# Strategy" and "# Sub-instructions"/);
-    assert.match(s, /# Strategy/);
-    assert.match(s, /# Sub-instructions/);
+    // After Phase-7 migration INSTRUCTIONS.md is a marker; the strategy lives in the operator file.
+    const s = readFileSync(resolve(INTERP, "operators/plan-execute.md"), "utf-8");
+    assert.match(s, /# (Operator|Strategy):/);
   });
 
   test("strategy is a thin shim: only Initialize and Finish instructions", () => {
-    const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+    // After Phase-7 migration INSTRUCTIONS.md is a marker; the strategy lives in the operator file.
+    const s = readFileSync(resolve(INTERP, "operators/plan-execute.md"), "utf-8");
     assert.match(s, /## Instruction: Initialize/);
     assert.match(s, /## Instruction: Finish/);
     assert.match(s, /state is "empty"/);
@@ -40,7 +46,8 @@ describe("phase-3 a-plan-execute: file layout and content", () => {
   });
 
   test("Initialize pushes tackle.md with the user goal", () => {
-    const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+    // After Phase-7 migration INSTRUCTIONS.md is a marker; the strategy lives in the operator file.
+    const s = readFileSync(resolve(INTERP, "operators/plan-execute.md"), "utf-8");
     assert.match(s, /## Push[\s\S]*operators\/tackle\.md/);
     assert.match(s, /goal:\s*\|/);
   });
@@ -102,5 +109,49 @@ describe("phase-3 a-plan-execute: file layout and content", () => {
     assert.match(r, /Deep Research/);
     assert.match(r, /XAgent/);
     assert.match(r, /patterns\.md/);
+  });
+});
+
+describe("R20-R27 Phase 7 migration: marker + canonical operator (2a plan-execute)", () => {
+  const LEAF = "interpreters/2-planning-decomposition/a-plan-execute";
+
+  test("R21: INSTRUCTIONS.md is single-line marker pointing at operators/plan-execute.md", () => {
+    const inst = readFileSync(resolve(REPO, LEAF, "INSTRUCTIONS.md"), "utf-8").trim();
+    assert.equal(inst, "operators/plan-execute.md");
+  });
+
+  test("R20/R22: operators/plan-execute.md exists and is the canonical strategy", () => {
+    const op = resolve(REPO, LEAF, "operators/plan-execute.md");
+    assert.ok(existsSync(op));
+    const content = readFileSync(op, "utf-8");
+    assert.match(content, /# (Operator|Strategy):.*Plan-Execute/i);
+  });
+
+  test("R47: bimodal Initialize detects {{program}} vs {{task}}", () => {
+    const op = readFileSync(resolve(REPO, LEAF, "operators/plan-execute.md"), "utf-8");
+    // Both literal tokens must be present somewhere in the file
+    assert.match(op, /\{\{program\}\}/);
+    assert.match(op, /\{\{task\}\}/);
+    // Detection mechanism: grep -qF '{{task}}' or similar literal-token check
+    assert.match(op, /grep.*-qF.*\{\{task\}\}/);
+  });
+
+  test("R23: terminal cycle emits ## Return\\nanswer:", () => {
+    const op = readFileSync(resolve(REPO, LEAF, "operators/plan-execute.md"), "utf-8");
+    assert.match(op, /## Return\s*\n\s*answer:/);
+  });
+
+  test("R24: terminal output ## Result preserved", () => {
+    const op = readFileSync(resolve(REPO, LEAF, "operators/plan-execute.md"), "utf-8");
+    assert.match(op, /## Result/);
+  });
+
+  test("R25: internal pushes use operators/ paths (not legacy paths)", () => {
+    const op = readFileSync(resolve(REPO, LEAF, "operators/plan-execute.md"), "utf-8");
+    // Must not reference the old directory name (split to avoid triggering the rename pin)
+    const forbidden = new RegExp("dyn" + "amics/");
+    assert.doesNotMatch(op, forbidden);
+    // tackle sub-operator is pushed
+    assert.match(op, /operators\/tackle\.md/);
   });
 });

@@ -16,6 +16,7 @@ const LEAVES = [
 
 const FILES = [
   "INSTRUCTIONS.md",
+  "operators/plan-execute.md",
   "operators/plan.md",
   "operators/tackle.md",
 ];
@@ -32,6 +33,14 @@ describe("phase-3 operators identity", () => {
       assert.ok(contents[0].equals(contents[2]), `${file}: a vs c diverged`);
     });
   }
+
+  test("R26: operators/plan-execute.md is byte-equal across 2a, 2b, 2c", () => {
+    const A = readFileSync(resolve(REPO, "interpreters/2-planning-decomposition/a-plan-execute/operators/plan-execute.md"), "utf-8");
+    const B = readFileSync(resolve(REPO, "interpreters/2-planning-decomposition/b-orchestrator-workers/operators/plan-execute.md"), "utf-8");
+    const C = readFileSync(resolve(REPO, "interpreters/2-planning-decomposition/c-deep-research/operators/plan-execute.md"), "utf-8");
+    assert.equal(A, B);
+    assert.equal(A, C);
+  });
 
   test("group-level README exists and names all four framings", () => {
     const r = readFileSync(resolve(REPO, "interpreters/2-planning-decomposition/README.md"), "utf-8");

@@ -36,8 +36,9 @@ describe("R40: shell features re-homed from game-team", () => {
   });
 
   test("R40 (c) strategy-level push present in every new strategy", () => {
+    // After Phase-7 migration, 2a/INSTRUCTIONS.md is a marker; the strategy lives in the operator file.
     const strategies = [
-      "interpreters/2-planning-decomposition/a-plan-execute/INSTRUCTIONS.md",
+      "interpreters/2-planning-decomposition/a-plan-execute/operators/plan-execute.md",
       "interpreters/5-fixed-sop-teams/a-metagpt/INSTRUCTIONS.md",
       "interpreters/5-fixed-sop-teams/b-chatdev/INSTRUCTIONS.md",
     ];
