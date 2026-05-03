@@ -456,6 +456,35 @@ describe("R3: leaf README full content", () => {
   });
 });
 
+describe("R56: source-spec parent doc updates", () => {
+  const PARENT = "docs/agent-workflows/requirements.md";
+  test("section heading: 'Reusable operators library'", () => {
+    const content = readFileSync(resolve(REPO, PARENT), "utf-8");
+    assert.match(content, /## Reusable operators library|# Reusable operators library/);
+    // Old heading should be gone
+    assert.doesNotMatch(content, /Reusable dynamics library/);
+  });
+  test("table row for expand-workflow.md", () => {
+    const content = readFileSync(resolve(REPO, PARENT), "utf-8");
+    assert.match(content, /\|\s*`expand-workflow\.md`\s*\|/);
+  });
+  test("Phase 7 section mentions actual deliverables (operator library, no nested shell)", () => {
+    const content = readFileSync(resolve(REPO, PARENT), "utf-8");
+    // The Phase 7 section should mention the real library and AFlow citation
+    const phase7Match = content.match(/## Phase 7[\s\S]+?(?=## Phase 8|$)/);
+    assert.ok(phase7Match, "Phase 7 section not found");
+    const p7 = phase7Match[0];
+    assert.match(p7, /aflow-lite/i);
+    assert.match(p7, /arXiv:2410\.10762/);
+    // Operator library list (refine,reflexion,cove,plan-execute,debate)
+    for (const op of ["refine", "reflexion", "cove", "plan-execute", "debate"]) {
+      assert.match(p7, new RegExp(`\\b${op}\\b`), `Phase 7 section missing operator ${op}`);
+    }
+    // No more speculative "evaluate-workflow nested shell" prose
+    assert.doesNotMatch(p7, /nested shell invocation/i);
+  });
+});
+
 describe("Negative pins R61–R72: aflow-lite is constrained as designed", () => {
   const OP = "interpreters/7-meta-framework/a-aflow-lite/operators/aflow-lite.md";
   const AFLOW_OPERATORS_DIR = "interpreters/7-meta-framework/a-aflow-lite/operators";

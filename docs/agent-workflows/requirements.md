@@ -164,6 +164,7 @@ is copied wholesale by `new-instance.sh`. Names and contracts are normative.
 | `expand-node.md` | 6 | ## Partial State, ## Task | `## Children` | 1 |
 | `score.md`       | 6 | ## Partial State, ## Task | `## Value`    | 1 |
 | `rollout.md`     | 6b | ## Partial State, ## Task | ## Terminal State | 1 |
+| `expand-workflow.md` | 7 | `## Partial State`, `## Task` | `## Children` | 1 |
 | `evaluate-workflow.md` | 7 | `## Candidate Workflow` | `## Score`, `## Trace` | 2 |
 
 ---
@@ -496,26 +497,29 @@ Phase 7 also needs.
 
 ---
 
-## Phase 7 — Meta-framework (patterns.md Group 7)
+## Phase 7 — Meta-frameworks: AFlow-lite (`interpreters/7-meta-framework/a-aflow-lite/`)
 
-The framework composes earlier interpreters as candidate workflows. Requires
-everything below to already work.
+A lightweight v1 of the AFlow meta-framework (Zhang et al. 2024, *AFlow: Automating Agentic Workflow Generation*, arXiv:2410.10762). aflow-lite runs MCTS over candidate workflows from a hardcoded five-operator library:
 
-**Deliverable:** `interpreters/aflow-lite/`.
+- `refine` — Evaluator-Optimizer pattern (canonical at `1-iterative-refinement/b-evaluator-optimizer/operators/refine.md`)
+- `reflexion` — Reflexion (1c)
+- `cove` — Chain-of-Verification (1d)
+- `plan-execute` — Plan-and-Execute (2a)
+- `debate` — Multi-Agent Debate (4a)
 
-- Strategy: MCTS controller over a library of Operators (Ensemble, Review,
-  Revise, …) seeded from earlier phases. Tree persisted in MEMORY
-  (`## MCTS Tree`).
-- New operator: `evaluate-workflow.md` — materialises a candidate workflow
-  as a throwaway `INSTRUCTIONS.md` in `workspace/candidates/NNN/`, launches
-  it via a nested shell invocation (same binary, different instance dir),
-  collects the score from its final MEMORY.
-- **Reuse:** operator library seeded from 1a (self-refine), 1c (reflexion),
-  3a (plan-execute, covering the Orchestrator–Workers and Deep Research
-  framings as demos), 5 (debate), 5b (MoA). MCTS helper imported from
-  Phase 6b.
-- Demo `PROGRAM.md`: a small automatically-scorable benchmark (a subset of
-  GSM8K or HumanEval).
+Each tree node is a candidate workflow (comma-separated operator names). Expansion uses the new `expand-workflow.md` operator (k=5 LLM-driven workflow children). Simulation runs each candidate on 3 GSM8K items by sequentially pushing operators with `{{task}}` and `{{prior_answer}}` push-args, comparing the integer answer extracted from the operator chain's final `## Answer` to the expected one. Reward is the mean fraction passing.
+
+The MCTS controller is reused verbatim from Phase 6b LATS (UCT, back-prop, tree ledger schema). No meta-reflexion in v1 (the operator `reflexion.md` runs INSIDE workflows, not at the meta level). No nested shell instances — all workflow execution happens via push/pop within one instance.
+
+**Deferred to future scope:**
+- `MoA` in the library (blocked on per-prompt model selection in the harness).
+- Cross-iteration meta-reflexion (a higher meta-meta-spec).
+- Domains beyond GSM8K.
+
+**Structural changes shipped alongside aflow-lite:**
+- Project-wide rename: pushable instruction subdirectories are now called `operators/` everywhere (file paths, source identifiers, prose). The old name was `dynamics` (prior phases).
+- New shell `.root-operator` bootstrap: `instances/<name>/.root-operator` configures the canonical operator the shell pushes at startup; PROGRAM.md content is substituted as `{{program}}`. At halt, the operator's `## Return` block is written to `instances/<name>/OUTPUT.md`.
+- Per-interpreter migration: every existing interpreter's strategy moved from `INSTRUCTIONS.md` (now a single-line marker file like `operators/refine.md`) into `operators/<canonical>.md`. The same canonical operator is then referenced standalone (via the marker pattern) AND reused by aflow-lite's library — no duplication.
 
 ---
 
