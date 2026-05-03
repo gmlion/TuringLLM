@@ -41,7 +41,7 @@ Then wholesale-rewrite MEMORY:
     ## Result
     Design phase initiated.
     ## Push
-    dynamics/dialogue.md
+    operators/dialogue.md
     ## Push-Args
     participants: |
       ceo,cto
@@ -82,7 +82,7 @@ Then update state via in-place sed (single-line replacement, no template-emissio
     ## Result
     Coding phase initiated.
     ## Push
-    dynamics/dialogue.md
+    operators/dialogue.md
     ## Push-Args
     participants: |
       coder,reviewer
@@ -118,7 +118,7 @@ Then update state via in-place sed (single-line replacement, no template-emissio
     ## Result
     Coding retry initiated.
     ## Push
-    dynamics/dialogue.md
+    operators/dialogue.md
     ## Push-Args
     participants: |
       coder,reviewer
@@ -154,7 +154,7 @@ Then update state via in-place sed (single-line replacement, no template-emissio
     ## Result
     Testing phase initiated.
     ## Push
-    dynamics/dialogue.md
+    operators/dialogue.md
     ## Push-Args
     participants: |
       tester,reviewer
@@ -190,7 +190,7 @@ Then update state via in-place sed (single-line replacement, no template-emissio
     ## Result
     Testing retry initiated.
     ## Push
-    dynamics/dialogue.md
+    operators/dialogue.md
     ## Push-Args
     participants: |
       tester,reviewer
@@ -226,7 +226,7 @@ Then update state via in-place sed (single-line replacement, no template-emissio
     ## Result
     Documenting phase initiated.
     ## Push
-    dynamics/dialogue.md
+    operators/dialogue.md
     ## Push-Args
     participants: |
       writer,reviewer
@@ -262,7 +262,7 @@ Then update state via in-place sed (single-line replacement, no template-emissio
     ## Result
     Documenting retry initiated.
     ## Push
-    dynamics/dialogue.md
+    operators/dialogue.md
     ## Push-Args
     participants: |
       writer,reviewer

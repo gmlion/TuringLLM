@@ -57,7 +57,7 @@ self-contained.
 
 ## Shared dynamic: `evaluate.md`
 
-`b-evaluator-optimizer/dynamics/evaluate.md` is the canonical
+`b-evaluator-optimizer/operators/evaluate.md` is the canonical
 copy of the evaluator. `c-reflexion`, plus `a-metagpt` and
 `b-chatdev` in Group 5, ship byte-equal copies. Identity is
 pinned by `src/test/phase-dynamics-identity.test.ts`. Don't

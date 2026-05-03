@@ -60,9 +60,9 @@ diff -u instances/mg/workspace/ instances/cd/workspace/
 
 ## Shared dynamic: `evaluate.md`
 
-Both leaves ship a byte-equal copy of `dynamics/evaluate.md` (the
+Both leaves ship a byte-equal copy of `operators/evaluate.md` (the
 canonical copy lives at
-`../1-iterative-refinement/b-evaluator-optimizer/dynamics/evaluate.md`).
+`../1-iterative-refinement/b-evaluator-optimizer/operators/evaluate.md`).
 The four-way identity across `b-evaluator-optimizer`,
 `c-reflexion`, `a-metagpt`, `b-chatdev` is pinned by
 `src/test/phase-dynamics-identity.test.ts`. The evaluator is

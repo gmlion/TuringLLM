@@ -26,7 +26,7 @@ Identified producer role and pushed tackle.md with the user goal as the root anc
 ## Result
 Tackling.
 ## Push
-dynamics/tackle.md
+operators/tackle.md
 ## Push-Args
 goal: |
   <verbatim PROGRAM.md body, every line indented two spaces>

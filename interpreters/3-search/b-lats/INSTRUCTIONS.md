@@ -213,7 +213,7 @@ Then wholesale-rewrite MEMORY:
 
 ## Instruction: Expand-push
 **Condition:** MEMORY state is "expanding"
-**Action:** Stage push-args via the Compose-partial-state primitive; emit `## Push dynamics/expand-node.md`.
+**Action:** Stage push-args via the Compose-partial-state primitive; emit `## Push operators/expand-node.md`.
 
     ID=$(cat ./scoped/cursor.md)
     compose_partial_state "$ID" > ./scoped/staged/partial_state.md
@@ -234,7 +234,7 @@ Then emit MEMORY:
     ## Result
     Push queued.
     ## Push
-    dynamics/expand-node.md
+    operators/expand-node.md
     ## Push-Args
     partial_state: |
     $PS
@@ -345,7 +345,7 @@ R50: `## Pending Questions` is appended; state is NEVER `waiting_for_user` here 
 
 ## Instruction: Simulate-push
 **Condition:** MEMORY state is "simulating"
-**Action:** Stage push-args from chosen_child (not cursor); emit `## Push dynamics/rollout.md`.
+**Action:** Stage push-args from chosen_child (not cursor); emit `## Push operators/rollout.md`.
 
     CC=$(cat ./scoped/chosen_child.md)
     compose_partial_state "$CC" > ./scoped/staged/partial_state.md
@@ -366,7 +366,7 @@ Then emit MEMORY:
     ## Result
     Push queued.
     ## Push
-    dynamics/rollout.md
+    operators/rollout.md
     ## Push-Args
     partial_state: |
     $PS
@@ -378,7 +378,7 @@ The state value `simulating` is the returnState; on pop the shell sets state to 
 
 ## Instruction: Simulate-absorb
 **Condition:** MEMORY state is "simulating_completed"
-**Action:** Persist `## Terminal State` to `./scoped/last_terminal.md`. If non-empty, push `dynamics/evaluate.md` with `attempt` = last_terminal and `criterion` = task. If empty/missing, synthesise a `fail` verdict directly and route to `evaluating_completed` (R53).
+**Action:** Persist `## Terminal State` to `./scoped/last_terminal.md`. If non-empty, push `operators/evaluate.md` with `attempt` = last_terminal and `criterion` = task. If empty/missing, synthesise a `fail` verdict directly and route to `evaluating_completed` (R53).
 
     # Extract body of ## Terminal State (or empty if missing)
     awk '/^## Terminal State$/{f=1; next} /^## /{f=0} f' ./MEMORY.md > ./scoped/last_terminal.md
@@ -415,7 +415,7 @@ The state value `simulating` is the returnState; on pop the shell sets state to 
     ## Result
     Push queued.
     ## Push
-    dynamics/evaluate.md
+    operators/evaluate.md
     ## Push-Args
     attempt: |
     $AT
@@ -484,7 +484,7 @@ The state value `simulating` is the returnState; on pop the shell sets state to 
 
 ## Instruction: Reflect-push
 **Condition:** MEMORY state is "reflecting"
-**Action:** Stage push-args; emit `## Push dynamics/reflect.md`.
+**Action:** Stage push-args; emit `## Push operators/reflect.md`.
 
     cp ./scoped/last_terminal.md ./scoped/staged/attempt.md
     echo "fail" > ./scoped/staged/verdict.md
@@ -506,7 +506,7 @@ Then emit MEMORY:
     ## Result
     Push queued.
     ## Push
-    dynamics/reflect.md
+    operators/reflect.md
     ## Push-Args
     attempt: |
     $AT

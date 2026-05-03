@@ -96,11 +96,11 @@ internally.
 
 | File | Receives (push-args) | Returns | Stack depth from caller |
 | --- | --- | --- | --- |
-| `dynamics/role-pm.md` | `program` | `prd` | leaf |
-| `dynamics/role-architect.md` | `prd` | `design` | leaf |
-| `dynamics/role-engineer.md` | `design` | `tasks` (+ side effect: source files in `workspace/`) | leaf |
-| `dynamics/role-qa.md` | `tasks`, `code_location` | `review` (= verdict + feedback) | 2 (pushes `evaluate.md`) |
-| `dynamics/evaluate.md` | `attempt`, `criterion` | `verdict`, `feedback` | leaf (byte-equal copy of the shared evaluator) |
+| `operators/role-pm.md` | `program` | `prd` | leaf |
+| `operators/role-architect.md` | `prd` | `design` | leaf |
+| `operators/role-engineer.md` | `design` | `tasks` (+ side effect: source files in `workspace/`) | leaf |
+| `operators/role-qa.md` | `tasks`, `code_location` | `review` (= verdict + feedback) | 2 (pushes `evaluate.md`) |
+| `operators/evaluate.md` | `attempt`, `criterion` | `verdict`, `feedback` | leaf (byte-equal copy of the shared evaluator) |
 
 ## Demo `PROGRAM.md`
 

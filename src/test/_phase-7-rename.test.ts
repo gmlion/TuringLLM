@@ -3,8 +3,21 @@ import { strict as assert } from "node:assert";
 import { existsSync } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
+import { execSync } from "child_process";
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
+
+describe("R5: no `dynamics/` substring in INSTRUCTIONS.md or operator files", () => {
+  test("no dynamics/ in any interpreter markdown", () => {
+    let out = "";
+    try {
+      out = execSync('git grep -l "dynamics/" -- "interpreters/**/*.md"', { cwd: REPO, encoding: "utf-8" }).trim();
+    } catch (e: any) {
+      out = "";
+    }
+    assert.equal(out, "", `unexpected 'dynamics/' references in: ${out}`);
+  });
+});
 
 describe("R4: dynamics/ → operators/ rename across all leaves", () => {
   const leaves = [

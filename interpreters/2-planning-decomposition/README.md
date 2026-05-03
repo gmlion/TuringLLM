@@ -78,8 +78,8 @@ Both dynamics are byte-identical across the three leaves:
 
 | File                   | Receives (push-args) | Returns                                       |
 | ---------------------- | -------------------- | --------------------------------------------- |
-| `dynamics/tackle.md`   | `goal`               | `result` (atomic execution output, or synthesized sub-results) |
-| `dynamics/plan.md`     | `goal`               | `plan` (newline-separated bullet list)        |
+| `operators/tackle.md`   | `goal`               | `result` (atomic execution output, or synthesized sub-results) |
+| `operators/plan.md`     | `goal`               | `plan` (newline-separated bullet list)        |
 
 Identity is pinned by an identity test under `src/test/`.
 

@@ -77,8 +77,8 @@ output.)
 
 | File | Receives (push-args) | Returns | Stack depth from caller |
 | --- | --- | --- | --- |
-| `dynamics/evaluate.md` | `attempt`, `criterion` | `verdict`, `feedback` | leaf (byte-equal copy of the shared evaluator) |
-| `dynamics/reflect.md` | `attempt`, `verdict`, `feedback` | `lesson` | leaf |
+| `operators/evaluate.md` | `attempt`, `criterion` | `verdict`, `feedback` | leaf (byte-equal copy of the shared evaluator) |
+| `operators/reflect.md` | `attempt`, `verdict`, `feedback` | `lesson` | leaf |
 
 ## Demo `PROGRAM.md`
 

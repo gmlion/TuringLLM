@@ -149,7 +149,7 @@ Then wholesale-rewrite MEMORY:
     ## Result
     Push queued.
     ## Push
-    dynamics/opine.md
+    operators/opine.md
     ## Push-Args
     round: $ROUND
     persona_name: $PERSONA_NAME

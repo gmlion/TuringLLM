@@ -124,7 +124,7 @@ The canonical push block this instruction emits into MEMORY is:
 
 ```
 ## Push
-dynamics/expand-node.md
+operators/expand-node.md
 ## Push-Args
 partial_state: |
   <contents of ./scoped/state-<id>.md, two-space indented>
@@ -168,7 +168,7 @@ Then emit MEMORY:
     ## Result
     Push queued.
     ## Push
-    dynamics/expand-node.md
+    operators/expand-node.md
     ## Push-Args
     partial_state: |
     $PS
@@ -307,7 +307,7 @@ The canonical push block this instruction emits into MEMORY is:
 
 ```
 ## Push
-dynamics/score.md
+operators/score.md
 ## Push-Args
 partial_state: |
   <contents of ./scoped/state-<id>.md, two-space indented>
@@ -327,7 +327,7 @@ Heredoc-form bash for the strategy:
     ## Result
     Push queued.
     ## Push
-    dynamics/score.md
+    operators/score.md
     ## Push-Args
     partial_state: |
     $PS
@@ -509,7 +509,7 @@ The canonical push block this instruction emits into MEMORY is:
 
 ```
 ## Push
-dynamics/evaluate.md
+operators/evaluate.md
 ## Push-Args
 attempt: |
   <contents of ./scoped/state-<id>.md, two-space indented>
@@ -563,7 +563,7 @@ criterion: |
     ## Result
     Push queued.
     ## Push
-    dynamics/evaluate.md
+    operators/evaluate.md
     ## Push-Args
     attempt: |
     $ATT

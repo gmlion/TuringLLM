@@ -32,9 +32,9 @@ Tree state lives in the strategy frame's `./scoped/tree.md` as an append-only YA
 
 | File | Push-args | Returns | Stack depth from caller |
 | ---- | --------- | ------- | ----------------------- |
-| `dynamics/expand-node.md` | `partial_state`, `task` | `children` (5 state entries) | 1 |
-| `dynamics/score.md` | `partial_state`, `task` | `value` ∈ {`sure`, `likely`, `impossible`} | 1 (pushed 3× per child) |
-| `dynamics/evaluate.md` | `attempt`, `criterion` | `verdict` ∈ {`pass`, `fail`}, `feedback` | 1 |
+| `operators/expand-node.md` | `partial_state`, `task` | `children` (5 state entries) | 1 |
+| `operators/score.md` | `partial_state`, `task` | `value` ∈ {`sure`, `likely`, `impossible`} | 1 (pushed 3× per child) |
+| `operators/evaluate.md` | `attempt`, `criterion` | `verdict` ∈ {`pass`, `fail`}, `feedback` | 1 |
 
 `evaluate.md` is the canonical 1b copy, byte-equal — pinned by `src/test/phase-dynamics-identity.test.ts`.
 

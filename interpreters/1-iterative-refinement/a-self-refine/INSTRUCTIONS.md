@@ -13,7 +13,7 @@ This interpreter implements the Self-Refine pattern (patterns.md Group 1). A sin
 **Action:** Read `./scoped/draft.md`. Append the following to `./MEMORY.md` (do not change state — the shell will set it to "empty" when it pushes the dynamic):
 
     ## Push
-    dynamics/self-critique.md
+    operators/self-critique.md
     ## Push-Args
     draft: |
       <verbatim contents of ./scoped/draft.md, every line indented two spaces>

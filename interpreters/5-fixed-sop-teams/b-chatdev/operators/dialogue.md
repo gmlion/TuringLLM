@@ -87,7 +87,7 @@ Overwrite `./scoped/turns.md` with `N+1`. If you emitted `<SOLUTION>`, set state
 **Action:** Extract the consensus artefact from the tail of `./scoped/transcript.md` (the `<SOLUTION>` block if present, or the last speaker's turn otherwise) into a short `attempt` string. The criterion is the topic at `./scoped/topic.md` — read its body and inline it below. The output_path is at `./scoped/output_path.md` — read its body and inline it below so the evaluator can `cat` the consensus file. Append to `./MEMORY.md`:
 
     ## Push
-    dynamics/evaluate.md
+    operators/evaluate.md
     ## Push-Args
     attempt: |
       <extracted attempt, indented two spaces>

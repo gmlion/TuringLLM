@@ -94,8 +94,8 @@ strategy → root tackle → worker tackle. Walk-through:
 
 | File | Receives (push-args) | Returns | Stack depth from caller |
 | --- | --- | --- | --- |
-| `dynamics/tackle.md` | `goal` | `result` | 1 (atomic Try); recursive (composite pushes `plan.md` then `tackle.md` per sub-goal) |
-| `dynamics/plan.md` | `goal` | `plan` | leaf |
+| `operators/tackle.md` | `goal` | `result` | 1 (atomic Try); recursive (composite pushes `plan.md` then `tackle.md` per sub-goal) |
+| `operators/plan.md` | `goal` | `plan` | leaf |
 
 Both files are byte-identical across this leaf,
 `../a-plan-execute/`, and `../c-deep-research/`, pinned by an

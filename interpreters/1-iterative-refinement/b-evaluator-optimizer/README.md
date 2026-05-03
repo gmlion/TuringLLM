@@ -63,9 +63,9 @@ There are no workspace files in this interpreter — the artefact
 
 | File | Receives (push-args) | Returns | Stack depth from caller |
 | --- | --- | --- | --- |
-| `dynamics/evaluate.md` | `attempt`, `criterion` | `verdict`, `feedback` | leaf |
+| `operators/evaluate.md` | `attempt`, `criterion` | `verdict`, `feedback` | leaf |
 
-`dynamics/evaluate.md` is the **canonical** copy. Other consumers
+`operators/evaluate.md` is the **canonical** copy. Other consumers
 in the repo (c-reflexion, a-metagpt, b-chatdev) ship a byte-equal
 copy, pinned by `src/test/phase-dynamics-identity.test.ts`.
 

@@ -21,7 +21,7 @@ The typed hand-off sections (`## Prd`, `## Design`, `## Tasks`, `## Review`) **a
 **Action:** Read `../../PROGRAM.md`. Append to `./MEMORY.md`:
 
     ## Push
-    dynamics/role-pm.md
+    operators/role-pm.md
     ## Push-Args
     program: |
       <verbatim PROGRAM.md body, every line indented two spaces>
@@ -33,7 +33,7 @@ The typed hand-off sections (`## Prd`, `## Design`, `## Tasks`, `## Review`) **a
 **Action:** Append to `./MEMORY.md`:
 
     ## Push
-    dynamics/role-architect.md
+    operators/role-architect.md
     ## Push-Args
     prd: |
       <verbatim ## Prd body, every line indented two spaces>
@@ -45,7 +45,7 @@ Leave `## Prd` in MEMORY (it accumulates as part of the final hand-off record pe
 **Action:** Append to `./MEMORY.md`:
 
     ## Push
-    dynamics/role-engineer.md
+    operators/role-engineer.md
     ## Push-Args
     design: |
       <verbatim ## Design body, every line indented two spaces>
@@ -57,7 +57,7 @@ Leave `## Design` in MEMORY. **Set state to "engineer_active"**.
 **Action:** Append to `./MEMORY.md`:
 
     ## Push
-    dynamics/role-qa.md
+    operators/role-qa.md
     ## Push-Args
     tasks: |
       <verbatim ## Tasks body, every line indented two spaces>

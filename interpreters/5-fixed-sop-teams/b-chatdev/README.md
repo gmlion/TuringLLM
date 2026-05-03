@@ -93,7 +93,7 @@ later by the evaluator, which inspects disk.
 ## What the evaluator does
 
 Once the dialogue reaches `decide_accept` *and* the phase is
-gated (`acceptance: true`), the dialogue pushes `dynamics/evaluate.md`
+gated (`acceptance: true`), the dialogue pushes `operators/evaluate.md`
 with the extracted attempt, the criterion (= the dialogue's
 topic), and the output path. The evaluator runs as its own
 context with no role bias — it sees the inputs as data, not as
@@ -154,8 +154,8 @@ gets overwritten by the new dialogue.
 
 | File | Receives (push-args) | Returns | Stack depth from caller |
 | --- | --- | --- | --- |
-| `dynamics/dialogue.md` | `participants`, `topic`, `input`, `output_path`, `acceptance` | `dialogue` (path marker), and on gated phases also `verdict` + `feedback` | 1 (2 when `acceptance=true` and the dialogue pushes `evaluate.md`) |
-| `dynamics/evaluate.md` | `attempt`, `criterion`, `output_path` | `verdict`, `feedback` | leaf (byte-equal copy of the shared evaluator) |
+| `operators/dialogue.md` | `participants`, `topic`, `input`, `output_path`, `acceptance` | `dialogue` (path marker), and on gated phases also `verdict` + `feedback` | 1 (2 when `acceptance=true` and the dialogue pushes `evaluate.md`) |
+| `operators/evaluate.md` | `attempt`, `criterion`, `output_path` | `verdict`, `feedback` | leaf (byte-equal copy of the shared evaluator) |
 
 Role descriptions live under `./roles/` (`ceo.md`, `cto.md`,
 `coder.md`, `reviewer.md`, `tester.md`, `writer.md`).

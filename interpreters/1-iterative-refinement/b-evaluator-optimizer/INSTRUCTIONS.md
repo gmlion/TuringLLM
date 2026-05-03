@@ -13,7 +13,7 @@ This interpreter implements the Evaluator–Optimizer pattern (patterns.md Group
 **Action:** Read `./scoped/attempt.md` and `./scoped/criterion.md`. Append the following to `./MEMORY.md` (do not change state — the shell will set it to "empty" when it pushes the dynamic):
 
     ## Push
-    dynamics/evaluate.md
+    operators/evaluate.md
     ## Push-Args
     attempt: |
       <verbatim contents of ./scoped/attempt.md, every line indented two spaces>

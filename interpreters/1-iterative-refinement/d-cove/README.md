@@ -95,8 +95,8 @@ The instruction-following gradient is doing the work.
 
 | File | Receives (push-args) | Returns | Stack depth from caller |
 | --- | --- | --- | --- |
-| `dynamics/verify.md` | `draft` | `revised` | 2 (pushes `answer-independently.md` per claim) |
-| `dynamics/answer-independently.md` | `question` | `answer` | leaf |
+| `operators/verify.md` | `draft` | `revised` | 2 (pushes `answer-independently.md` per claim) |
+| `operators/answer-independently.md` | `question` | `answer` | leaf |
 
 ## Demo `PROGRAM.md`
 

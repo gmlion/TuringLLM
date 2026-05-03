@@ -112,8 +112,8 @@ For an atomic tackle, only step 1 runs.
 
 | File | Receives (push-args) | Returns | Stack depth from caller |
 | --- | --- | --- | --- |
-| `dynamics/tackle.md` | `goal` | `result` | recursive — composite pushes `plan.md` momentarily, then `tackle.md` per sub-goal |
-| `dynamics/plan.md` | `goal` | `plan` | leaf — pure one-shot decomposer |
+| `operators/tackle.md` | `goal` | `result` | recursive — composite pushes `plan.md` momentarily, then `tackle.md` per sub-goal |
+| `operators/plan.md` | `goal` | `plan` | leaf — pure one-shot decomposer |
 
 Both files are byte-identical across this leaf,
 `../a-plan-execute/`, and `../b-orchestrator-workers/`, pinned

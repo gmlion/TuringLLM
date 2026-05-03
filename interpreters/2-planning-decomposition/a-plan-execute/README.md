@@ -105,8 +105,8 @@ The atomic Try path is just steps 1: one tool call, one pop.
 
 | File | Receives (push-args) | Returns | Stack depth from caller |
 | --- | --- | --- | --- |
-| `dynamics/tackle.md` | `goal` | `result` | 1 (atomic Try); recursive (composite path pushes `plan.md` momentarily, then pushes `tackle.md` per sub-goal) |
-| `dynamics/plan.md` | `goal` | `plan` | leaf — pure one-shot decomposer |
+| `operators/tackle.md` | `goal` | `result` | 1 (atomic Try); recursive (composite path pushes `plan.md` momentarily, then pushes `tackle.md` per sub-goal) |
+| `operators/plan.md` | `goal` | `plan` | leaf — pure one-shot decomposer |
 
 Both files are byte-identical across this leaf,
 `../b-orchestrator-workers/`, and `../c-deep-research/`, pinned

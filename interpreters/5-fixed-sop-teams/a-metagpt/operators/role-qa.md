@@ -18,7 +18,7 @@ The code lives under:
 Read the relevant files in that location via `bash cat`. Synthesise a review *attempt* (one paragraph describing what was implemented and your overall judgement) and a *criterion* (one sentence from the PRD/acceptance criteria). Append to `./MEMORY.md`:
 
     ## Push
-    dynamics/evaluate.md
+    operators/evaluate.md
     ## Push-Args
     attempt: |
       <verbatim attempt summary, indented two spaces>

@@ -86,7 +86,7 @@ Decided as {{role}} to split this sub-task; pushing plan.md to decompose, anchor
 ## Result
 Decomposition queued.
 ## Push
-dynamics/plan.md
+operators/plan.md
 ## Push-Args
 goal: |
   <verbatim {{goal}}, every line indented two spaces>
@@ -131,7 +131,7 @@ Wrote N sub-tasks to ./scoped/sub-goals.md and composed child_chain; pushing tac
 ## Result
 First sub-task queued.
 ## Push
-dynamics/tackle.md
+operators/tackle.md
 ## Push-Args
 goal: |
   <body of the first bullet (after stripping leading "- "), every line indented two spaces>
@@ -170,7 +170,7 @@ Recorded sub-result <CURRENT+1>; pushing tackle.md for sub-task <NEXT+1>.
 ## Result
 Next sub-task queued.
 ## Push
-dynamics/tackle.md
+operators/tackle.md
 ## Push-Args
 goal: |
   <body of the bullet at line (NEXT+1) (after stripping leading "- "), every line indented two spaces>

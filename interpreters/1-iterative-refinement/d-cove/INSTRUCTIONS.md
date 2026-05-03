@@ -18,7 +18,7 @@ This interpreter is one-shot: there is no acceptance loop. If the revised answer
 **Action:** Read `./scoped/draft.md`. Append the following to `./MEMORY.md` (do not change state — the shell will set it to "empty" when it pushes the dynamic):
 
     ## Push
-    dynamics/verify.md
+    operators/verify.md
     ## Push-Args
     draft: |
       <verbatim contents of ./scoped/draft.md, every line indented two spaces>

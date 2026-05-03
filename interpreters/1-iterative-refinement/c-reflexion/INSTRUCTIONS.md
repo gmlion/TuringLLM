@@ -20,7 +20,7 @@ This interpreter implements the Reflexion pattern (patterns.md Group 1): Evaluat
 **Action:** Read `./scoped/attempt.md` and `./scoped/criterion.md`. Append the following to `./MEMORY.md` (do not change state — the shell will set it to "empty" when it pushes the dynamic):
 
     ## Push
-    dynamics/evaluate.md
+    operators/evaluate.md
     ## Push-Args
     attempt: |
       <verbatim contents of ./scoped/attempt.md, every line indented two spaces>
@@ -36,7 +36,7 @@ This interpreter implements the Reflexion pattern (patterns.md Group 1): Evaluat
 **Action:** Read `./scoped/attempt.md` for the attempt, and `## Verdict` and `## Feedback` from MEMORY. Append the following to `./MEMORY.md` (do not change state — the shell will set it to "empty" when it pushes the dynamic):
 
     ## Push
-    dynamics/reflect.md
+    operators/reflect.md
     ## Push-Args
     attempt: |
       <verbatim contents of ./scoped/attempt.md, every line indented two spaces>

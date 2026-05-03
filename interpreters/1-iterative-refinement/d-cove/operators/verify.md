@@ -7,7 +7,7 @@ Return: state done → caller sees {caller_state}_completed, and ## Return entry
 Internal scoped file: `./scoped/verifications.md` (owned by this dynamic's frame; NOT a MEMORY section).
 **WHOLESALE REWRITES of `./scoped/verifications.md` are FORBIDDEN after initial creation. All status updates MUST use surgical `sed -i` to modify individual bullet lines. Never use `cat >` or any full overwrite on this file after it is created.**
 
-Pushes (depth 2): `dynamics/answer-independently.md`, once per pending verification question.
+Pushes (depth 2): `operators/answer-independently.md`, once per pending verification question.
 
 ## Instruction: Pose questions
 **Condition:** MEMORY state is "empty"
@@ -29,7 +29,7 @@ Draft:
 **Action:** Find the FIRST bullet in `./scoped/verifications.md` whose status is the literal word `pending`. Append the following to `./MEMORY.md` (do not change state — the shell will set it to "empty" when it pushes the dynamic):
 
     ## Push
-    dynamics/answer-independently.md
+    operators/answer-independently.md
     ## Push-Args
     question: |
       <verbatim text of that pending bullet's verification question, every line indented two spaces>
