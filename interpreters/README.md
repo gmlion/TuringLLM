@@ -63,6 +63,14 @@ A small simulated team with hard-coded phases. The strategy walks through the ph
 
 Both ship byte-identical demos so their outputs are directly comparable.
 
+### Phase 7 — Meta-frameworks (`7-meta-framework/`)
+
+> *Treat the operator library itself as a search space — search and learn over compositions of other operators.*
+
+Operators that don't solve a task directly but instead search for the best combination of other operators to solve it. The v1 member:
+
+- **`a-aflow-lite/`** — AFlow-lite (Zhang et al., arXiv:2410.10762). MCTS over candidate workflows drawn from a five-operator library (`refine`, `reflexion`, `cove`, `plan-execute`, `debate`). Each MCTS iteration selects a promising workflow, expands it via an LLM-driven `expand-workflow.md` call (k=5 children), simulates the candidate by running its operators on a 3-item GSM8K sample, and back-propagates the reward. The MCTS controller is adapted from Phase 6b LATS. Key constraint: v1 has no meta-reflexion and no nested shell instances — all workflow execution happens via push/pop within one shell instance.
+
 ---
 
 ## 2. Execution context — the mechanics that everyone shares
@@ -131,6 +139,21 @@ So **return values flow through MEMORY sections, not function-call return**. The
 | Can write `workspace/`? | Yes | Yes (shared across all frames) |
 
 The asymmetry between strategy and dynamic is the point: **strategies own state and orchestrate; dynamics are pure functions over their push-args**. This is what makes dynamics composable. A dynamic that depended on its caller's scoped/ files would only work for one caller.
+
+### Root-operator bootstrap
+
+Every interpreter directory contains an `INSTRUCTIONS.md` that is a single-line marker pointing at the canonical operator file, e.g. `operators/refine.md`. When `new-instance.sh <name> <interpreter-dir>` creates an instance, it reads that marker and writes the resolved path to `instances/<name>/.root-operator`.
+
+At startup (before the first cycle), the shell:
+
+1. Reads `.root-operator` and the canonical operator file at the named path.
+2. Substitutes `{{program}}` (the content of `instances/<name>/PROGRAM.md`) into the operator text.
+3. Writes the substituted operator to `frames/f000-<slug>/INSTRUCTIONS.md` and initialises the call stack with one root frame.
+4. Enters the cycle loop.
+
+When the root frame transitions to `state == done`, the shell parses the `## Return` block from that frame's MEMORY and writes one section per key to `instances/<name>/OUTPUT.md` (e.g. `## Answer`). If the operator halts without a `## Return`, OUTPUT.md receives a diagnostic.
+
+This unification means a meta-framework operator like `aflow-lite.md` is invoked the same way as any other operator — pass `{{program}}`, enter at `state == empty` — but internally it pushes operators from the library to materialise and evaluate candidate workflows.
 
 ### Per-group execution-context highlights
 

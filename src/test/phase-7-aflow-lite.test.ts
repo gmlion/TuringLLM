@@ -561,3 +561,27 @@ describe("Negative pins R61–R72: aflow-lite is constrained as designed", () =>
     }
   });
 });
+
+describe("R57: interpreters/README.md updates", () => {
+  const README = "interpreters/README.md";
+  test("README mentions Phase 7 — Meta-frameworks", () => {
+    const content = readFileSync(resolve(REPO, README), "utf-8");
+    assert.match(content, /Phase 7|7-meta-framework|Meta-framework/i);
+  });
+  test("operator shortlist mentions the actual five v1 operators", () => {
+    const content = readFileSync(resolve(REPO, README), "utf-8");
+    // Should mention library and the five operator names somewhere
+    for (const op of ["refine", "reflexion", "cove", "plan-execute", "debate"]) {
+      assert.match(content, new RegExp(`\\b${op}\\b`), `interpreters README missing ${op}`);
+    }
+  });
+  test("operator shortlist mentions MoA as future scope", () => {
+    const content = readFileSync(resolve(REPO, README), "utf-8");
+    assert.match(content, /MoA/);
+  });
+  test("execution-context section mentions root-operator bootstrap", () => {
+    const content = readFileSync(resolve(REPO, README), "utf-8");
+    assert.match(content, /root.operator/i);
+    assert.match(content, /\.root-operator|root.operator bootstrap/);
+  });
+});
