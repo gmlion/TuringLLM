@@ -8,6 +8,7 @@ import { applyPush, applyPop, type CallStack } from "../call-stack.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+const REPO = resolve(__dirname, "../..");
 const INTERP = resolve(__dirname, "../../interpreters/1-iterative-refinement/b-evaluator-optimizer");
 
 describe("1b evaluator-optimizer", () => {
@@ -18,7 +19,8 @@ describe("1b evaluator-optimizer", () => {
   });
 
   test("strategy declares the four required states", () => {
-    const strategy = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+    // After Phase-7 migration INSTRUCTIONS.md is a marker; the strategy lives in the operator file.
+    const strategy = readFileSync(resolve(INTERP, "operators/refine.md"), "utf-8");
     for (const needle of [
       'state is "empty"',
       'state is "attempted"',
@@ -30,7 +32,8 @@ describe("1b evaluator-optimizer", () => {
   });
 
   test("strategy uses scoped attempt and criterion files and ## Return splicing", () => {
-    const strategy = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+    // After Phase-7 migration INSTRUCTIONS.md is a marker; the strategy lives in the operator file.
+    const strategy = readFileSync(resolve(INTERP, "operators/refine.md"), "utf-8");
     assert.match(strategy, /\.\/scoped\/attempt\.md/, "strategy should reference ./scoped/attempt.md");
     assert.match(strategy, /\.\/scoped\/criterion\.md/, "strategy should reference ./scoped/criterion.md");
     assert.match(strategy, /## Return/, "strategy should mention ## Return");
@@ -56,7 +59,8 @@ describe("1b evaluator-optimizer", () => {
   });
 
   test("malformed-verdict path keeps the loop alive (no waiting_for_user)", () => {
-    const strategy = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+    // After Phase-7 migration INSTRUCTIONS.md is a marker; the strategy lives in the operator file.
+    const strategy = readFileSync(resolve(INTERP, "operators/refine.md"), "utf-8");
     const section = strategy.split(/^## Instruction: Handle verdict/m)[1] ?? "";
     assert.match(section, /Pending Questions/, "malformed-verdict path must add a Pending Questions item");
     assert.match(section, /do NOT set state to "waiting_for_user"/i, "malformed-verdict path must explicitly forbid waiting_for_user");
@@ -223,5 +227,44 @@ describe("1b evaluator-optimizer", () => {
       assert.equal(finalPop.callStack.stack.length, 1, "root frame never popped");
       assert.equal(finalPop.events.length, 0, "no pop event at root");
     });
+  });
+});
+
+describe("R20-R27 Phase 7 migration: marker + canonical operator", () => {
+  const LEAF = "interpreters/1-iterative-refinement/b-evaluator-optimizer";
+
+  test("R21: INSTRUCTIONS.md is single-line marker pointing at operators/refine.md", () => {
+    const inst = readFileSync(resolve(REPO, LEAF, "INSTRUCTIONS.md"), "utf-8").trim();
+    assert.equal(inst, "operators/refine.md");
+  });
+
+  test("R20/R22: operators/refine.md exists and is the canonical strategy", () => {
+    const op = resolve(REPO, LEAF, "operators/refine.md");
+    assert.ok(existsSync(op));
+    const content = readFileSync(op, "utf-8");
+    assert.match(content, /# (Operator|Strategy):.*Evaluator|# (Operator|Strategy):.*Refine/i);
+  });
+
+  test("R47: bimodal Initialize", () => {
+    const op = readFileSync(resolve(REPO, LEAF, "operators/refine.md"), "utf-8");
+    assert.match(op, /\{\{program\}\}/);
+    assert.match(op, /\{\{task\}\}/);
+    assert.match(op, /grep.*-qF.*\{\{task\}\}/);
+  });
+
+  test("R23: terminal cycle emits ## Return\\nanswer:", () => {
+    const op = readFileSync(resolve(REPO, LEAF, "operators/refine.md"), "utf-8");
+    assert.match(op, /## Return\s*\n\s*answer:/);
+  });
+
+  test("R24: terminal output ## Refined preserved", () => {
+    const op = readFileSync(resolve(REPO, LEAF, "operators/refine.md"), "utf-8");
+    assert.match(op, /## Refined/);
+  });
+
+  test("R25: internal pushes use operators/ paths", () => {
+    const op = readFileSync(resolve(REPO, LEAF, "operators/refine.md"), "utf-8");
+    assert.doesNotMatch(op, new RegExp("dyn" + "amics/"));
+    assert.match(op, /operators\/evaluate\.md/);
   });
 });
