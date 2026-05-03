@@ -212,3 +212,15 @@ describe("R26/R34: 12 operators copied byte-equal into aflow-lite", () => {
     });
   }
 });
+
+describe("R32: aflow-lite has compose_partial_state helper", () => {
+  const OP = "interpreters/7-meta-framework/a-aflow-lite/operators/aflow-lite.md";
+  test("compose_partial_state assembles current_workflow + library + recent_scores", () => {
+    const content = readFileSync(resolve(REPO, OP), "utf-8");
+    assert.match(content, /compose_partial_state|Compose.partial.state|## Partial State/i);
+    // It must include the three pieces:
+    assert.match(content, /current.workflow|state-\$\{?ID\}?\.md|workflow recipe/i);
+    assert.match(content, /\$LIBRARY|library/);
+    assert.match(content, /recent_scores/);
+  });
+});

@@ -72,6 +72,33 @@ Compact one-line form, used inline by Back-prop and other instructions where the
 
 **Per-node state file**: created at node-creation time as `./scoped/state-<id>.md`; **write-once**, never modified after creation. Read whenever the strategy needs to push that node's workflow recipe into a dynamic.
 
+### Compose-partial-state primitive
+
+The expansion phase sends a `{{partial_state}}` push-arg to `expand-workflow.md`. For aflow-lite this is composed from three pieces:
+1. The current workflow recipe (the cursor node's `state-${CURSOR}.md` content; for the root n0 it's empty).
+2. The library of available operator names (`$LIBRARY`).
+3. A summary of recent scores (the last N entries from `./scoped/recent_scores.md`, where each entry is `<workflow>: <score>`).
+
+Bash:
+
+    compose_partial_state() {
+      local CURSOR=$(cat ./scoped/cursor.md)
+      local CURRENT=$(cat "./scoped/state-${CURSOR}.md")
+      local RECENT=$(tail -n 10 ./scoped/recent_scores.md 2>/dev/null || true)
+      cat << COMPOSE_EOF
+    Current workflow recipe (the operator chain to extend; empty means the root):
+    ${CURRENT}
+
+    Library of available operator names:
+    ${LIBRARY}
+
+    Recent scores observed in this run (workflow: mean_reward over 3 items):
+    ${RECENT}
+    COMPOSE_EOF
+    }
+
+The composed text is written to a staging file (e.g. `./scoped/staged/partial_state.md`) before being passed as a `{{partial_state}}` push-arg to `expand-workflow.md`.
+
 ### Back-prop primitive
 
 Walks the parent chain from a starting node up to and including the root, surgically incrementing `n` by 1 and adding `reward` to `q` at every node on the path.
