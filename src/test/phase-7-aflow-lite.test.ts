@@ -58,6 +58,33 @@ describe("R10: no 'dynamics/' substring outside frozen spec dirs", () => {
   });
 });
 
+describe("R48: workspace/gsm8k.jsonl fixture", () => {
+  const FIXTURE = "interpreters/7-meta-framework/a-aflow-lite/workspace/gsm8k.jsonl";
+  test("fixture exists", () => {
+    assert.ok(existsSync(resolve(REPO, FIXTURE)));
+  });
+  test("fixture has exactly 20 lines, each parseable JSON with question (string) + answer (integer)", () => {
+    const lines = readFileSync(resolve(REPO, FIXTURE), "utf-8").trim().split("\n");
+    assert.equal(lines.length, 20, "expected 20 items");
+    for (let i = 0; i < lines.length; i++) {
+      const obj = JSON.parse(lines[i]);
+      assert.equal(typeof obj.question, "string", `item ${i}: question not string`);
+      assert.ok(obj.question.length > 10, `item ${i}: question too short`);
+      assert.equal(typeof obj.answer, "number", `item ${i}: answer not number`);
+      assert.ok(Number.isInteger(obj.answer), `item ${i}: answer not integer`);
+    }
+  });
+});
+
+describe("R49: PROGRAM.md is short prose pointing at fixture", () => {
+  const PROG = "interpreters/7-meta-framework/a-aflow-lite/PROGRAM.md";
+  test("PROGRAM.md exists and references workspace/gsm8k.jsonl", () => {
+    const content = readFileSync(resolve(REPO, PROG), "utf-8");
+    assert.match(content, /workspace\/gsm8k\.jsonl/);
+    assert.match(content, /GSM8K/);
+  });
+});
+
 describe("R26/R34: 12 operators copied byte-equal into aflow-lite", () => {
   const COPIES = [
     ["refine.md",                "interpreters/1-iterative-refinement/b-evaluator-optimizer/operators/refine.md"],
