@@ -2,8 +2,8 @@
  * call-stack.ts — Instruction call stack: persistence and per-cycle transforms.
  *
  * The call stack enables hierarchical instruction dispatch: a running
- * instruction set can "push" a dynamic (reusable instruction file), and
- * the shell automatically restores the caller on "pop" (when the dynamic
+ * instruction set can "push" an operator (reusable instruction file), and
+ * the shell automatically restores the caller on "pop" (when the operator
  * sets state to "done").
  *
  * The push/pop transforms are pure — no file I/O — so stack semantics can
@@ -322,7 +322,7 @@ export function substitutePlaceholders(
 
 /**
  * Derive a filesystem-safe slug from a push-target path.
- * Example: "dynamics/answer-independently.md" → "answer-independently".
+ * Example: "operators/answer-independently.md" → "answer-independently".
  */
 export function slugFromTarget(target: string): string {
   const base = target.split(/[\\/]/).pop() ?? target;

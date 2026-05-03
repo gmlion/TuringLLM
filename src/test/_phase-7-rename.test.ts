@@ -1,6 +1,6 @@
 import { test, describe } from "node:test";
 import { strict as assert } from "node:assert";
-import { existsSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
 import { execSync } from "child_process";
@@ -42,4 +42,19 @@ describe("R4: dynamics/ → operators/ rename across all leaves", () => {
       assert.ok(!existsSync(resolve(REPO, leaf, "dynamics")), `${leaf}/dynamics/ should be gone`);
     });
   }
+});
+
+describe("R7: source identifiers use 'operator' not 'dynamic' (where it means a pushable file)", () => {
+  test("call-stack.ts: no 'dynamic file/INSTRUCTIONS/frame' phrasing", () => {
+    const s = readFileSync(resolve(REPO, "src/call-stack.ts"), "utf-8");
+    assert.doesNotMatch(s, /dynamic file|dynamic INSTRUCTIONS|dynamic frame/i);
+  });
+  test("main.ts: no `pushedDynamic`-style identifiers", () => {
+    const s = readFileSync(resolve(REPO, "src/main.ts"), "utf-8");
+    assert.doesNotMatch(s, /pushedDynamic|childDynamic|dynamicFrame/);
+  });
+  test("prompt.ts: prose mentions 'operator' for pushable sense", () => {
+    const s = readFileSync(resolve(REPO, "src/prompt.ts"), "utf-8");
+    assert.match(s, /operator/i);
+  });
 });
