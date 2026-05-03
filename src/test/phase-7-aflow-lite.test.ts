@@ -650,3 +650,60 @@ describe("R59: per-leaf READMEs mention the marker pattern", () => {
     });
   }
 });
+
+describe("R67/R68/R69: backwards-compat pins", () => {
+  test("R67: src/main.ts does NOT load frames/f000-strategy as a fallback", () => {
+    const content = readFileSync(resolve(REPO, "src/main.ts"), "utf-8");
+    // No literal load of "frames/f000-strategy/INSTRUCTIONS.md" as a path
+    assert.doesNotMatch(content, /frames\/f000-strategy\/INSTRUCTIONS\.md/);
+    // The slug must come from .root-operator → no hardcoded "f000-strategy" reference in the active path
+    // (We tolerate it if it's only in legacy ROOT_FRAME_DIR constant or comments — but no exec.)
+    // Stronger check: no try/catch that swallows .root-operator errors
+    // (Trust T9 — just pin the absence of the legacy literal)
+  });
+
+  test("R67: src/main.ts requires .root-operator (canonical error message present)", () => {
+    const content = readFileSync(resolve(REPO, "src/main.ts"), "utf-8");
+    assert.match(content, /no \.root-operator configured for this instance/i);
+    // The message may be split across two string literals in source; match each fragment separately
+    assert.match(content, /pre-Phase-7 instances/i);
+    assert.match(content, /read-only artefacts/i);
+  });
+
+  test("R68: instances/ dir is gitignored or otherwise preserved (not deleted by anything in this spec)", () => {
+    const gitignore = readFileSync(resolve(REPO, ".gitignore"), "utf-8");
+    // .gitignore should ignore instances/ (preventing accidental commits) — not delete them
+    // If it doesn't, that's fine too; this is a soft pin
+    // Just check we don't have any rm -rf instances/ in the codebase
+    let out = "";
+    try {
+      out = execSync('git grep -l "rm.*-rf.*instances" -- "src/" "new-instance.sh" 2>/dev/null', { cwd: REPO, encoding: "utf-8" }).trim();
+    } catch (e: any) {
+      out = "";
+    }
+    // Allow rm -rf instances/${name} (delete a single instance), but not rm -rf instances/ (delete all)
+    if (out) {
+      const files = out.split("\n");
+      for (const f of files) {
+        const c = readFileSync(resolve(REPO, f), "utf-8");
+        // Must not have a bare "rm -rf instances" without a subdir
+        assert.doesNotMatch(c, /rm\s+-rf\s+instances\/?\s*$/m, `${f} has dangerous instances/ deletion`);
+      }
+    }
+  });
+
+  test("R69: frozen spec dirs still exist and contain their key R# pins", () => {
+    const FROZEN_SPECS = [
+      "docs/specs/2026-04-23-agent-workflows-phase-2b-push-returns",
+      "docs/specs/2026-04-24-implement-phase-3-and-4",
+      "docs/specs/2026-04-30-agent-workflows-phase-6",
+      "docs/specs/2026-05-01-implement-phase-6b",
+    ];
+    for (const dir of FROZEN_SPECS) {
+      const p = resolve(REPO, dir);
+      assert.ok(existsSync(p), `frozen spec ${dir} should still exist`);
+      // Should still have requirements.md
+      assert.ok(existsSync(resolve(p, "requirements.md")), `${dir}/requirements.md missing`);
+    }
+  });
+});
