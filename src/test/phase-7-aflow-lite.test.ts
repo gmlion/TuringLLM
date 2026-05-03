@@ -408,6 +408,54 @@ describe("R72: no '## Aflow Answer' tag — uses canonical ## Return answer:", (
   });
 });
 
+describe("R2: group README full content", () => {
+  const README = "interpreters/7-meta-framework/README.md";
+  test("group README cites AFlow paper", () => {
+    const content = readFileSync(resolve(REPO, README), "utf-8");
+    assert.match(content, /Zhang et al/);
+    assert.match(content, /arXiv:2410\.10762/);
+  });
+  test("group README lists aflow-lite as the v1 member", () => {
+    const content = readFileSync(resolve(REPO, README), "utf-8");
+    assert.match(content, /a-aflow-lite/);
+  });
+});
+
+describe("R3: leaf README full content", () => {
+  const README = "interpreters/7-meta-framework/a-aflow-lite/README.md";
+  test("leaf README cites AFlow paper", () => {
+    const content = readFileSync(resolve(REPO, README), "utf-8");
+    assert.match(content, /arXiv:2410\.10762/);
+  });
+  test("leaf README documents operator library + exclusions", () => {
+    const content = readFileSync(resolve(REPO, README), "utf-8");
+    for (const op of ["refine", "reflexion", "cove", "plan-execute", "debate"]) {
+      assert.match(content, new RegExp(`\\b${op}\\b`), `leaf README missing operator ${op}`);
+    }
+    // Exclusions mentioned (MoA in particular)
+    assert.match(content, /MoA/);
+  });
+  test("leaf README has MCTS state machine summary", () => {
+    const content = readFileSync(resolve(REPO, README), "utf-8");
+    assert.match(content, /MCTS/);
+    for (const phase of ["Select", "Expand", "Simulate", "Evaluate"]) {
+      assert.match(content, new RegExp(`\\b${phase}`));
+    }
+  });
+  test("leaf README has demo description (GSM8K) + run-it section", () => {
+    const content = readFileSync(resolve(REPO, README), "utf-8");
+    assert.match(content, /GSM8K/);
+    assert.match(content, /Run.*it|Run instructions|## Run/i);
+    assert.match(content, /new-instance\.sh/);
+  });
+  test("leaf README has Notable behaviour section (no MoA, no meta-reflexion)", () => {
+    const content = readFileSync(resolve(REPO, README), "utf-8");
+    assert.match(content, /Notable behaviour|Notable behavior/i);
+    // Mentions the v1 limitations
+    assert.match(content, /meta.?reflexion/i);
+  });
+});
+
 describe("Negative pins R61–R72: aflow-lite is constrained as designed", () => {
   const OP = "interpreters/7-meta-framework/a-aflow-lite/operators/aflow-lite.md";
   const AFLOW_OPERATORS_DIR = "interpreters/7-meta-framework/a-aflow-lite/operators";
