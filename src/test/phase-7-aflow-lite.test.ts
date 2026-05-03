@@ -224,3 +224,27 @@ describe("R32: aflow-lite has compose_partial_state helper", () => {
     assert.match(content, /recent_scores/);
   });
 });
+
+describe("R29: aflow-lite Select instruction (UCT descent)", () => {
+  const OP = "interpreters/7-meta-framework/a-aflow-lite/operators/aflow-lite.md";
+  test("Select instruction matches state selecting", () => {
+    const content = readFileSync(resolve(REPO, OP), "utf-8");
+    assert.match(content, /## Instruction: Select/);
+    assert.match(content, /MEMORY state is "selecting"/);
+  });
+  test("Select uses UCT formula", () => {
+    const content = readFileSync(resolve(REPO, OP), "utf-8");
+    assert.match(content, /UCT|sqrt.*log|q\/n/i);
+    // Some indication of UCT computation (bc -l or similar)
+    assert.match(content, /bc -l/);
+  });
+  test("Select writes cursor.md and transitions to expanding", () => {
+    const content = readFileSync(resolve(REPO, OP), "utf-8");
+    assert.match(content, /cursor\.md/);
+    assert.match(content, /expanding/);
+  });
+  test("Select uses leftmost tiebreak (R45-equivalent)", () => {
+    const content = readFileSync(resolve(REPO, OP), "utf-8");
+    assert.match(content, /leftmost|first|tiebreak/i);
+  });
+});

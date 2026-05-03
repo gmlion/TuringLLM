@@ -216,4 +216,55 @@ INITEOF
 
 # Sub-instructions
 
-(Future tasks T28-T34 add: tree-ledger primitives, Compose-partial-state, Select, Expand-push, Expand-absorb, Simulate-push, Simulate-absorb, Evaluate-absorb, termination, etc.)
+## Instruction: Select
+**Condition:** MEMORY state is "selecting"
+**Action:** Descend the tree from root using UCT. At each non-leaf, choose the next child by the n=0 fast-path or by UCT formula (R44, R45). When a leaf is reached (no node has `parent_id == this id`), write the leaf id to `./scoped/cursor.md` and transition to `expanding` (R46).
+
+    C=$(cat ./scoped/uct_c.md)
+    CURRENT="n0"
+
+    while true; do
+      CHILDREN=$(awk -v P="$CURRENT" '/^---$/{id="";p=""} /^id:/{id=$2} /^parent_id:/{p=$2; if (p==P) print id}' ./scoped/tree.md)
+      [ -z "$CHILDREN" ] && break
+
+      # R45: leftmost unvisited (n == 0) — leftmost tiebreak
+      UNVISITED=$(for ID in $CHILDREN; do
+        N=$(awk -v X="$ID" '/^---$/{ib=0;next} /^id:/{ib=($2==X)} ib && /^n:/{print $2; exit}' ./scoped/tree.md)
+        [ "$N" = "0" ] && echo "$ID"
+      done | sort | head -n 1)
+      if [ -n "$UNVISITED" ]; then
+        CURRENT="$UNVISITED"
+        continue
+      fi
+
+      # R44: UCT among visited children
+      N_PARENT=$(awk -v X="$CURRENT" '/^---$/{ib=0;next} /^id:/{ib=($2==X)} ib && /^n:/{print $2; exit}' ./scoped/tree.md)
+      BEST_ID=""
+      BEST_UCT=""
+      for ID in $CHILDREN; do
+        Q=$(awk -v X="$ID" '/^---$/{ib=0;next} /^id:/{ib=($2==X)} ib && /^q:/{print $2; exit}' ./scoped/tree.md)
+        N=$(awk -v X="$ID" '/^---$/{ib=0;next} /^id:/{ib=($2==X)} ib && /^n:/{print $2; exit}' ./scoped/tree.md)
+        UCT=$(echo "$Q/$N + $C * sqrt(l($N_PARENT)/$N)" | bc -l)
+        if [ -z "$BEST_UCT" ] || [ "$(echo "$UCT > $BEST_UCT" | bc -l)" = "1" ]; then
+          BEST_ID="$ID"; BEST_UCT="$UCT"
+        fi
+      done
+      CURRENT="$BEST_ID"
+    done
+
+    echo "$CURRENT" > ./scoped/cursor.md
+
+Then wholesale-rewrite MEMORY:
+
+    cat > ./MEMORY.md << SEL_EOF
+    ## State
+    expanding
+    ## Matched Instruction
+    Select
+    ## Last Action
+    Descended via UCT to leaf $CURRENT.
+    ## Result
+    Cursor set; ready to expand.
+    SEL_EOF
+
+(Future tasks T31-T34 add: Expand-push, Expand-absorb, Simulate-push, Simulate-absorb, Evaluate-absorb, termination, etc.)
