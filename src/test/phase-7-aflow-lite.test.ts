@@ -279,3 +279,41 @@ describe("R32: aflow-lite Expand-push + Expand-absorb", () => {
     assert.match(content, /simulating/);
   });
 });
+
+describe("R41/R42/R43/R44: expand-workflow.md operator", () => {
+  const OP = "interpreters/7-meta-framework/a-aflow-lite/operators/expand-workflow.md";
+  test("file exists", () => {
+    assert.ok(existsSync(resolve(REPO, OP)));
+  });
+  test("R41: declares {{partial_state}} and {{task}} push-args", () => {
+    const content = readFileSync(resolve(REPO, OP), "utf-8");
+    assert.match(content, /\{\{partial_state\}\}/);
+    assert.match(content, /\{\{task\}\}/);
+  });
+  test("R42: single-cycle — one Instruction matching state empty", () => {
+    const content = readFileSync(resolve(REPO, OP), "utf-8");
+    const instructions = content.match(/^## Instruction:/gm) || [];
+    assert.equal(instructions.length, 1, `expected 1 instruction, found ${instructions.length}`);
+    assert.match(content, /MEMORY state is "empty"/);
+  });
+  test("R42: emits ## Return\\nchildren: |", () => {
+    const content = readFileSync(resolve(REPO, OP), "utf-8");
+    assert.match(content, /## Return\s*\n\s*children:\s*\|/);
+  });
+  test("R43: domain-agnostic prose — no GSM8K, math, arithmetic, target, maze, code, etc.", () => {
+    const content = readFileSync(resolve(REPO, OP), "utf-8");
+    for (const word of ["GSM8K", "arithmetic", "Game of 24", "target", "maze", "test suite"]) {
+      assert.doesNotMatch(content, new RegExp(`\\b${word}\\b`, "i"), `unexpected domain word: ${word}`);
+    }
+    // "math" is potentially too generic — accept it in the explicit "this operator is domain-agnostic" sense if any.
+    // But strict mode: ensure the example/instruction text doesn't say "math problem"
+    assert.doesNotMatch(content, /\bmath problem\b/i);
+  });
+  test("R44: no ## Push anywhere in the file body", () => {
+    const content = readFileSync(resolve(REPO, OP), "utf-8");
+    // Allow "## Push" only inside code-block fences if absolutely necessary; strictest: count zero
+    const lines = content.split("\n");
+    const pushLines = lines.filter(l => /^## Push/.test(l));
+    assert.equal(pushLines.length, 0, `unexpected ## Push line(s): ${pushLines.join(", ")}`);
+  });
+});
