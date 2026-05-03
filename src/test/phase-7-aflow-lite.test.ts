@@ -562,6 +562,22 @@ describe("Negative pins R61–R72: aflow-lite is constrained as designed", () =>
   });
 });
 
+describe("R60: per-group READMEs use 'operators' terminology", () => {
+  const GROUPS = [
+    "1-iterative-refinement",
+    "2-planning-decomposition",
+    "3-search",
+    "4-peer-collaboration",
+    "5-fixed-sop-teams",
+  ];
+  for (const g of GROUPS) {
+    test(`${g} README uses operators terminology (no dynamics/ paths)`, () => {
+      const content = readFileSync(resolve(REPO, "interpreters", g, "README.md"), "utf-8");
+      assert.doesNotMatch(content, new RegExp("dyn" + "amics/"), `${g}/README.md still has dynamics/`);
+    });
+  }
+});
+
 describe("R57: interpreters/README.md updates", () => {
   const README = "interpreters/README.md";
   test("README mentions Phase 7 — Meta-frameworks", () => {
