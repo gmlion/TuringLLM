@@ -707,3 +707,27 @@ describe("R67/R68/R69: backwards-compat pins", () => {
     }
   });
 });
+
+describe("R27: cross-cutting marker-file pin for all migrated leaves", () => {
+  test("every migrated interpreter's INSTRUCTIONS.md is a marker file pointing at operators/<x>.md", () => {
+    const leaves = [
+      "1-iterative-refinement/a-self-refine",
+      "1-iterative-refinement/b-evaluator-optimizer",
+      "1-iterative-refinement/c-reflexion",
+      "1-iterative-refinement/d-cove",
+      "2-planning-decomposition/a-plan-execute",
+      "2-planning-decomposition/b-orchestrator-workers",
+      "2-planning-decomposition/c-deep-research",
+      "3-search/a-tot",
+      "3-search/b-lats",
+      "4-peer-collaboration/a-debate",
+      "5-fixed-sop-teams/a-metagpt",
+      "5-fixed-sop-teams/b-chatdev",
+      "7-meta-framework/a-aflow-lite",
+    ];
+    for (const leaf of leaves) {
+      const inst = readFileSync(resolve(REPO, "interpreters", leaf, "INSTRUCTIONS.md"), "utf-8");
+      assert.match(inst.trim(), /^operators\/[a-z0-9_-]+\.md$/, `${leaf}/INSTRUCTIONS.md is not a marker file: ${inst}`);
+    }
+  });
+});
