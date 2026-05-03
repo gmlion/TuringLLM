@@ -582,17 +582,22 @@ async function main() {
   ensureMachineRepo(BASE_DIR);
   ensureProjectRepo(BASE_DIR);
 
-  // Phase-7 bootstrap: if no call stack exists yet, read .root-operator and
-  // create the root frame before the cycle loop begins.
+  // Phase-7 bootstrap: always require .root-operator (R14, R67).
+  // Pre-Phase-7 instances without .root-operator are read-only artefacts.
+  const rootOperatorFile = resolve(BASE_DIR, ".root-operator");
+  if (!existsSync(rootOperatorFile) || !readFileSync(rootOperatorFile, "utf-8").trim()) {
+    const msg =
+      "no .root-operator configured for this instance — pre-Phase-7 instances " +
+      "are read-only artefacts; create a new instance via new-instance.sh";
+    log(`  [bootstrap] ${msg}`);
+    process.exit(1);
+  }
+
+  // First run (no call stack yet): bootstrap creates the root frame.
+  // Resume (call stack exists): just reload it — don't re-create frames.
   if (!existsSync(CALL_STACK_PATH)) {
-    try {
-      startupBootstrap(BASE_DIR);
-      log("  Bootstrapped root frame from .root-operator");
-    } catch (err) {
-      log(`  [bootstrap] ${err instanceof Error ? err.message : err}`);
-      // Fall through: loadCallStack will return freshCallStack() with the legacy
-      // frames/f000-strategy dir, which works for pre-Phase-7 instances.
-    }
+    startupBootstrap(BASE_DIR);
+    log("  Bootstrapped root frame from .root-operator");
   }
 
   const callStack = loadCallStack(CALL_STACK_PATH);

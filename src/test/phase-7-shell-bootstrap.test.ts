@@ -79,6 +79,38 @@ describe("R12: {{program}} substitution at bootstrap — edge cases", () => {
   });
 });
 
+describe("R14: absent .root-operator → clean error", () => {
+  test("startupBootstrap throws with the canonical message when .root-operator is missing", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "turing-bootstrap-"));
+    writeFileSync(join(dir, "PROGRAM.md"), "anything");
+    try {
+      const { startupBootstrap } = await import(pathToFileURL(resolve(REPO, "dist/main.js")).href);
+      assert.throws(
+        () => startupBootstrap(dir),
+        (err: Error) => /no \.root-operator configured/i.test(err.message),
+      );
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("startupBootstrap throws with canonical message even when .call-stack.json exists (no legacy fallback)", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "turing-bootstrap-"));
+    writeFileSync(join(dir, "PROGRAM.md"), "anything");
+    // Pre-existing call stack — must NOT save us
+    writeFileSync(join(dir, ".call-stack.json"), JSON.stringify({ nextCounter: 1, stack: [{ returnState: "<root>", frameDir: "frames/f000-strategy" }] }));
+    try {
+      const { startupBootstrap } = await import(pathToFileURL(resolve(REPO, "dist/main.js")).href);
+      assert.throws(
+        () => startupBootstrap(dir),
+        (err: Error) => /no \.root-operator configured/i.test(err.message),
+      );
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
 describe("R13/R18/R19: OUTPUT.md emission on halt", () => {
   test("done@depth1 with ## Return\\nanswer: writes ## Answer to OUTPUT.md", async () => {
     const dir = mkdtempSync(join(tmpdir(), "turing-bootstrap-"));
