@@ -376,4 +376,126 @@ The state value `expanding` is the returnState; on pop the shell sets state to `
     ABSORB_OK_EOF
     fi
 
-(Future tasks T32-T34 add: expand-workflow.md operator, Simulate-push, Simulate-absorb, Evaluate-absorb, termination, etc.)
+## Instruction: Simulate-push
+**Condition:** MEMORY state is "simulating"
+**Action:** Read current_item_index and current_op_index from scoped sim files, determine the next operator to push from the chosen child's workflow recipe, compose push-args with task (current item's question) and prior_answer (previous operator's answer, empty for first op), emit `## Push` + `## Push-Args`.
+
+    mkdir -p ./scoped/sim
+    [ -f ./scoped/sim/current_item.md ] || echo "0" > ./scoped/sim/current_item.md
+    [ -f ./scoped/sim/current_op.md ] || echo "0" > ./scoped/sim/current_op.md
+    [ -f ./scoped/sim/scores.md ] || : > ./scoped/sim/scores.md
+    [ -f ./scoped/sim/last_answer.md ] || : > ./scoped/sim/last_answer.md
+
+    ITEM_IDX=$(cat ./scoped/sim/current_item.md)
+    OP_IDX=$(cat ./scoped/sim/current_op.md)
+    CHOSEN=$(cat ./scoped/chosen_child.md)
+    RECIPE=$(cat "./scoped/state-${CHOSEN}.md")
+
+    # Parse recipe operators (comma-separated, strip whitespace)
+    IFS=',' read -ra OPS <<< "$RECIPE"
+    NUM_OPS=${#OPS[@]}
+
+    # Get the current operator name (strip surrounding whitespace)
+    OP_NAME=$(echo "${OPS[$OP_IDX]}" | tr -d ' ')
+
+    # Get the current item's question text from benchmark_items.md (JSONL, 1-indexed)
+    ITEM_LINE=$(sed -n "$((ITEM_IDX + 1))p" ./scoped/benchmark_items.md)
+    TASK_TEXT=$(echo "$ITEM_LINE" | python3 -c 'import sys,json; print(json.loads(sys.stdin.read())["question"])')
+
+    # Get prior answer (empty string if first op of this item)
+    if [ "$OP_IDX" -eq 0 ]; then
+      PRIOR=""
+    else
+      PRIOR=$(cat ./scoped/sim/last_answer.md)
+    fi
+
+    # Indent task and prior for YAML block scalar (two-space indent)
+    TASK_INDENTED=$(echo "$TASK_TEXT" | sed 's/^/  /')
+    PRIOR_INDENTED=$(echo "$PRIOR" | sed 's/^/  /')
+
+    cat > ./MEMORY.md << SIM_PUSH_EOF
+## State
+simulating
+## Matched Instruction
+Simulate-push
+## Last Action
+Pushing operators/${OP_NAME}.md for item ${ITEM_IDX}, op ${OP_IDX}.
+## Result
+Push queued.
+## Push
+operators/${OP_NAME}.md
+## Push-Args
+task: |
+${TASK_INDENTED}
+prior_answer: |
+${PRIOR_INDENTED}
+SIM_PUSH_EOF
+
+## Instruction: Simulate-absorb
+**Condition:** MEMORY state is "simulating_completed"
+**Action:** Capture the `## Answer` returned from the just-popped operator, save it, advance op_index. If op_index reaches end of recipe, score the item (compare extracted integer to expected answer from benchmark_items.md), record score, advance item_index, reset op_index. If all 3 items done, transition to `evaluating`. Otherwise loop back to `simulating`.
+
+    ITEM_IDX=$(cat ./scoped/sim/current_item.md)
+    OP_IDX=$(cat ./scoped/sim/current_op.md)
+    CHOSEN=$(cat ./scoped/chosen_child.md)
+    RECIPE=$(cat "./scoped/state-${CHOSEN}.md")
+    IFS=',' read -ra OPS <<< "$RECIPE"
+    NUM_OPS=${#OPS[@]}
+    NUM_ITEMS=3
+
+    # Capture ## Answer from MEMORY (spliced in by the just-popped operator's ## Return)
+    ANSWER=$(awk '/^## Answer$/{found=1;next} found && /^## /{exit} found{print}' ./MEMORY.md | sed '/^[[:space:]]*$/d')
+    echo "$ANSWER" > ./scoped/sim/last_answer.md
+
+    # Advance op_index
+    OP_IDX=$((OP_IDX + 1))
+    echo "$OP_IDX" > ./scoped/sim/current_op.md
+
+    if [ "$OP_IDX" -ge "$NUM_OPS" ]; then
+      # Item complete — score it
+      ITEM_LINE=$(sed -n "$((ITEM_IDX + 1))p" ./scoped/benchmark_items.md)
+      EXPECTED=$(echo "$ITEM_LINE" | python3 -c 'import sys,json; print(json.loads(sys.stdin.read())["answer"])')
+      # Extract last integer from answer using [-+]?\d+ pattern
+      ACTUAL=$(echo "$ANSWER" | grep -oE '[-+]?[0-9]+' | tail -n 1)
+      if [ "$ACTUAL" = "$EXPECTED" ]; then
+        SCORE=1
+      else
+        SCORE=0
+      fi
+      echo "$SCORE" >> ./scoped/sim/scores.md
+
+      # Advance to next item, reset op index and last answer
+      ITEM_IDX=$((ITEM_IDX + 1))
+      echo "$ITEM_IDX" > ./scoped/sim/current_item.md
+      echo "0" > ./scoped/sim/current_op.md
+      : > ./scoped/sim/last_answer.md
+
+      if [ "$ITEM_IDX" -ge "$NUM_ITEMS" ]; then
+        # All 3 items done — transition to evaluating
+        cat > ./MEMORY.md << EVALEOF
+## State
+evaluating
+## Matched Instruction
+Simulate-absorb
+## Last Action
+All ${NUM_ITEMS} items simulated for chosen child ${CHOSEN}. Per-item scores in scoped/sim/scores.md.
+## Result
+Ready for back-prop.
+EVALEOF
+        exit 0
+      fi
+    fi
+
+    # Loop back: keep simulating (next op of current item, or first op of next item)
+    cat > ./MEMORY.md << LOOPEOF
+## State
+simulating
+## Matched Instruction
+Simulate-absorb
+## Last Action
+Captured operator answer for item ${ITEM_IDX}, advancing simulation.
+## Result
+Continuing simulation.
+LOOPEOF
+
+(Future task T34 adds: Evaluate-absorb, back-prop, termination, etc.)

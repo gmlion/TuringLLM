@@ -317,3 +317,32 @@ describe("R41/R42/R43/R44: expand-workflow.md operator", () => {
     assert.equal(pushLines.length, 0, `unexpected ## Push line(s): ${pushLines.join(", ")}`);
   });
 });
+
+describe("R33: aflow-lite Simulate phase pushes operators per-item with {{task}}+{{prior_answer}}", () => {
+  const OP = "interpreters/7-meta-framework/a-aflow-lite/operators/aflow-lite.md";
+  test("Simulate-push instruction matches state simulating", () => {
+    const content = readFileSync(resolve(REPO, OP), "utf-8");
+    assert.match(content, /## Instruction: Simulate-push|## Instruction: Simulate push/);
+    assert.match(content, /MEMORY state is "simulating"/);
+  });
+  test("Simulate pushes a library operator (resolved from workflow recipe)", () => {
+    const content = readFileSync(resolve(REPO, OP), "utf-8");
+    // Should compose a push to operators/${OPNAME}.md based on workflow recipe
+    assert.match(content, /operators\/\$\{?OP\w*\}?\.md|operators\/\$OP\w*\.md/);
+  });
+  test("Simulate-push declares task and prior_answer push-args", () => {
+    const content = readFileSync(resolve(REPO, OP), "utf-8");
+    assert.match(content, /task:\s*\|/);
+    assert.match(content, /prior_answer:\s*\|/);
+  });
+  test("R35: integer extraction via regex [-+]?\\d+", () => {
+    const content = readFileSync(resolve(REPO, OP), "utf-8");
+    // Should grep or sed for an integer pattern
+    assert.match(content, /\[-\+\]\?\\?d\+|grep.*-o.*[0-9]|grep -oE.*\[0-9\]/);
+  });
+  test("Simulate-absorb tracks 3 items and accumulates scores", () => {
+    const content = readFileSync(resolve(REPO, OP), "utf-8");
+    // Some indication of per-item iteration over 3 items
+    assert.match(content, /current_item|item_index|sim\/scores/);
+  });
+});
