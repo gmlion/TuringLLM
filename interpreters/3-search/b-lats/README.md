@@ -75,3 +75,9 @@ Contrast the resulting trees: ToT grows breadth-first to fixed `max_depth = N âˆ
 - **Record-A: failed rollouts do NOT materialise into the tree.** The tree only grows by deliberate UCT expansions (k=5 children per iteration). Winning rollouts are recorded only in MEMORY's `## Solution` section (and in `history/` snapshots). This matches the LATS paper's distinction between deliberate tree growth and throwaway rollouts.
 - **Malformed dynamic outputs are non-blocking.** Bad `expand-node` children (R50), missing `rollout` terminal state (R53), unexpected `evaluate` verdicts (R54), missing `reflect` lessons (R60) all append `## Pending Questions` and progress (treated as fail / fall-through). The strategy never transitions to `waiting_for_user`.
 - **Phase 6 dynamics generalisation landed alongside this interpreter.** As of `docs/specs/2026-05-01-implement-phase-6b/`, `expand-node.md` and `score.md` (Phase 6) are domain-agnostic â€” same `partial_state` / `task` push-arg shape that LATS uses. The LATS leaf adopts the canonical (post-refactor) `expand-node.md` byte-equal.
+
+## Layout note
+
+`INSTRUCTIONS.md` is a single-line marker pointing at the canonical operator file `operators/lats.md`. The strategy body lives in the canonical operator. This pattern lets the same operator be invoked standalone (via `.root-operator` bootstrap) AND as a library operator inside meta-frameworks like `aflow-lite`.
+
+For this interpreter the canonical operator is `operators/lats.md`.

@@ -63,3 +63,9 @@ After completion, inspect:
 - **Malformed dynamic outputs are non-blocking.** Bad `expand-node` children, malformed `score.md` labels, or unexpected `evaluate.md` verdicts append a `## Pending Questions` entry and otherwise progress (treated as `impossible` / `fail` respectively). The strategy never transitions to `waiting_for_user` for soft errors — only at Initialize when PROGRAM.md is genuinely missing input.
 - **PROGRAM.md prose constraint.** Initialize parses integers via `grep -oE '\b[0-9]+\b' | head -n 5`; the convention is "puzzle numbers, then target" with the LAST integer as target. Do not include stray integer tokens in the prose (no "Phase 6", "Section 3", or duplicate "24" headings). Stick to the demo's plain shape: title that contains no digits, then prose listing the puzzle numbers and target as integers.
 - **Project-git per branch is deferred.** The source spec mentions per-branch `workspace/` git as a future integration; Game of 24 has no per-branch artefacts, so the integration is out of scope here. Phase 6b (LATS) or a future code-search demo is the natural place to introduce it.
+
+## Layout note
+
+`INSTRUCTIONS.md` is a single-line marker pointing at the canonical operator file `operators/tot.md`. The strategy body lives in the canonical operator. This pattern lets the same operator be invoked standalone (via `.root-operator` bootstrap) AND as a library operator inside meta-frameworks like `aflow-lite`.
+
+For this interpreter the canonical operator is `operators/tot.md`.

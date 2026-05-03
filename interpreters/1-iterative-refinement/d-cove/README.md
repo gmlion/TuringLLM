@@ -131,3 +131,9 @@ instances/my-d/run.sh
   Evaluator) would add an acceptance loop.
 - **No iteration cap** on the inner question loop — the verifier
   keeps asking until every bullet is `answered`.
+
+## Layout note
+
+`INSTRUCTIONS.md` is a single-line marker pointing at the canonical operator file `operators/cove.md`. The strategy body lives in the canonical operator. This pattern lets the same operator be invoked standalone (via `.root-operator` bootstrap) AND as a library operator inside meta-frameworks like `aflow-lite`.
+
+For this interpreter the canonical operator is `operators/cove.md`.

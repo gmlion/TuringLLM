@@ -157,3 +157,9 @@ instances/my-c/run.sh
 - **Report quality depends on the provider** and on whether the
   atomic tackle frames actually use web tools (vs. answering
   from training data).
+
+## Layout note
+
+`INSTRUCTIONS.md` is a single-line marker pointing at the canonical operator file `operators/plan-execute.md`. The strategy body lives in the canonical operator. This pattern lets the same operator be invoked standalone (via `.root-operator` bootstrap) AND as a library operator inside meta-frameworks like `aflow-lite`.
+
+For this interpreter the canonical operator is `operators/plan-execute.md`.

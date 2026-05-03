@@ -127,3 +127,9 @@ instances/my-metagpt/run.sh
   sequence of four role pushes.
 - **Stack depth 2 only inside QA.** Every other role is a leaf
   push at depth 1.
+
+## Layout note
+
+`INSTRUCTIONS.md` is a single-line marker pointing at the canonical operator file `operators/metagpt.md`. The strategy body lives in the canonical operator. This pattern lets the same operator be invoked standalone (via `.root-operator` bootstrap) AND as a library operator inside meta-frameworks like `aflow-lite`.
+
+For this interpreter the canonical operator is `operators/metagpt.md`.

@@ -609,3 +609,28 @@ describe("R58: CLAUDE.md updates", () => {
     assert.match(content, /OUTPUT\.md/);
   });
 });
+
+describe("R59: per-leaf READMEs mention the marker pattern", () => {
+  const LEAVES_WITH_CANONICALS = [
+    ["1-iterative-refinement/a-self-refine", "self-refine"],
+    ["1-iterative-refinement/b-evaluator-optimizer", "refine"],
+    ["1-iterative-refinement/c-reflexion", "reflexion"],
+    ["1-iterative-refinement/d-cove", "cove"],
+    ["2-planning-decomposition/a-plan-execute", "plan-execute"],
+    ["2-planning-decomposition/b-orchestrator-workers", "plan-execute"],
+    ["2-planning-decomposition/c-deep-research", "plan-execute"],
+    ["3-search/a-tot", "tot"],
+    ["3-search/b-lats", "lats"],
+    ["4-peer-collaboration/a-debate", "debate"],
+    ["5-fixed-sop-teams/a-metagpt", "metagpt"],
+    ["5-fixed-sop-teams/b-chatdev", "chatdev"],
+  ] as const;
+  for (const [leaf, canonical] of LEAVES_WITH_CANONICALS) {
+    test(`${leaf} README mentions marker + canonical operators/${canonical}.md`, () => {
+      const readmePath = resolve(REPO, "interpreters", leaf, "README.md");
+      const content = readFileSync(readmePath, "utf-8");
+      assert.match(content, /marker|canonical operator/i, `${leaf}/README.md missing marker pattern note`);
+      assert.match(content, new RegExp(`operators/${canonical}\\.md`), `${leaf}/README.md missing canonical path operators/${canonical}.md`);
+    });
+  }
+});

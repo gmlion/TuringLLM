@@ -110,3 +110,9 @@ instances/my-c/run.sh
   cleared.
 - **No iteration cap.** Convergence is the evaluator's
   judgement.
+
+## Layout note
+
+`INSTRUCTIONS.md` is a single-line marker pointing at the canonical operator file `operators/reflexion.md`. The strategy body lives in the canonical operator. This pattern lets the same operator be invoked standalone (via `.root-operator` bootstrap) AND as a library operator inside meta-frameworks like `aflow-lite`.
+
+For this interpreter the canonical operator is `operators/reflexion.md`.

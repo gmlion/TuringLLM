@@ -98,3 +98,9 @@ instances/my-b/run.sh
   because this strategy has no `user_responded` handler.
 - **No iteration cap.** Convergence is the evaluator's
   judgement.
+
+## Layout note
+
+`INSTRUCTIONS.md` is a single-line marker pointing at the canonical operator file `operators/refine.md`. The strategy body lives in the canonical operator. This pattern lets the same operator be invoked standalone (via `.root-operator` bootstrap) AND as a library operator inside meta-frameworks like `aflow-lite`.
+
+For this interpreter the canonical operator is `operators/refine.md`.

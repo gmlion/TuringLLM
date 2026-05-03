@@ -95,3 +95,9 @@ instances/my-a/run.sh
 - **No iteration cap.** Convergence is the model's judgement.
   Ctrl-C is safe; state persists in `./scoped/draft.md` and the
   strategy's MEMORY, so re-running picks up at the next cycle.
+
+## Layout note
+
+`INSTRUCTIONS.md` is a single-line marker pointing at the canonical operator file `operators/self-refine.md`. The strategy body lives in the canonical operator. This pattern lets the same operator be invoked standalone (via `.root-operator` bootstrap) AND as a library operator inside meta-frameworks like `aflow-lite`.
+
+For this interpreter the canonical operator is `operators/self-refine.md`.

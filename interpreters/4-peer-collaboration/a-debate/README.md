@@ -33,3 +33,9 @@ Mixture of Agents — the second Group-4 pattern — is deferred pending per-pro
 - `docs/agent-workflows/patterns.md` § Group 4 — Peer Collaboration.
 - `docs/agent-workflows/requirements.md` § Phase 5.
 - `docs/specs/2026-04-28-agent-workflows-phase-5/` — full spec (requirements, design, tasks).
+
+## Layout note
+
+`INSTRUCTIONS.md` is a single-line marker pointing at the canonical operator file `operators/debate.md`. The strategy body lives in the canonical operator. This pattern lets the same operator be invoked standalone (via `.root-operator` bootstrap) AND as a library operator inside meta-frameworks like `aflow-lite`.
+
+For this interpreter the canonical operator is `operators/debate.md`.
