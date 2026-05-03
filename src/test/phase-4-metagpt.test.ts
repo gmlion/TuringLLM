@@ -26,14 +26,14 @@ describe("phase-4 a-metagpt: layout, roles, evaluate reuse", () => {
   });
 
   test("strategy walks PM → Architect → Engineer → QA", () => {
-    const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+    const s = readFileSync(resolve(INTERP, "operators/metagpt.md"), "utf-8");
     for (const dyn of ["role-pm.md", "role-architect.md", "role-engineer.md", "role-qa.md"]) {
       assert.match(s, new RegExp(dyn), `strategy missing push of ${dyn}`);
     }
   });
 
   test("strategy uses Push-Args to forward typed hand-offs", () => {
-    const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+    const s = readFileSync(resolve(INTERP, "operators/metagpt.md"), "utf-8");
     // Architect receives {{prd}}, Engineer receives {{design}}, QA receives {{tasks}}.
     assert.match(s, /\{\{prd\}\}/);
     assert.match(s, /\{\{design\}\}/);
@@ -60,5 +60,73 @@ describe("phase-4 a-metagpt: layout, roles, evaluate reuse", () => {
     assert.match(ar, /## Return[\s\S]*design:/);
     assert.match(en, /## Return[\s\S]*tasks:/);
     assert.match(qa, /## Return[\s\S]*review:/);
+  });
+});
+
+describe("phase-7 a-metagpt: canonical operator migration (R20, R21, R22, R23, R24, R25, R27, R45, R46, R47)", () => {
+  test("INSTRUCTIONS.md is a single-line marker pointing at operators/metagpt.md (R21, R46)", () => {
+    const inst = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8").trim();
+    assert.equal(inst, "operators/metagpt.md");
+  });
+
+  test("operators/metagpt.md exists (R22)", () => {
+    assert.ok(existsSync(resolve(INTERP, "operators/metagpt.md")), "operators/metagpt.md missing");
+  });
+
+  test("operators/metagpt.md has bimodal header (# Operator:) and # Sub-instructions (R20, R22, R45)", () => {
+    const s = readFileSync(resolve(INTERP, "operators/metagpt.md"), "utf-8");
+    assert.match(s, /^# Operator:/m);
+    assert.match(s, /^# Sub-instructions/m);
+  });
+
+  test("operators/metagpt.md has bimodal push-args: {{program}} and {{task}} + {{prior_answer}} (R47)", () => {
+    const s = readFileSync(resolve(INTERP, "operators/metagpt.md"), "utf-8");
+    assert.match(s, /\{\{program\}\}/);
+    assert.match(s, /\{\{task\}\}/);
+    assert.match(s, /\{\{prior_answer\}\}/);
+  });
+
+  test("operators/metagpt.md Initialize detects mode via {{task}} grep (R47)", () => {
+    const s = readFileSync(resolve(INTERP, "operators/metagpt.md"), "utf-8");
+    const initM = s.match(/^## Instruction:\s*Initialize\b([\s\S]*?)(?=^## Instruction:|^# Sub-instructions)/m);
+    const init = initM ? initM[1] : "";
+    assert.match(init, /grep.*\{\{task\}\}/);
+  });
+
+  test("operators/metagpt.md Initialize does NOT hardcode cat ../../PROGRAM.md (R23)", () => {
+    const s = readFileSync(resolve(INTERP, "operators/metagpt.md"), "utf-8");
+    const initM = s.match(/^## Instruction:\s*Initialize\b([\s\S]*?)(?=^## Instruction:|^# Sub-instructions)/m);
+    const init = initM ? initM[1] : "";
+    assert.doesNotMatch(init, /cat\s+\.\.\/\.\.\/PROGRAM\.md/);
+  });
+
+  test("operators/metagpt.md Finish preserves ## Review AND adds ## Return answer: (R23, R24)", () => {
+    const s = readFileSync(resolve(INTERP, "operators/metagpt.md"), "utf-8");
+    const finishM = s.match(/^## Instruction:\s*Finish\b([\s\S]*?)(?=^## Instruction:|^# Sub-instructions)/m);
+    const finish = finishM ? finishM[1] : "";
+    assert.match(finish, /## Review/);
+    assert.match(finish, /## Return\s*\n\s*answer:/);
+  });
+
+  test("operators/metagpt.md internal sub-pushes use operators/ paths (R25)", () => {
+    const s = readFileSync(resolve(INTERP, "operators/metagpt.md"), "utf-8");
+    assert.match(s, /## Push\s*\n\s*operators\/role-pm\.md/);
+    assert.match(s, /## Push\s*\n\s*operators\/role-architect\.md/);
+    assert.match(s, /## Push\s*\n\s*operators\/role-engineer\.md/);
+    assert.match(s, /## Push\s*\n\s*operators\/role-qa\.md/);
+  });
+
+  test("operators/metagpt.md describes both standalone and aflow-lite invocation modes (R27)", () => {
+    const s = readFileSync(resolve(INTERP, "operators/metagpt.md"), "utf-8");
+    assert.match(s, /mode 1.*standalone|standalone.*mode 1/i);
+    assert.match(s, /mode 2.*aflow|aflow.*mode 2/i);
+  });
+
+  test("operators/metagpt.md Sub-instructions section is empty (this operator needs none)", () => {
+    const s = readFileSync(resolve(INTERP, "operators/metagpt.md"), "utf-8");
+    const idx = s.search(/^# Sub-instructions/m);
+    assert.ok(idx >= 0, "# Sub-instructions section missing");
+    const sub = s.slice(idx).replace(/^# Sub-instructions\s*\n/, "").trim();
+    assert.match(sub, /\(none/, `sub-instructions section should declare "(none …)", got: ${sub.slice(0, 80)}`);
   });
 });
