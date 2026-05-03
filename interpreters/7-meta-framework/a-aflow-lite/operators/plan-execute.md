@@ -16,7 +16,7 @@ This interpreter implements the Plan-and-Execute pattern (patterns.md Group 2) a
 The recursive split between operators (single-responsibility):
 - `plan.md` — one-shot decomposition: given a sub-goal, the role, and the anchors, returns a list of sub-tasks the role would naturally produce.
 - `tackle.md` — given a sub-goal + role + anchors, produce a result; atomic path executes one tool call directly, composite path pushes `plan.md` then recursively pushes `tackle.md` per sub-task then synthesizes.
-- The atomic-vs-composite decision in `tackle.md`'s Try is framed as a question of professional judgement in the role: "as {{role}}, would you produce this now or split it?" — not as a checklist of rules to match.
+- The atomic-vs-composite decision in `tackle.md`'s Try is framed as a question of professional judgement in the role — "as <the producer role>, would you produce this now or split it?" — not as a checklist of rules to match. (`tackle.md` itself receives the role as a real push-arg; this prose just describes the rhetorical framing.)
 
 **Anchor context** (`original_goal`, `parent_chain`, `role`) is propagated unchanged through every recursion level. It is the only defence against semantic drift in deep decomposition trees, and the role-framing is the only defence against over-decomposition: a researcher writing one section just writes it; an analyst writing one summary just writes it.
 

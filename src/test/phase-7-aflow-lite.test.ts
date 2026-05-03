@@ -776,3 +776,32 @@ describe("F1: every bimodal operator's done transition writes ## Return inline",
     });
   }
 });
+
+describe("F2: aflow-lite library operators have only the 3 bimodal placeholders (no phantoms)", () => {
+  // Found during smoke test: plan-execute.md had a literal {{role}} token in
+  // illustrative prose (not a real push-arg), which the shell's substitutePlaceholders
+  // saw as unresolved → applyPush silently failed when aflow-lite pushed plan-execute.
+  // Library operators may only contain the 3 bimodal placeholders that aflow-lite passes.
+  const LIBRARY_OPS = [
+    "interpreters/1-iterative-refinement/b-evaluator-optimizer/operators/refine.md",
+    "interpreters/1-iterative-refinement/c-reflexion/operators/reflexion.md",
+    "interpreters/1-iterative-refinement/d-cove/operators/cove.md",
+    "interpreters/2-planning-decomposition/a-plan-execute/operators/plan-execute.md",
+    "interpreters/4-peer-collaboration/a-debate/operators/debate.md",
+    "interpreters/7-meta-framework/a-aflow-lite/operators/refine.md",
+    "interpreters/7-meta-framework/a-aflow-lite/operators/reflexion.md",
+    "interpreters/7-meta-framework/a-aflow-lite/operators/cove.md",
+    "interpreters/7-meta-framework/a-aflow-lite/operators/plan-execute.md",
+    "interpreters/7-meta-framework/a-aflow-lite/operators/debate.md",
+  ];
+  const ALLOWED = new Set(["program", "task", "prior_answer"]);
+  for (const op of LIBRARY_OPS) {
+    test(`${op}: only contains {{program|task|prior_answer}}`, () => {
+      const content = readFileSync(resolve(REPO, op), "utf-8");
+      const matches = content.match(/\{\{([a-z_]+)\}\}/g) || [];
+      const found = new Set(matches.map(m => m.slice(2, -2)));
+      const phantoms = [...found].filter(k => !ALLOWED.has(k));
+      assert.deepEqual(phantoms, [], `${op} contains phantom placeholders ${JSON.stringify(phantoms)}. Rephrase prose to avoid literal {{token}} or aflow-lite Simulate-push must pass empty values for them.`);
+    });
+  }
+});
