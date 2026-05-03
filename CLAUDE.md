@@ -177,6 +177,20 @@ The `_completed` suffix prevents an infinite loop: the caller's original `{calle
 
 **Implementation.** All push/pop semantics live in `src/call-stack.ts` as pure functions (`applyPush`, `applyPop`) that take `{stack, memory, instructions}` and return the transformed state. The shell in `src/main.ts` runs them before each LLM invocation and writes results back to disk. This split is why the stack logic is unit-tested independently of the main loop.
 
+## Root-operator bootstrap (Phase 7)
+
+When `new-instance.sh` creates an instance, it reads the interpreter's `INSTRUCTIONS.md` (a single-line marker like `operators/refine.md`) and writes that path to `instances/<name>/.root-operator`.
+
+At startup, the shell:
+1. Reads `.root-operator` and the canonical operator file at the path it names (e.g. `instances/<name>/operators/refine.md`).
+2. Substitutes `{{program}}` (from `instances/<name>/PROGRAM.md`) into the operator content.
+3. Writes the substituted operator to `frames/f000-<slug>/INSTRUCTIONS.md` (slug = operator filename without extension; e.g. `f000-refine`).
+4. Initialises the call stack with one frame and enters the cycle loop.
+
+When the root frame transitions to `state == done`, the shell parses the `## Return` block from the frame's MEMORY and writes one section per key to `instances/<name>/OUTPUT.md`. If `## Return` is absent or empty, OUTPUT.md gets a diagnostic.
+
+Pre-Phase-7 instances (those without `.root-operator`) cannot run under the new shell — they exit cleanly with the message *"no .root-operator configured for this instance — pre-Phase-7 instances are read-only artefacts; create a new instance via new-instance.sh"*. Old instances stay on disk for inspection.
+
 ## Per-frame directories and ## Return splicing (Phase 2b)
 
 Phase 2b replaces the flat instance layout (INSTRUCTIONS.md + MEMORY.md at the root) with a **per-frame directory tree**. Each call stack frame lives in its own directory; the shell sets cwd to the active frame before every LLM cycle.
@@ -186,10 +200,11 @@ Phase 2b replaces the flat instance layout (INSTRUCTIONS.md + MEMORY.md at the r
 ```
 instances/foo/
 ├── PROGRAM.md          # User's program (read-only to machine; always at instance root)
+├── .root-operator      # Marker pointing at the canonical operator (e.g. "operators/refine.md")
 ├── workspace/          # Project artifacts (has its own git repo; always at instance root)
 ├── .call-stack.json    # Saved call stack
 ├── frames/
-│   ├── f000-strategy/  # Root frame (stack[0], returnState: "<root>")
+│   ├── f000-refine/    # Root frame (stack[0], returnState: "<root>"; slug = operator basename)
 │   │   ├── INSTRUCTIONS.md
 │   │   ├── MEMORY.md
 │   │   └── scoped/     # Per-frame heap files (draft.md, attempt.md, etc.)
@@ -201,6 +216,7 @@ instances/foo/
 │       ├── INSTRUCTIONS.md
 │       ├── MEMORY.md
 │       └── scoped/
+├── OUTPUT.md           # Written on halt; contains ## Answer (from operator's ## Return)
 ├── run.sh
 ├── .env
 ├── .api_key
@@ -209,7 +225,7 @@ instances/foo/
 └── logs/
 ```
 
-**Frame naming:** `frames/f<NNN>-<slug>` where NNN is a monotonically increasing counter (zero-padded to 3 digits, widens beyond 999) and slug is derived from the push target filename (e.g. `operators/verify.md` → `verify`). The root frame is always `frames/f000-strategy`.
+**Frame naming:** `frames/f<NNN>-<slug>` where NNN is a monotonically increasing counter (zero-padded to 3 digits, widens beyond 999) and slug is derived from the push target filename (e.g. `operators/verify.md` → `verify`). The root frame slug comes from `.root-operator` (e.g. `operators/refine.md` → `f000-refine`).
 
 **Halt detection:** `state === "done"` AND `stack.length === 1` (only the root frame remains).
 
@@ -332,19 +348,21 @@ Supporting `.md` files (role descriptions, templates) are copied into the instan
 ```
 instances/foo/
 ├── PROGRAM.md         # User's program (read-only to machine)
+├── .root-operator     # Marker pointing at canonical operator (e.g. "operators/refine.md")
 ├── .call-stack.json   # Saved call stack; stack[0] is always the root frame
 ├── .env               # Provider/model config (gitignored)
 ├── workspace/         # Project artifacts (has its own git repo)
-├── operators/          # Reusable instruction files copied from the interpreter (optional)
+├── operators/         # Reusable instruction files copied from the interpreter
 ├── frames/
-│   ├── f000-strategy/ # Root frame (always present)
-│   │   ├── INSTRUCTIONS.md   # Strategy + generated sub-instructions
+│   ├── f000-<operator-slug>/  # Root frame (always present; slug = operator basename)
+│   │   ├── INSTRUCTIONS.md   # Operator content with {{program}} substituted
 │   │   ├── MEMORY.md         # Current state; may contain ## Push / ## Return
 │   │   └── scoped/           # Per-frame heap files (draft.md, etc.)
 │   └── f001-<slug>/   # Pushed frames appear here while active
 │       ├── INSTRUCTIONS.md
 │       ├── MEMORY.md
 │       └── scoped/
+├── OUTPUT.md          # Written on halt; one section per ## Return key from root frame
 ├── run.sh             # Launch script
 ├── .api_key           # Cached API key (gitignored)
 ├── .gitignore         # Ignores .api_key, .env, logs/, history/, workspace/.git/

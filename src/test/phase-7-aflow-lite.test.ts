@@ -585,3 +585,27 @@ describe("R57: interpreters/README.md updates", () => {
     assert.match(content, /\.root-operator|root.operator bootstrap/);
   });
 });
+
+describe("R58: CLAUDE.md updates", () => {
+  const CMD = "CLAUDE.md";
+  test("section heading 'Operators (Call Stack)'", () => {
+    const content = readFileSync(resolve(REPO, CMD), "utf-8");
+    assert.match(content, /## Operators \(Call Stack\)/);
+    assert.doesNotMatch(content, /## Dynamics \(Call Stack\)/);
+  });
+  test("Root-operator bootstrap section exists", () => {
+    const content = readFileSync(resolve(REPO, CMD), "utf-8");
+    assert.match(content, /Root.operator bootstrap|root-operator bootstrap/i);
+    assert.match(content, /\.root-operator/);
+    assert.match(content, /OUTPUT\.md/);
+  });
+  test("Instance Layout diagram updated to f000-<operator-slug>", () => {
+    const content = readFileSync(resolve(REPO, CMD), "utf-8");
+    // The layout diagram should show frames/f000-<slug>/ pattern; "f000-strategy" should not be the only example
+    assert.match(content, /f000-<.*slug.*>|f000-<operator|f000-refine|f000-aflow/);
+  });
+  test("OUTPUT.md mentioned in the layout diagram or nearby", () => {
+    const content = readFileSync(resolve(REPO, CMD), "utf-8");
+    assert.match(content, /OUTPUT\.md/);
+  });
+});
