@@ -156,6 +156,35 @@ describe("R36/R50: Initialize loads fixture and samples 3 items deterministicall
   });
 });
 
+describe("R29: aflow-lite has tree ledger primitives (Phase 6b reuse)", () => {
+  const OP = "interpreters/7-meta-framework/a-aflow-lite/operators/aflow-lite.md";
+  test("declares append_node helper or pattern — heredoc writing id/parent_id/depth/q/n/status", () => {
+    const content = readFileSync(resolve(REPO, OP), "utf-8");
+    // Heredoc that actually writes a node with all 6 fields
+    assert.match(content, /cat >> .*tree\.md/);
+    assert.match(content, /parent_id:/);
+    assert.match(content, /depth:/);
+    assert.match(content, /status: live/);
+  });
+  test("declares update-field helper or pattern (awk surgical in-place edit of q and n)", () => {
+    const content = readFileSync(resolve(REPO, OP), "utf-8");
+    // Must have awk-based surgical update with tree.md.tmp pattern (as in LATS)
+    assert.match(content, /tree\.md\.tmp/);
+    assert.match(content, /awk.*\bq:\b|awk.*print.*"q:/);
+  });
+  test("declares back-prop or walk-parents pattern as a named bash function", () => {
+    const content = readFileSync(resolve(REPO, OP), "utf-8");
+    // Must have a named backprop/walk-parents function definition
+    assert.match(content, /backprop\s*\(\)|backprop\(\)/);
+    // Must walk parent chain
+    assert.match(content, /parent_id.*exit|exit.*parent_id/s);
+  });
+  test("next monotonic id helper uses grep -c pattern", () => {
+    const content = readFileSync(resolve(REPO, OP), "utf-8");
+    assert.match(content, /grep -c.*id: n|NEXT_INDEX/);
+  });
+});
+
 describe("R26/R34: 12 operators copied byte-equal into aflow-lite", () => {
   const COPIES = [
     ["refine.md",                "interpreters/1-iterative-refinement/b-evaluator-optimizer/operators/refine.md"],

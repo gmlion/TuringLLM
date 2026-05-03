@@ -35,6 +35,64 @@ Hardcoded:
 
 The library does NOT include `self-refine` (subsumed by `refine`), `tot`/`lats` (search-over-search recursion), `metagpt`/`chatdev` (end-to-end pipelines), or `MoA` (deferred — blocked on per-prompt model selection in the harness).
 
+## Tree-ledger primitives (LATS-equivalent)
+
+Every instruction that reads or writes `./scoped/tree.md` uses these bash idioms. They are stated once here and referenced by name from each Instruction body.
+
+**Append a node block** (used by Initialize for n0, by Expand-absorb for children):
+
+    cat >> ./scoped/tree.md << NODE_EOF
+    ---
+    id: $NEW_ID
+    parent_id: $PARENT_ID
+    depth: $DEPTH
+    q: 0
+    n: 0
+    status: live
+    NODE_EOF
+
+**Next monotonic id**:
+
+    NEXT_INDEX=$(grep -c '^id: n' ./scoped/tree.md)
+    NEW_ID="n$NEXT_INDEX"
+
+**Update one field of one node** (surgical edit):
+
+    # Args: $1 = id, $2 = field name, $3 = new value
+    awk -v ID="$1" -v F="$2" -v V="$3" '
+      /^---$/ { in_block = 0; print; next }
+      /^id:/  { in_block = ($2 == ID); print; next }
+      in_block && $1 == F":" { print F": " V; next }
+      { print }
+    ' ./scoped/tree.md > ./scoped/tree.md.tmp && mv ./scoped/tree.md.tmp ./scoped/tree.md
+
+Compact one-line form, used inline by Back-prop and other instructions where the field name is a literal:
+
+    awk -v X="$ID" -v V="$NEWV" '/^---$/{ib=0;print;next} /^id:/{ib=($2==X);print;next} ib && /^q:/{print "q: " V;next} {print}' ./scoped/tree.md > ./scoped/tree.md.tmp && mv ./scoped/tree.md.tmp ./scoped/tree.md
+
+**Per-node state file**: created at node-creation time as `./scoped/state-<id>.md`; **write-once**, never modified after creation. Read whenever the strategy needs to push that node's workflow recipe into a dynamic.
+
+### Back-prop primitive
+
+Walks the parent chain from a starting node up to and including the root, surgically incrementing `n` by 1 and adding `reward` to `q` at every node on the path.
+
+```bash
+backprop() {
+  local START="$1"
+  local REWARD="$2"
+  local CURRENT="$START"
+  while [ -n "$CURRENT" ] && [ "$CURRENT" != "-" ]; do
+    Q=$(awk -v X="$CURRENT" '/^---$/{ib=0;next} /^id:/{ib=($2==X)} ib && /^q:/{print $2; exit}' ./scoped/tree.md)
+    N=$(awk -v X="$CURRENT" '/^---$/{ib=0;next} /^id:/{ib=($2==X)} ib && /^n:/{print $2; exit}' ./scoped/tree.md)
+    NEW_Q=$(echo "$Q + $REWARD" | bc -l)
+    NEW_N=$((N + 1))
+    awk -v X="$CURRENT" -v V="$NEW_Q" '/^---$/{ib=0;print;next} /^id:/{ib=($2==X);print;next} ib && /^q:/{print "q: " V;next} {print}' ./scoped/tree.md > ./scoped/tree.md.tmp && mv ./scoped/tree.md.tmp ./scoped/tree.md
+    awk -v X="$CURRENT" -v V="$NEW_N" '/^---$/{ib=0;print;next} /^id:/{ib=($2==X);print;next} ib && /^n:/{print "n: " V;next} {print}' ./scoped/tree.md > ./scoped/tree.md.tmp && mv ./scoped/tree.md.tmp ./scoped/tree.md
+    CURRENT=$(awk -v X="$CURRENT" '/^---$/{ib=0;next} /^id:/{ib=($2==X)} ib && /^parent_id:/{print $2; exit}' ./scoped/tree.md)
+  done
+}
+```
+
 ## Instruction: Initialize
 **Condition:** MEMORY state is "empty"
 **Action:** Load the demo configuration, copy the program, sample benchmark items, seed the tree.
