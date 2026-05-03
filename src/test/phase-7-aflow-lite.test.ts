@@ -85,6 +85,77 @@ describe("R49: PROGRAM.md is short prose pointing at fixture", () => {
   });
 });
 
+describe("R28: aflow-lite.md is the canonical operator", () => {
+  const OP = "interpreters/7-meta-framework/a-aflow-lite/operators/aflow-lite.md";
+  test("operators/aflow-lite.md exists", () => {
+    assert.ok(existsSync(resolve(REPO, OP)));
+  });
+  test("file has a strategy preamble naming the meta-framework", () => {
+    const content = readFileSync(resolve(REPO, OP), "utf-8");
+    assert.match(content, /# Operator: AFlow-lite/i);
+    assert.match(content, /MCTS/);
+    assert.match(content, /workflow/i);
+  });
+});
+
+describe("R31: hardcoded operator library", () => {
+  const OP = "interpreters/7-meta-framework/a-aflow-lite/operators/aflow-lite.md";
+  test("library is exactly refine,reflexion,cove,plan-execute,debate", () => {
+    const content = readFileSync(resolve(REPO, OP), "utf-8");
+    assert.match(content, /LIBRARY="refine,reflexion,cove,plan-execute,debate"/);
+  });
+  test("library does NOT include MoA, self-refine, tot, lats, metagpt, chatdev", () => {
+    const content = readFileSync(resolve(REPO, OP), "utf-8");
+    assert.doesNotMatch(content, /LIBRARY=.*\bMoA\b/);
+    assert.doesNotMatch(content, /LIBRARY=.*\bself-refine\b/);
+    assert.doesNotMatch(content, /LIBRARY=.*\btot\b/);
+    assert.doesNotMatch(content, /LIBRARY=.*\blats\b/);
+    assert.doesNotMatch(content, /LIBRARY=.*\bmetagpt\b/);
+    assert.doesNotMatch(content, /LIBRARY=.*\bchatdev\b/);
+  });
+});
+
+describe("R28/R29/R30: scoped files schema and tree ledger setup", () => {
+  const OP = "interpreters/7-meta-framework/a-aflow-lite/operators/aflow-lite.md";
+  test("preamble lists scoped files: tree.md, task.md, max_iterations.md, uct_c.md, iter_count.md, benchmark_items.md, state-<id>.md", () => {
+    const content = readFileSync(resolve(REPO, OP), "utf-8");
+    for (const f of ["tree.md", "task.md", "max_iterations.md", "uct_c.md", "iter_count.md", "benchmark_items.md", "state-"]) {
+      assert.match(content, new RegExp(f.replace(".", "\\.").replace("-", "\\-")), `preamble missing scoped/${f}`);
+    }
+  });
+});
+
+describe("R36/R50: Initialize loads fixture and samples 3 items deterministically", () => {
+  const OP = "interpreters/7-meta-framework/a-aflow-lite/operators/aflow-lite.md";
+  test("Initialize instruction matches state empty", () => {
+    const content = readFileSync(resolve(REPO, OP), "utf-8");
+    assert.match(content, /## Instruction: Initialize/);
+    assert.match(content, /MEMORY state is "empty"/);
+  });
+  test("Initialize loads workspace/gsm8k.jsonl", () => {
+    const content = readFileSync(resolve(REPO, OP), "utf-8");
+    assert.match(content, /workspace\/gsm8k\.jsonl/);
+  });
+  test("Initialize writes max_iterations=10, uct_c≈1.41421356, iter_count=0", () => {
+    const content = readFileSync(resolve(REPO, OP), "utf-8");
+    assert.match(content, /max_iterations\.md.*10|10.*max_iterations\.md/s);
+    assert.match(content, /1\.41421356/);
+    assert.match(content, /iter_count\.md.*0|0.*iter_count\.md/s);
+  });
+  test("Initialize samples 3 items and persists to scoped/benchmark_items.md", () => {
+    const content = readFileSync(resolve(REPO, OP), "utf-8");
+    assert.match(content, /benchmark_items\.md/);
+    // Some indication of 3-item sampling
+    assert.match(content, /\b3\b/);
+  });
+  test("Initialize creates root n0 (empty workflow) and transitions to selecting", () => {
+    const content = readFileSync(resolve(REPO, OP), "utf-8");
+    assert.match(content, /n0/);
+    assert.match(content, /state-n0\.md/);
+    assert.match(content, /selecting/);
+  });
+});
+
 describe("R26/R34: 12 operators copied byte-equal into aflow-lite", () => {
   const COPIES = [
     ["refine.md",                "interpreters/1-iterative-refinement/b-evaluator-optimizer/operators/refine.md"],
