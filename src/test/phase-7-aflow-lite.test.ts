@@ -1,6 +1,6 @@
 import { test, describe } from "node:test";
 import { strict as assert } from "node:assert";
-import { existsSync, readFileSync } from "fs";
+import { existsSync, readFileSync, readdirSync } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
 import { execSync } from "child_process";
@@ -405,5 +405,82 @@ describe("R72: no '## Aflow Answer' tag — uses canonical ## Return answer:", (
   test("no ## Aflow Answer tag", () => {
     const content = readFileSync(resolve(REPO, OP), "utf-8");
     assert.doesNotMatch(content, /## Aflow Answer/i);
+  });
+});
+
+describe("Negative pins R61–R72: aflow-lite is constrained as designed", () => {
+  const OP = "interpreters/7-meta-framework/a-aflow-lite/operators/aflow-lite.md";
+  const AFLOW_OPERATORS_DIR = "interpreters/7-meta-framework/a-aflow-lite/operators";
+
+  test("R31: library is exactly refine,reflexion,cove,plan-execute,debate", () => {
+    const content = readFileSync(resolve(REPO, OP), "utf-8");
+    assert.match(content, /LIBRARY="refine,reflexion,cove,plan-execute,debate"/);
+  });
+
+  test("R61/R62/R63/R64: library excludes self-refine, MoA, tot, lats, metagpt, chatdev", () => {
+    const content = readFileSync(resolve(REPO, OP), "utf-8");
+    const libMatch = content.match(/LIBRARY="([^"]*)"/);
+    assert.ok(libMatch, "LIBRARY assignment not found");
+    const lib = libMatch[1];
+    for (const excluded of ["self-refine", "MoA", "tot", "lats", "metagpt", "chatdev"]) {
+      assert.ok(!lib.includes(excluded), `library should not include ${excluded}: ${lib}`);
+    }
+  });
+
+  test("R39/R65: no meta-reflexion (no push to reflect.md from aflow-lite.md)", () => {
+    const content = readFileSync(resolve(REPO, OP), "utf-8");
+    // No literal "## Push reflect.md" or "## Push\n...operators/reflect.md" pattern
+    assert.doesNotMatch(content, /## Push[^\n]*\n[^\n]*operators\/reflect\.md/);
+    assert.doesNotMatch(content, /## Push\s+operators\/reflect\.md/);
+  });
+
+  test("R40/R66: no nested shell instances (no node, spawn, execFile, child_process)", () => {
+    const content = readFileSync(resolve(REPO, OP), "utf-8");
+    assert.doesNotMatch(content, /\bnode\s+[./]/);
+    assert.doesNotMatch(content, /\bspawn\(/);
+    assert.doesNotMatch(content, /\bexecFile\(/);
+    assert.doesNotMatch(content, /child_process/);
+  });
+
+  test("R70: no concurrency primitives", () => {
+    const content = readFileSync(resolve(REPO, OP), "utf-8");
+    assert.doesNotMatch(content, /xargs\s+-P\b/);
+    assert.doesNotMatch(content, /\bparallel\b\s+/);
+    // No trailing & for backgrounding (excluding `&&` chains and `>&` redirections):
+    // Match a `&` that's at end of line and not preceded by another `&` or `>`:
+    const lines = content.split("\n");
+    for (const line of lines) {
+      // Skip non-shell context lines (e.g. prose). Heuristic: only check lines that look like indented bash.
+      if (/^    /.test(line) && /[^&>]\s*&\s*$/.test(line)) {
+        assert.fail(`apparent backgrounded process: ${line}`);
+      }
+    }
+  });
+
+  test("R71: domain-agnostic vocabulary except in explicit demo-specific block", () => {
+    const content = readFileSync(resolve(REPO, OP), "utf-8");
+    // The strategy may mention "GSM8K" only in the explicit demo/Initialize-demo context.
+    // Soft check: every occurrence of GSM8K should be in or near a comment about the demo.
+    // Strict version: count occurrences and accept up to a few inside Initialize.
+    const gsm8kMatches = content.match(/GSM8K/g) || [];
+    assert.ok(gsm8kMatches.length <= 3, `aflow-lite.md should mention GSM8K at most a few times (in Initialize fixture loading), found ${gsm8kMatches.length}`);
+    // No "math problem", "arithmetic", "Game of 24", etc.
+    for (const word of ["math problem", "arithmetic", "Game of 24", "Sudoku", "maze"]) {
+      assert.doesNotMatch(content, new RegExp(`\\b${word}\\b`, "i"), `unexpected domain word: ${word}`);
+    }
+  });
+
+  test("R72: no ## Aflow Answer tag — uses canonical ## Return answer:", () => {
+    const content = readFileSync(resolve(REPO, OP), "utf-8");
+    assert.doesNotMatch(content, /## Aflow Answer/i);
+  });
+
+  test("aflow-lite operators/ excludes search/SOP/single-mode operators", () => {
+    const dir = resolve(REPO, AFLOW_OPERATORS_DIR);
+    const files = readdirSync(dir);
+    const excluded = ["score.md", "expand-node.md", "rollout.md", "tot.md", "lats.md", "metagpt.md", "chatdev.md", "self-refine.md"];
+    for (const f of excluded) {
+      assert.ok(!files.includes(f), `aflow-lite operators/ should not contain ${f}`);
+    }
   });
 });
