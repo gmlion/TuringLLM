@@ -121,7 +121,7 @@ Two cases that require regeneration:
      interpreters/<group>/<leaf>/INSTRUCTIONS.md
    ```
 
-   Any difference, or any `*.md` in the interpreter's `dynamics/`
+   Any difference, or any `*.md` in the interpreter's `operators/`
    or `roles/` modified after the instance's `frames/f000-strategy/MEMORY.md`
    mtime, means the instance pre-dates the current code and its
    numbers are not directly comparable to a fresh single-prompt

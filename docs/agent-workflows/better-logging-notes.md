@@ -32,10 +32,10 @@ The seq-strictly-increases test (`better-logging-demo.test.ts`) passes for all f
 bl-d hit `depth: 2` on push event seq=27 (cycle 5):
 
 ```json
-{"seq":27,"ts":"2026-04-24T09:26:03.696Z","cycle":5,"frame":"frames/f001-verify","type":"push","target":"dynamics/answer-independently.md","frameDir":"frames/f002-answer-independently","depth":2}
+{"seq":27,"ts":"2026-04-24T09:26:03.696Z","cycle":5,"frame":"frames/f001-verify","type":"push","target":"operators/answer-independently.md","frameDir":"frames/f002-answer-independently","depth":2}
 ```
 
-7 such depth-2 pushes appeared in total (V1–V7 verifications); the 8th verification was synthesized from accumulated context without a new push, which is consistent with the `verify.md` dynamic's state-machine short-circuit. The events.jsonl makes that decision visible in a way the prior text logs never did — the depth-2 push count is now a one-line `grep`.
+7 such depth-2 pushes appeared in total (V1–V7 verifications); the 8th verification was synthesized from accumulated context without a new push, which is consistent with the `verify.md` operator's state-machine short-circuit. The events.jsonl makes that decision visible in a way the prior text logs never did — the depth-2 push count is now a one-line `grep`.
 
 ## Provider event ordering (B-architecture)
 

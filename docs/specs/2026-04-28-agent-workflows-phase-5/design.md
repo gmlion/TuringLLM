@@ -40,7 +40,7 @@ interpreters/4-peer-collaboration/a-debate/
 ├── INSTRUCTIONS.md         # Strategy: round coordinator
 ├── PROGRAM.md              # Demo: Postgres-vs-SQLite + 3 personas
 ├── README.md               # Mechanism summary, refs Du et al. 2023
-└── dynamics/
+└── operators/
     └── opine.md            # The only dynamic. Stack depth 1.
 ```
 
@@ -120,7 +120,7 @@ Pushed opine.md for $PERSONA_NAME in round $ROUND.
 ## Result
 Push queued.
 ## Push
-dynamics/opine.md
+operators/opine.md
 ## Push-Args
 round: $ROUND
 persona_name: $PERSONA_NAME
@@ -230,7 +230,7 @@ The shell already persists `.call-stack.json` after each cycle; no new persisted
 ```yaml
 # At push time, the strategy writes:
 ## Push
-dynamics/opine.md
+operators/opine.md
 ## Push-Args
 round: <integer>                 # 1-indexed round number
 persona_name: <single line>      # short label, e.g. "DBA"
@@ -294,7 +294,7 @@ The repository uses `node:test` for shell-level tests in `src/test/` and end-to-
 
 These read static files; no LLM. Live in `src/test/debate-interpreter.test.ts` (new file).
 
-- **Test: dynamics directory contents** — assert exactly one file `dynamics/opine.md` exists; no other dynamics. *Satisfies R20 (negative — no second dynamic).*
+- **Test: dynamics directory contents** — assert exactly one file `operators/opine.md` exists; no other dynamics. *Satisfies R20 (negative — no second dynamic).*
 - **Test: opine.md does not push** — read opine.md, assert no `## Push` section template appears in any code path. *Satisfies R16, R20.*
 - **Test: opine.md push-arg contract** — read opine.md, assert it references `{{round}}`, `{{persona_name}}`, `{{persona_description}}`, `{{question}}`, `{{transcript}}` placeholders. *Satisfies R14.*
 - **Test: opine.md single-cycle** — assert opine.md has exactly one instruction with condition `state is "empty"`, and its action body sets state directly to `done`. *Satisfies R15.*
@@ -323,7 +323,7 @@ The interpreter is shipped with a runnable demo. Validation is by running `insta
 ### Test files Phase 3 will produce or modify
 
 - New: `src/test/debate-interpreter.test.ts` (unit-shaped tests above)
-- New: `interpreters/4-peer-collaboration/a-debate/INSTRUCTIONS.md`, `dynamics/opine.md`, `PROGRAM.md`, `README.md`
+- New: `interpreters/4-peer-collaboration/a-debate/INSTRUCTIONS.md`, `operators/opine.md`, `PROGRAM.md`, `README.md`
 - No changes to: `src/main.ts`, `src/call-stack.ts`, `src/memory.ts`, or any provider — Phase 5 needs no shell-level changes.
 
 ## Open questions

@@ -621,11 +621,11 @@ describe("phase-6b: parent doc updates (R73, R74, R75)", () => {
     assert.match(parent, /\|\s*`rollout\.md`\s*\|\s*6b\s*\|\s*## Partial State[^|]*## Task[^|]*\|\s*## Terminal State/);
   });
 
-  test("Phase 6b section mentions rollout.md as a new dynamic (R74)", () => {
+  test("Phase 6b section mentions rollout.md as a new operator (R74)", () => {
     const m6b = parent.match(/## Phase 6b[^]+?(?=^## Phase 7|\z)/m);
     assert.ok(m6b, "Phase 6b section missing");
     assert.match(m6b[0], /rollout\.md/);
-    assert.match(m6b[0], /one new dynamic/i);
+    assert.match(m6b[0], /one new operator/i);
   });
 
   test("Phase 6b section no longer claims 'no new dynamics' (R74)", () => {

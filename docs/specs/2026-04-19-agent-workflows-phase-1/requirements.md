@@ -54,11 +54,11 @@ struck-through and kept for traceability.
   containing at minimum an `INSTRUCTIONS.md` and a demo `PROGRAM.md`.
 - **R2**: THE SYSTEM SHALL introduce three reusable dynamics —
   `self-critique.md`, `evaluate.md`, `reflect.md` — each placed under the
-  owning interpreter's `dynamics/` directory (e.g.
-  `interpreters/1-iterative-refinement/a-self-refine/dynamics/self-critique.md`)
+  owning interpreter's `operators/` directory (e.g.
+  `interpreters/1-iterative-refinement/a-self-refine/operators/self-critique.md`)
   so that
   `./new-instance.sh foo interpreters/1-iterative-refinement/<exploration-letter>-<slug>`
-  copies them verbatim into `instances/foo/dynamics/`.
+  copies them verbatim into `instances/foo/operators/`.
 - **R3**: THE SYSTEM SHALL make the `self-critique.md` dynamic consume
   MEMORY section `## Draft` and produce `## Critique` and `## Refined`
   before setting state `done`, matching the contract listed in

@@ -7,18 +7,18 @@ onto the repo.
 
 The plan is organised **by conceptual group**, with phases within a group
 ordered from simplest to most nested. Each phase produces one or more
-interpreters that run on their own, and each group harvests its dynamics for
+interpreters that run on their own, and each group harvests its operators for
 reuse by later groups.
 
 ## Guiding principles
 
 1. **Dynamics are the reuse unit.** Anything that recurs across interpreters
    (critique, evaluation, reflection, verification, planning, role-play)
-   lives as a dynamic and is copied into every instance. Interpreters
-   orchestrate dynamics; they do not reimplement them.
+   lives as an operator and is copied into every instance. Interpreters
+   orchestrate operators; they do not reimplement them.
 2. **Group-first, phase-second.** Build an entire conceptual group before
    moving to the next one. Within a group, start with the variant that needs
-   the fewest new dynamics.
+   the fewest new operators.
 3. **Phase 4 retired `interpreters/game-team`** per spec
    `docs/specs/2026-04-24-implement-phase-3-and-4/`. The directory has
    been deleted; its shell-level features (fuzzy NL conditions,
@@ -26,15 +26,15 @@ reuse by later groups.
    exercised by Phase 4's MetaGPT and ChatDev leaves.
 4. **Every interpreter ships with a demo `PROGRAM.md`** so a user can run it
    via `./new-instance.sh foo interpreters/<name>`.
-5. **No speculative dynamics.** If something would only be used by one
-   interpreter, inline it. Promote to `dynamics/` only on second use.
+5. **No speculative operators.** If something would only be used by one
+   interpreter, inline it. Promote to `operators/` only on second use.
 6. **Every interpreter ships with a `README.md`** at its leaf directory
    summarising the pattern (with the `patterns.md` group + citation), the
-   state machine, the dynamics it pushes, the demo program, how to run it,
+   state machine, the operators it pushes, the demo program, how to run it,
    and known behaviour. Each conceptual group directory (e.g.
    `interpreters/1-iterative-refinement/`) **also ships a group-level
    `README.md`** framing the family, listing variants with a short
-   comparison table, and pointing at shared dynamics.
+   comparison table, and pointing at shared operators.
    **When a single implementation subsumes two or more named patterns
    from `patterns.md` (a "collapsed pattern" — e.g. Phase 3a's strategy
    covers Plan-and-Execute, Orchestrator–Workers, Deep Research, and
@@ -74,46 +74,46 @@ The mechanism already exists:
 - `## Push <path>` loads *any* file, relative to the instance directory,
   as the new `INSTRUCTIONS.md`. The shell calls `resolve(BASE_DIR, path)`
   on the push target and reads whatever is there — there is no
-  `dynamics/`-only restriction and no registration step. The path can
+  `operators/`-only restriction and no registration step. The path can
   point at a file the LLM just wrote this same cycle.
 - Machine git auto-commits the instance tree every cycle, so any file
   the LLM writes under the instance directory is versioned without extra
   effort.
 
-A "skill" is therefore just an LLM-authored dynamic file. An interpreter
+A "skill" is therefore just an LLM-authored operator file. An interpreter
 opts in by:
 
 1. **Saving.** After a successful sub-computation, the strategy (or a
-   purpose-built dynamic it owns) writes the reusable instruction text to
-   `dynamics/<name>.md` — the same directory that holds the human-authored
-   dynamics shipped with the interpreter. The file is indistinguishable
-   from a built-in dynamic once on disk; its provenance can live in a
+   purpose-built operator it owns) writes the reusable instruction text to
+   `operators/<name>.md` — the same directory that holds the human-authored
+   operators shipped with the interpreter. The file is indistinguishable
+   from a built-in operator once on disk; its provenance can live in a
    short front-matter header (`source: llm`, `produced-in-cycle: N`) or
-   in a side file the strategy maintains (`dynamics/index.json`).
+   in a side file the strategy maintains (`operators/index.json`).
 2. **Invoking.** On a later cycle, the strategy writes
-   `## Push\ndynamics/<name>.md` in MEMORY. The shell's existing push
+   `## Push\noperators/<name>.md` in MEMORY. The shell's existing push
    machinery loads the file verbatim (or with `## Push-Args` substitution)
-   and the skill runs exactly like a built-in dynamic.
+   and the skill runs exactly like a built-in operator.
 
-No new shell code, no cross-cutting dynamics, no dedicated `invoke-skill`
+No new shell code, no cross-cutting operators, no dedicated `invoke-skill`
 or `install-skill` abstractions. Interpreters that want skill
 accumulation write the save/lookup logic into their own strategy or into
-per-interpreter dynamics. Whatever convention emerges from the first
+per-interpreter operators. Whatever convention emerges from the first
 consumer can be reused (or promoted to cross-cutting) by the second.
 
 An interpreter that wants its skill library tracked *separately* from
 the machine git (e.g. to let the LLM branch/rewind its skill library
 independently of cycle history) can store skills under `workspace/`
 instead — `workspace/` is the LLM-controlled project git. This is a
-niche choice; `dynamics/` under the machine git is the natural default.
+niche choice; `operators/` under the machine git is the natural default.
 
 - **Status.** Nothing to ship at the cross-cutting level. Phase 3's
   demos are single-shot and do not benefit from skill accumulation (see
   Phase 3 for the explicit reasoning). Phase 7 (AFlow) is the first
-  phase where a library of LLM-authored dynamics is structurally
+  phase where a library of LLM-authored operators is structurally
   required — AFlow's operator library is a skill library by another
   name, and under this framing its operators are simply LLM-materialised
-  dynamics under `dynamics/` (or `workspace/operators/` if AFlow wants
+  operators under `operators/` (or `workspace/operators/` if AFlow wants
   its own git history for them), not a separate abstraction.
 
 ### ReAct tool-calling convention
@@ -123,7 +123,7 @@ Every phase that invokes shell tools (bash, write_file, git) follows the
 `Thought:` preamble, names the tool call as an `Action:`, and reads the
 result as an `Observation:` before the next thought. The current shell
 prompt already encourages this; the note here is to **not regress it**.
-No dynamic required — it is a prompting standard, enforced through the
+No operator required — it is a prompting standard, enforced through the
 system prompt.
 
 ## Group order and prerequisites
@@ -141,9 +141,9 @@ system prompt.
 Building blocks (prompting techniques), Group 6 (dynamic teams), and Group 8
 (libraries) are **not built as interpreters** — see "Out of scope" at the bottom.
 
-## Reusable dynamics library
+## Reusable operators library
 
-Built up progressively. Each lives under `interpreters/<name>/dynamics/` and
+Built up progressively. Each lives under `interpreters/<name>/operators/` and
 is copied wholesale by `new-instance.sh`. Names and contracts are normative.
 
 | Dynamic | Introduced in | MEMORY in | MEMORY out | Stack depth |
@@ -171,7 +171,7 @@ is copied wholesale by `new-instance.sh`. Names and contracts are normative.
 ## Phase 1 — Iterative refinement (patterns.md Group 1)
 
 Three interpreters that are **variants of the same architectural pattern**:
-`generate → critique → revise`. Built together because they share dynamics
+`generate → critique → revise`. Built together because they share operators
 by design.
 
 ### 1a. `interpreters/self-refine/`
@@ -192,7 +192,7 @@ Two roles, no memory across iterations.
 - States: `empty → drafted → evaluated → (revise|done)`.
 - Dynamic: `evaluate.md` — generic, takes `## Attempt` and `## Criterion`,
   returns `## Verdict` (pass/fail) + `## Feedback`.
-- **Reuse:** strategy-level only; no dynamic is shared with 1a because the
+- **Reuse:** strategy-level only; no operator is shared with 1a because the
   critic/self-critic framing genuinely differs (external feedback vs.
   self-edit). They do share scaffolding helpers at the source level.
 - Demo `PROGRAM.md`: translate a paragraph to a target register (e.g.
@@ -205,7 +205,7 @@ key upgrade.
 
 - States: `empty → attempting → evaluated → reflecting → attempting → … → done`.
 - **Reuses:** `evaluate.md` from 1b verbatim.
-- New dynamic: `reflect.md` — takes `## Attempt` and `## Verdict`, returns
+- New operator: `reflect.md` — takes `## Attempt` and `## Verdict`, returns
   `## Lesson`, appended to `## Lessons` (persisted across attempts).
 - Strategy reads `## Lessons` before each attempt.
 - Demo `PROGRAM.md`: a task that genuinely benefits from retries (a riddle;
@@ -225,18 +225,18 @@ validates push/pop at depth 1 before anything else is attempted.
 
 Still iterative refinement, but the critique step is *decomposed* into independent verification Q&A. First interpreter that requires **stack depth 2**, so it doubles as a snapshot/restore stress test for the shell.
 
-Phase 2 also introduces the **arguments-via-INSTRUCTIONS** shell convention (`## Push-Args` + `{{var}}` substitution) and retrofits the existing `a`/`b`/`c` dynamics onto it. The convention retires "prompt trust" as the isolation mechanism for `answer-independently.md` and cleanly separates per-frame arguments (INSTRUCTIONS) from the shared heap (MEMORY).
+Phase 2 also introduces the **arguments-via-INSTRUCTIONS** shell convention (`## Push-Args` + `{{var}}` substitution) and retrofits the existing `a`/`b`/`c` operators onto it. The convention retires "prompt trust" as the isolation mechanism for `answer-independently.md` and cleanly separates per-frame arguments (INSTRUCTIONS) from the shared heap (MEMORY).
 
 **Deliverables:**
 - `interpreters/1-iterative-refinement/d-cove/`
 - Shell extension to `applyPush` in `src/call-stack.ts`
-- Refactored `a`/`b`/`c` dynamics
+- Refactored `a`/`b`/`c` operators
 
 - Strategy: drafter emits a candidate answer, pushes `verify.md` with `{{draft}}` as a push-arg.
-- New dynamic: `verify.md` — generates N >= 2 verification questions from the draft, for each pushes `answer-independently.md` with `{{question}}`, collects answers from MEMORY, emits `## Revised`.
-- New dynamic: `answer-independently.md` — answers one question using PROGRAM.md and general knowledge; references no caller MEMORY section.
+- New operator: `verify.md` — generates N >= 2 verification questions from the draft, for each pushes `answer-independently.md` with `{{question}}`, collects answers from MEMORY, emits `## Revised`.
+- New operator: `answer-independently.md` — answers one question using PROGRAM.md and general knowledge; references no caller MEMORY section.
 - Demo `PROGRAM.md`: a four-person knights-and-knaves puzzle where first-pass reasoning commonly drifts.
-- **Reuse:** the arguments-via-INSTRUCTIONS convention introduced by this phase is used by all four dynamics in Group 1 from this phase onward.
+- **Reuse:** the arguments-via-INSTRUCTIONS convention introduced by this phase is used by all four operators in Group 1 from this phase onward.
 - **Validation:** mid-verify, `.call-stack.json` contains two frames (asserted by `src/test/phase-2-cove.test.ts`).
 
 ---
@@ -263,7 +263,7 @@ Spec: `docs/specs/2026-04-23-agent-workflows-phase-2b-push-returns/`.
 
 Shipped per spec `docs/specs/2026-04-24-implement-phase-3-and-4/` as
 three sibling leaves under `interpreters/2-planning-decomposition/`
-sharing byte-equal `INSTRUCTIONS.md` and `dynamics/`, distinguished
+sharing byte-equal `INSTRUCTIONS.md` and `operators/`, distinguished
 only by their `PROGRAM.md` demo (the canonical framings that the
 original plan called "demos d1/d2/d3" became three separate leaves
 because each demo wants its own runnable instance directory).
@@ -280,17 +280,17 @@ as upfront planning with replans, recursive sub-question investigation is
 a special case of `execute-step.md` re-pushing `plan.md`, and XAgent's
 "planner rewrites at any time" is just a replanner prompted to fire every
 cycle. Four named patterns, one implementation — violating "no speculative
-dynamics" would mean shipping four interpreters that do the same thing.
+operators" would mean shipping four interpreters that do the same thing.
 The canonical framings live as distinct **demos** on the same strategy.
 
 ### 3a. `interpreters/2-planning-decomposition/a-plan-execute/`, `.../b-orchestrator-workers/`, `.../c-deep-research/`
 
 Baseline decomposition: plan, execute steps sequentially, optionally
 synthesise. The three leaves share byte-equal `INSTRUCTIONS.md` and
-`dynamics/`; only their `PROGRAM.md` differs.
+`operators/`; only their `PROGRAM.md` differs.
 
 - Strategy: planner/replanner holding `## Plan` and accumulated `## Results`.
-- New dynamics:
+- New operators:
   - `plan.md` — produces an ordered step list for `## Goal`.
   - `execute-step.md` — executes one step. May re-push `plan.md` if the
     step is too coarse (recursion), or push `evaluate.md` as a step-
@@ -328,7 +328,7 @@ executor shape genuinely differs.
   placeholder tokens for tool outputs; `execute-batch.md` runs all tools
   in one pass and substitutes the results; a final inline synthesis uses
   the resolved plan. No interleaved reasoning/observation loop.
-- New dynamic: `execute-batch.md` — resolves all `#E_k` placeholders in
+- New operator: `execute-batch.md` — resolves all `#E_k` placeholders in
   `## Plan` against a batch of tool calls, emits `## Resolved Plan`.
 - **Reuse:** `plan.md` from 3a (different prompting, same contract).
 - Demo `PROGRAM.md`: a task with multiple independent lookups (e.g.
@@ -345,7 +345,7 @@ Once the shell supports parallel stack frames (see Open questions
 below), genuine fan-out to generic workers in parallel becomes
 structurally distinct from sequential 3a d2. At that point, add
 `interpreters/2-planning-decomposition/c-orchestrator-workers/` with a
-new `worker.md` dynamic executed in concurrent frames, reusing `plan.md`
+new `worker.md` operator executed in concurrent frames, reusing `plan.md`
 (or replacing it with on-the-fly dispatch). Until then, sequential
 Orchestrator–Workers is demo d2 on 3a and is not a separate interpreter.
 
@@ -363,7 +363,7 @@ of this phase.
 Document hand-off between roles (MetaGPT — Hong et al., ICLR 2024).
 
 - Strategy: SOP sequencer walking PM → Architect → Engineer → QA.
-- New dynamics: `role-pm.md`, `role-architect.md`, `role-engineer.md`,
+- New operators: `role-pm.md`, `role-architect.md`, `role-engineer.md`,
   `role-qa.md` — each reads the prior role's MEMORY section, writes its own.
 - Typed hand-off sections: `## PRD`, `## Design`, `## Tasks`, `## Code Review`.
 - **Reuse:** QA role pushes `evaluate.md` from 1b.
@@ -374,7 +374,7 @@ Document hand-off between roles (MetaGPT — Hong et al., ICLR 2024).
 Phase-dialogue between role pairs (ChatDev — Qian et al., 2023).
 
 - Strategy: phase sequencer (design, coding, testing, documenting).
-- New dynamic: `dialogue.md` — parameterised by `## Participants` and
+- New operator: `dialogue.md` — parameterised by `## Participants` and
   `## Topic`; pairs like CEO↔CTO, coder↔reviewer.
 - Role descriptions in `roles/*.md` referenced from MEMORY.
 - **Reuse:** reviewer pairs push `evaluate.md`.
@@ -398,7 +398,7 @@ Phase-dialogue between role pairs (ChatDev — Qian et al., 2023).
 ## Phase 5 — Peer collaboration: Debate (patterns.md Group 4)
 
 First of two Group-4 interpreters. CAMEL is skipped (two-role conversation
-adds little over 4b's dialogue dynamic).
+adds little over 4b's dialogue operator).
 
 **Deliverable:** `interpreters/4-peer-collaboration/a-debate/`.
 
@@ -407,7 +407,7 @@ adds little over 4b's dialogue dynamic).
   agents do not see each other's contributions — they see only prior
   rounds' batches. Coordinator snapshots each round's opinions to a
   per-round scoped file before opening the next round.
-- New dynamic: `opine.md` — receives the question, round number, persona,
+- New operator: `opine.md` — receives the question, round number, persona,
   and prior-rounds transcript; returns `## Opinion`. Strategy appends
   surgically to `./scoped/transcript.md` after each pop.
 - PROGRAM.md is free-form prose (the question, named personas, optional
@@ -428,9 +428,9 @@ can stack.
 
 - Strategy: layer coordinator. For each layer, pushes `propose.md` N times
   with distinct system prompts; collects proposals; runs an aggregator
-  prompt inline (no dynamic needed) to produce the layer output; feeds it
+  prompt inline (no operator needed) to produce the layer output; feeds it
   as the prompt to the next layer.
-- New dynamic: `propose.md` — receives `## Prompt` and `## Persona`,
+- New operator: `propose.md` — receives `## Prompt` and `## Persona`,
   returns `## Proposal`. Distinct from `opine.md` because proposers must
   *not* see each other's output within a layer.
 - **Reuse:** none. `opine.md` is deliberately not reused — the access
@@ -449,10 +449,10 @@ use of the per-instance project git for parallel-branch snapshots.
 
 **Deliverable:** `interpreters/tot/` (Tree of Thoughts).
 
-**Why two dynamics, not one.** An earlier draft of the Phase 6 dynamics table conflated child-generation with graded ranking inside `expand-node.md`. During Phase 6 spec work the contracts were split: `expand-node.md` returns only `## Children`, and a new `score.md` returns `## Value` ∈ {sure, likely, impossible}. The split honours `evaluate.md`'s pass/fail contract (used by 1b, 1c, 4a, 4b — multiple consumers), avoids coercing a graded-ranking signal through a pass/fail-shaped channel, and exposes `score.md` as a candidate second-consumer surface for Phase 6b (LATS). Deviates deliberately from guiding principle 5 ("no speculative dynamics — promote only on second use"); LATS is expected to validate the deviation by adopting `score.md` for its rollout-value role.
+**Why two operators, not one.** An earlier draft of the Phase 6 operators table conflated child-generation with graded ranking inside `expand-node.md`. During Phase 6 spec work the contracts were split: `expand-node.md` returns only `## Children`, and a new `score.md` returns `## Value` ∈ {sure, likely, impossible}. The split honours `evaluate.md`'s pass/fail contract (used by 1b, 1c, 4a, 4b — multiple consumers), avoids coercing a graded-ranking signal through a pass/fail-shaped channel, and exposes `score.md` as a candidate second-consumer surface for Phase 6b (LATS). Deviates deliberately from guiding principle 5 ("no speculative operators — promote only on second use"); LATS is expected to validate the deviation by adopting `score.md` for its rollout-value role.
 
 - Strategy: search controller holding the frontier and visited set in MEMORY.
-- New dynamic: `expand-node.md` — generates k children, evaluates each,
+- New operator: `expand-node.md` — generates k children, evaluates each,
   pops with scored children. Recursive per best child (BFS or DFS).
 - Project-git integration: each ToT branch gets a git branch in
   `workspace/`; the controller `checkout`s before expanding so siblings
@@ -461,7 +461,7 @@ use of the per-instance project git for parallel-branch snapshots.
 - Demo `PROGRAM.md`: Game of 24 or a small code-search problem.
 - **Optional variant — GoT** (`patterns.md` Group 3). Swap the tree-shaped
   frontier for a DAG: `expand-node.md` can additionally emit `aggregate`
-  edges merging two existing thoughts into a new one. Same dynamic,
+  edges merging two existing thoughts into a new one. Same operator,
   different strategy bookkeeping. Worth building only if a demo requires
   cross-branch join (ToT's tree is usually enough).
 
@@ -474,7 +474,7 @@ use of the per-instance project git for parallel-branch snapshots.
 Language Agent Tree Search: MCTS over ToT-style thoughts, Reflexion-style
 lessons at evaluation time, environment feedback as reward. This phase
 is **the natural bridge between Phase 6 and Phase 7** — it reuses ToT's
-dynamic and Reflexion's memory, and introduces MCTS machinery that
+operator and Reflexion's memory, and introduces MCTS machinery that
 Phase 7 also needs.
 
 **Deliverable:** `interpreters/lats/`.
@@ -486,7 +486,7 @@ Phase 7 also needs.
   - `expand-node.md` (Phase 6, generalised in this same phase) — for node expansion.
   - `evaluate.md` (Phase 1b) — text-only mode, as the rollout reward signal.
   - `reflect.md` (Phase 1c) — pushed on rollout failure to harvest a per-node lesson, propagated into future expansions of the same subtree via ancestor-walk concatenation into `partial_state`.
-- **One new dynamic:** `rollout.md` — paper-faithful LLM-policy single-shot rollout. Receives `partial_state` and `task`; returns a `terminal_state` reached by playing forward in one LLM call. The earlier zero-dynamic plan was aspirational: paper-faithful rollout has no honest implementation in the existing dynamic contracts (the rollout's job — "play forward to terminal in one shot, return only the endpoint" — is structurally distinct from `expand-node.md`'s "generate k siblings" and from `evaluate.md`'s "judge a complete attempt"); bundling rollout into either would distort their contracts and break their reuse by other interpreters. The deviation is the same shape as Phase 6's R4 deviation (split of `expand-node.md` / `score.md`) and is justified for the same reason: contract preservation over count minimisation.
+- **One new operator:** `rollout.md` — paper-faithful LLM-policy single-shot rollout. Receives `partial_state` and `task`; returns a `terminal_state` reached by playing forward in one LLM call. The earlier zero-operator plan was aspirational: paper-faithful rollout has no honest implementation in the existing operator contracts (the rollout's job — "play forward to terminal in one shot, return only the endpoint" — is structurally distinct from `expand-node.md`'s "generate k siblings" and from `evaluate.md`'s "judge a complete attempt"); bundling rollout into either would distort their contracts and break their reuse by other interpreters. The deviation is the same shape as Phase 6's R4 deviation (split of `expand-node.md` / `score.md`) and is justified for the same reason: contract preservation over count minimisation.
 - **New infrastructure:** MCTS helper code in the strategy (not a
   dynamic) — reusable by Phase 7.
 - Demo `PROGRAM.md`: a task with executable feedback (write a function
@@ -506,7 +506,7 @@ everything below to already work.
 - Strategy: MCTS controller over a library of Operators (Ensemble, Review,
   Revise, …) seeded from earlier phases. Tree persisted in MEMORY
   (`## MCTS Tree`).
-- New dynamic: `evaluate-workflow.md` — materialises a candidate workflow
+- New operator: `evaluate-workflow.md` — materialises a candidate workflow
   as a throwaway `INSTRUCTIONS.md` in `workspace/candidates/NNN/`, launches
   it via a nested shell invocation (same binary, different instance dir),
   collects the score from its final MEMORY.
@@ -571,8 +571,8 @@ interpreters. Each is a **shell-level change**, not a phase.
   SPP (`patterns.md` Group 4) lives here rather than under Phase 5 because
   it is a single-cycle multi-persona prompt: it does not push and does
   not exercise the stack, so an "SPP interpreter" would be a prompt-only
-  instance with no dynamics. The technique can still be used *inside* any
-  opine-like dynamic of Phase 5 when a caller wants multi-persona
+  instance with no operators. The technique can still be used *inside* any
+  opine-like operator of Phase 5 when a caller wants multi-persona
   reasoning within one frame.
 - **Group 6 (Dynamic teams)** — AgentVerse, AutoAgents, XAgents (plural).
   AgentVerse and AutoAgents are covered **in spirit** by Phase 3a's
@@ -582,7 +582,7 @@ interpreters. Each is a **shell-level change**, not a phase.
 - **Group 8 (Libraries)** — AutoGen, Superpowers, DSPy, LangGraph, CrewAI.
   Infrastructure, not interpreters. Superpowers' skill *content* (4-phase
   systematic debugging, TDD methodology) is a good source to mine when
-  building dynamics for Phase 4b. DSPy's compiler concept is listed under
+  building operators for Phase 4b. DSPy's compiler concept is listed under
   "Open questions" above.
 - **Voyager as its own interpreter** — absorbed into the skill-library
   building block above. Voyager's skill-library idea is the contribution
@@ -614,7 +614,7 @@ Each phase is complete when:
 3. `CLAUDE.md` "Existing interpreters" is updated to list the new
    interpreters with one-line descriptions pointing at their conceptual
    group in `patterns.md`.
-4. Any new dynamic introduced in the phase has an entry in the table at
+4. Any new operator introduced in the phase has an entry in the table at
    the top of this document, matching its actual MEMORY contract.
 5. A one-paragraph note is added to a sibling `notes.md` describing
    anything surprising discovered during implementation, so the next

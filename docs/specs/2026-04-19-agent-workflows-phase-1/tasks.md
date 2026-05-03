@@ -77,7 +77,7 @@ instead — do not open T0.
 **Files:**
 - Create: `interpreters/1-iterative-refinement/a-self-refine/INSTRUCTIONS.md`
 - Create: `interpreters/1-iterative-refinement/a-self-refine/PROGRAM.md`
-- Create: `interpreters/1-iterative-refinement/a-self-refine/dynamics/self-critique.md`
+- Create: `interpreters/1-iterative-refinement/a-self-refine/operators/self-critique.md`
 - Test:   `src/test/phase-1-self-refine.test.ts`
 
 - [ ] **Step 1: Write the failing integration test**
@@ -132,7 +132,7 @@ instead — do not open T0.
       test("interpreter files exist at the Group-2 path", () => {
         assert.ok(existsSync(resolve(INTERP, "INSTRUCTIONS.md")), "INSTRUCTIONS.md missing");
         assert.ok(existsSync(resolve(INTERP, "PROGRAM.md")), "PROGRAM.md missing");
-        assert.ok(existsSync(resolve(INTERP, "dynamics/self-critique.md")), "dynamics/self-critique.md missing");
+        assert.ok(existsSync(resolve(INTERP, "operators/self-critique.md")), "operators/self-critique.md missing");
       });
 
       test("strategy declares the four required states", () => {
@@ -148,7 +148,7 @@ instead — do not open T0.
       });
 
       test("self-critique dynamic declares the empty and critiqued states", () => {
-        const dyn = readFileSync(resolve(INTERP, "dynamics/self-critique.md"), "utf-8");
+        const dyn = readFileSync(resolve(INTERP, "operators/self-critique.md"), "utf-8");
         assert.match(dyn, /state is "empty"/);
         assert.match(dyn, /state is "critiqued"/);
         assert.match(dyn, /state to "done"/);
@@ -156,7 +156,7 @@ instead — do not open T0.
 
       test("push on drafted -> dynamic runs -> pop to drafted_completed", () => {
         const strategy = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
-        const memory = '## State\ndrafted\n## Draft\nfirst attempt\n## Push\ndynamics/self-critique.md';
+        const memory = '## State\ndrafted\n## Draft\nfirst attempt\n## Push\noperators/self-critique.md';
 
         let r = runStackBlock([], memory, strategy);
         assert.equal(r.halt, false);
@@ -179,7 +179,7 @@ instead — do not open T0.
         const strategy = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
         // Simulate the caller deciding to loop once more (drafted again),
         // then accepting the second refinement.
-        let memory = '## State\ndrafted\n## Draft\nsecond attempt\n## Push\ndynamics/self-critique.md';
+        let memory = '## State\ndrafted\n## Draft\nsecond attempt\n## Push\noperators/self-critique.md';
         let r = runStackBlock([], memory, strategy);
         const memAfterDynamic = setState(
           r.memory + "\n## Critique\nfinal feedback\n## Refined\nfinal text",
@@ -219,7 +219,7 @@ instead — do not open T0.
 
     ## Instruction: Request critique
     **Condition:** MEMORY state is "drafted" and `## Draft` is present
-    **Action:** Write `## Push` with exactly the value `dynamics/self-critique.md` on its own line. Do not change state — the shell will set it to "empty" when it pushes the dynamic.
+    **Action:** Write `## Push` with exactly the value `operators/self-critique.md` on its own line. Do not change state — the shell will set it to "empty" when it pushes the dynamic.
 
     ## Instruction: Evaluate refinement
     **Condition:** MEMORY state is "drafted_completed" and both `## Critique` and `## Refined` are present
@@ -255,7 +255,7 @@ instead — do not open T0.
 
 - [ ] **Step 5: Create the self-critique dynamic**
 
-    Create `interpreters/1-iterative-refinement/a-self-refine/dynamics/self-critique.md`
+    Create `interpreters/1-iterative-refinement/a-self-refine/operators/self-critique.md`
     with this exact content:
 
     ````markdown
@@ -294,7 +294,7 @@ instead — do not open T0.
 **Files:**
 - Create: `interpreters/1-iterative-refinement/b-evaluator-optimizer/INSTRUCTIONS.md`
 - Create: `interpreters/1-iterative-refinement/b-evaluator-optimizer/PROGRAM.md`
-- Create: `interpreters/1-iterative-refinement/b-evaluator-optimizer/dynamics/evaluate.md`
+- Create: `interpreters/1-iterative-refinement/b-evaluator-optimizer/operators/evaluate.md`
 - Test:   `src/test/phase-1-evaluator-optimizer.test.ts`
 
 - [ ] **Step 1: Write the failing integration test**
@@ -349,7 +349,7 @@ instead — do not open T0.
       test("interpreter files exist", () => {
         assert.ok(existsSync(resolve(INTERP, "INSTRUCTIONS.md")));
         assert.ok(existsSync(resolve(INTERP, "PROGRAM.md")));
-        assert.ok(existsSync(resolve(INTERP, "dynamics/evaluate.md")));
+        assert.ok(existsSync(resolve(INTERP, "operators/evaluate.md")));
       });
 
       test("strategy declares the required states", () => {
@@ -365,7 +365,7 @@ instead — do not open T0.
       });
 
       test("evaluate dynamic consumes ## Attempt and ## Criterion, produces ## Verdict and ## Feedback", () => {
-        const dyn = readFileSync(resolve(INTERP, "dynamics/evaluate.md"), "utf-8");
+        const dyn = readFileSync(resolve(INTERP, "operators/evaluate.md"), "utf-8");
         assert.match(dyn, /## Attempt/);
         assert.match(dyn, /## Criterion/);
         assert.match(dyn, /## Verdict/);
@@ -379,7 +379,7 @@ instead — do not open T0.
         // Cycle A: strategy has produced ## Attempt and ## Criterion and is pushing.
         let r = runStackBlock(
           [],
-          '## State\nattempted\n## Criterion\nc1\n## Attempt\nv1\n## Push\ndynamics/evaluate.md',
+          '## State\nattempted\n## Criterion\nc1\n## Attempt\nv1\n## Push\noperators/evaluate.md',
           strategy,
         );
         assert.equal(r.stack.length, 1);
@@ -396,7 +396,7 @@ instead — do not open T0.
 
         // Strategy reacts: rewrites ## Attempt, removes Verdict+Feedback, re-enters attempted, pushes again.
         const memLoop =
-          '## State\nattempted\n## Criterion\nc1\n## Attempt\nv2\n## Push\ndynamics/evaluate.md';
+          '## State\nattempted\n## Criterion\nc1\n## Attempt\nv2\n## Push\noperators/evaluate.md';
         r = runStackBlock([], memLoop, strategy);
         assert.equal(r.stack.length, 1);
 
@@ -439,7 +439,7 @@ instead — do not open T0.
 
     ## Instruction: Request evaluation
     **Condition:** MEMORY state is "attempted" and both `## Attempt` and `## Criterion` are present
-    **Action:** Write `## Push` with exactly the value `dynamics/evaluate.md` on its own line. Do not change state.
+    **Action:** Write `## Push` with exactly the value `operators/evaluate.md` on its own line. Do not change state.
 
     ## Instruction: Handle verdict
     **Condition:** MEMORY state is "attempted_completed" and `## Verdict` is present
@@ -477,7 +477,7 @@ instead — do not open T0.
 
 - [ ] **Step 5: Create the evaluate dynamic**
 
-    Create `interpreters/1-iterative-refinement/b-evaluator-optimizer/dynamics/evaluate.md`
+    Create `interpreters/1-iterative-refinement/b-evaluator-optimizer/operators/evaluate.md`
     with this exact content:
 
     ````markdown
@@ -512,8 +512,8 @@ instead — do not open T0.
 - Create: `interpreters/1-iterative-refinement/c-reflexion/INSTRUCTIONS.md`
 - Create: `interpreters/1-iterative-refinement/c-reflexion/PROGRAM.md`
 - Create: `interpreters/1-iterative-refinement/c-reflexion/test_palindrome.md`
-- Create: `interpreters/1-iterative-refinement/c-reflexion/dynamics/evaluate.md`  *(byte-equal copy of b's)*
-- Create: `interpreters/1-iterative-refinement/c-reflexion/dynamics/reflect.md`
+- Create: `interpreters/1-iterative-refinement/c-reflexion/operators/evaluate.md`  *(byte-equal copy of b's)*
+- Create: `interpreters/1-iterative-refinement/c-reflexion/operators/reflect.md`
 - Test:   `src/test/phase-1-reflexion.test.ts`
 
 - [ ] **Step 1: Write the failing integration test**
@@ -572,7 +572,7 @@ instead — do not open T0.
       feedback: string,
     ): { memory: string; stack: StackEntry[]; instructions: string } {
       const initial =
-        `## State\nattempted\n## Criterion\nc1\n## Lessons\n${lessons}\n## Attempt\n${attempt}\n## Push\ndynamics/evaluate.md`;
+        `## State\nattempted\n## Criterion\nc1\n## Lessons\n${lessons}\n## Attempt\n${attempt}\n## Push\noperators/evaluate.md`;
       let r = runStackBlock([], initial, strategy);
       assert.equal(r.stack.length, 1, "evaluate push should save caller frame");
       assert.match(r.instructions, /Instruction: Judge/);
@@ -592,7 +592,7 @@ instead — do not open T0.
       memoryAtFailedAttempt: string,
       lessonText: string,
     ): { memory: string; stack: StackEntry[]; instructions: string } {
-      const withPush = memoryAtFailedAttempt + "\n## Push\ndynamics/reflect.md";
+      const withPush = memoryAtFailedAttempt + "\n## Push\noperators/reflect.md";
       let r = runStackBlock([], withPush, strategy);
       assert.equal(r.stack.length, 1, "reflect push should save caller frame");
       assert.match(r.instructions, /Instruction: Distil lesson/);
@@ -608,8 +608,8 @@ instead — do not open T0.
         assert.ok(existsSync(resolve(INTERP, "INSTRUCTIONS.md")));
         assert.ok(existsSync(resolve(INTERP, "PROGRAM.md")));
         assert.ok(existsSync(resolve(INTERP, "test_palindrome.md")));
-        assert.ok(existsSync(resolve(INTERP, "dynamics/evaluate.md")));
-        assert.ok(existsSync(resolve(INTERP, "dynamics/reflect.md")));
+        assert.ok(existsSync(resolve(INTERP, "operators/evaluate.md")));
+        assert.ok(existsSync(resolve(INTERP, "operators/reflect.md")));
       });
 
       test("strategy declares every required state", () => {
@@ -634,7 +634,7 @@ instead — do not open T0.
       });
 
       test("reflect dynamic consumes Attempt+Verdict, produces Lesson", () => {
-        const dyn = readFileSync(resolve(INTERP, "dynamics/reflect.md"), "utf-8");
+        const dyn = readFileSync(resolve(INTERP, "operators/reflect.md"), "utf-8");
         assert.match(dyn, /## Attempt/);
         assert.match(dyn, /## Verdict/);
         assert.match(dyn, /## Lesson/);
@@ -699,7 +699,7 @@ instead — do not open T0.
 
     ## Instruction: Request evaluation
     **Condition:** MEMORY state is "attempted" and `## Attempt` is present
-    **Action:** Write `## Push` with exactly the value `dynamics/evaluate.md` on its own line. Do not change state.
+    **Action:** Write `## Push` with exactly the value `operators/evaluate.md` on its own line. Do not change state.
 
     ## Instruction: Route on verdict
     **Condition:** MEMORY state is "attempted_completed" and `## Verdict` is present
@@ -707,7 +707,7 @@ instead — do not open T0.
 
     ## Instruction: Reflect
     **Condition:** MEMORY state is "failed_attempt" and `## Attempt` and `## Verdict` are present
-    **Action:** Write `## Push` with exactly the value `dynamics/reflect.md` on its own line. Do not change state.
+    **Action:** Write `## Push` with exactly the value `operators/reflect.md` on its own line. Do not change state.
 
     ## Instruction: Accumulate lesson
     **Condition:** MEMORY state is "failed_attempt_completed" and `## Lesson` is present
@@ -799,15 +799,15 @@ instead — do not open T0.
     Copy the file byte-for-byte from the b interpreter:
 
     ```bash
-    cp interpreters/1-iterative-refinement/b-evaluator-optimizer/dynamics/evaluate.md \
-       interpreters/1-iterative-refinement/c-reflexion/dynamics/evaluate.md
+    cp interpreters/1-iterative-refinement/b-evaluator-optimizer/operators/evaluate.md \
+       interpreters/1-iterative-refinement/c-reflexion/operators/evaluate.md
     ```
 
     Do NOT edit the copy. Drift will be caught by T4's byte-equality test.
 
 - [ ] **Step 7: Create the `reflect.md` dynamic**
 
-    Create `interpreters/1-iterative-refinement/c-reflexion/dynamics/reflect.md`
+    Create `interpreters/1-iterative-refinement/c-reflexion/operators/reflect.md`
     with this exact content:
 
     ````markdown
@@ -860,10 +860,10 @@ instead — do not open T0.
     describe("phase-1 dynamics identity", () => {
       test("evaluate.md is byte-equal across b and c", () => {
         const a = readFileSync(
-          resolve(REPO, "interpreters/1-iterative-refinement/b-evaluator-optimizer/dynamics/evaluate.md"),
+          resolve(REPO, "interpreters/1-iterative-refinement/b-evaluator-optimizer/operators/evaluate.md"),
         );
         const b = readFileSync(
-          resolve(REPO, "interpreters/1-iterative-refinement/c-reflexion/dynamics/evaluate.md"),
+          resolve(REPO, "interpreters/1-iterative-refinement/c-reflexion/operators/evaluate.md"),
         );
         assert.ok(a.equals(b), "evaluate.md diverged between b and c");
       });

@@ -243,10 +243,10 @@
 
       test("emitPush carries target/frameDir/depth (R8)", () => {
         setCycleContext(2, "frames/f000-strategy");
-        emitPush("dynamics/verify.md", "frames/f001-verify", 1);
+        emitPush("operators/verify.md", "frames/f001-verify", 1);
         const ev = lastEvent();
         assert.equal(ev.type, "push");
-        assert.equal(ev.target, "dynamics/verify.md");
+        assert.equal(ev.target, "operators/verify.md");
         assert.equal(ev.frameDir, "frames/f001-verify");
         assert.equal(ev.depth, 1);
       });

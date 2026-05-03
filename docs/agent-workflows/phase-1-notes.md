@@ -94,8 +94,8 @@ evaluate passed. Only the quantitative gate differs.
    Cosmetic; Node reads identical bytes. Left unaddressed to avoid
    `.gitattributes` churn.
 6. **`evaluate.md` byte-equality test (R19)** is passing. The canonical
-   copy lives in `b-evaluator-optimizer/dynamics/` and `c-reflexion`'s copy is
-   enforced identical via `src/test/phase-1-dynamics-identity.test.ts`.
+   copy lives in `b-evaluator-optimizer/operators/` and `c-reflexion`'s copy is
+   enforced identical via `src/test/phase-operators-identity.test.ts`.
    Phase 2's CoVe will reuse `evaluate.md` a third time — consider
-   promoting to a shared-dynamics convention in `new-instance.sh` at
+   promoting to a shared-operators convention in `new-instance.sh` at
    that point (see design.md OQ4).

@@ -81,7 +81,7 @@ decomposed critique visibly valuable in a live run.
 ### Retrofit of a/b/c dynamics onto the new convention
 
 - **R7**: THE `self-critique.md` dynamic at
-  `interpreters/1-iterative-refinement/a-self-refine/dynamics/` SHALL
+  `interpreters/1-iterative-refinement/a-self-refine/operators/` SHALL
   be refactored to receive the draft as `{{draft}}` (not by reading
   `## Draft` from MEMORY), and SHALL continue to emit `## Critique`
   and `## Refined` to MEMORY with the same contract the caller reads.
@@ -90,7 +90,7 @@ decomposed critique visibly valuable in a live run.
   to emit `## Verdict` (literal `pass` or `fail`) and `## Feedback` to
   MEMORY with the same contract the caller reads.
 - **R9**: THE `reflect.md` dynamic at
-  `interpreters/1-iterative-refinement/c-reflexion/dynamics/` SHALL be
+  `interpreters/1-iterative-refinement/c-reflexion/operators/` SHALL be
   refactored to receive `{{attempt}}`, `{{verdict}}`, and `{{feedback}}`
   as arguments, and SHALL continue to emit `## Lesson` to MEMORY with
   the same contract the caller reads.
@@ -100,8 +100,8 @@ decomposed critique visibly valuable in a live run.
   state (e.g. `a` reads its own `## Draft` heap section and forwards
   its value as `draft: …` in `## Push-Args`).
 - **R11**: THE byte-equality invariant between
-  `b-evaluator-optimizer/dynamics/evaluate.md` and
-  `c-reflexion/dynamics/evaluate.md` SHALL be preserved after the
+  `b-evaluator-optimizer/operators/evaluate.md` and
+  `c-reflexion/operators/evaluate.md` SHALL be preserved after the
   retrofit; `src/test/phase-1-dynamics-identity.test.ts` SHALL
   continue to pass without modification to its assertions.
 - **R12**: THE existing Phase-1 integration tests
@@ -120,7 +120,7 @@ decomposed critique visibly valuable in a live run.
 
 - **R14**: THE SYSTEM SHALL deliver the Chain-of-Verification
   interpreter at `interpreters/1-iterative-refinement/d-cove/` with
-  `INSTRUCTIONS.md`, `PROGRAM.md`, a `dynamics/` directory containing
+  `INSTRUCTIONS.md`, `PROGRAM.md`, a `operators/` directory containing
   `verify.md` and `answer-independently.md`, and a `README.md` in the
   same format as the sibling `a`/`b`/`c` leaf READMEs (literature
   citation, state machine, dynamics table, demo description, run-it

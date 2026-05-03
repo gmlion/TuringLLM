@@ -120,35 +120,35 @@ When the LLM writes `## Matched Instruction: none`, the shell automatically ente
 
 The shell intercepts these MEMORY states before each LLM invocation:
 
-- `done` — If only the root frame remains on the stack (stack.length === 1), halts the machine. If a dynamic is active (stack.length > 1), the shell pops one frame: restores the caller's instructions and sets state to `{returnState}_completed` (where `returnState` is the state the caller was in when it pushed). Cascade-pops while state remains `done`.
+- `done` — If only the root frame remains on the stack (stack.length === 1), halts the machine. If an operator is active (stack.length > 1), the shell pops one frame: restores the caller's instructions and sets state to `{returnState}_completed` (where `returnState` is the state the caller was in when it pushed). Cascade-pops while state remains `done`.
 - `waiting_for_user` — reads `## Pending Questions` from MEMORY, prompts user one question at a time, writes answers to `## Answers` in MEMORY, sets state to `user_responded`. Questions are non-blocking: the LLM adds them to `## Pending Questions` without changing state and keeps working. Only sets `waiting_for_user` when all remaining work is blocked on unanswered questions.
 
-The shell also intercepts the `## Push` MEMORY section (see Dynamics below).
+The shell also intercepts the `## Push` MEMORY section (see Operators below).
 
-## Dynamics (Call Stack)
+## Operators (Call Stack)
 
-A **dynamic** is a reusable instruction file that can be invoked from the running instruction set via push/pop semantics — like calling a subroutine. The shell owns the stack; the LLM signals intent through MEMORY.
+An **operator** is a reusable instruction file that can be invoked from the running instruction set via push/pop semantics — like calling a subroutine. The shell owns the stack; the LLM signals intent through MEMORY.
 
 **Push.** The LLM writes `## Push` in MEMORY with a file path relative to the instance directory:
 
 ```
 ## Push
-dynamics/consult.md
+operators/consult.md
 ```
 
 Before the next LLM invocation, the shell:
 1. Saves a new frame `{ returnState, frameDir }` on the call stack. The caller's INSTRUCTIONS.md and MEMORY.md remain on disk in the caller's frame directory; the child gets its own frame directory with fresh files.
 2. Loads the target file as the new `INSTRUCTIONS.md`.
 3. Strips the `## Push` section from MEMORY.
-4. Sets state to `empty` so the dynamic starts fresh.
+4. Sets state to `empty` so the operator starts fresh.
 
-The dynamic then runs its own state machine over the MEMORY the caller left behind. The caller is expected to write any context the dynamic needs into dedicated MEMORY sections before pushing.
+The operator then runs its own state machine over the MEMORY the caller left behind. The caller is expected to write any context the operator needs into dedicated MEMORY sections before pushing.
 
-**Push-Args (arguments).** A dynamic can declare `{{placeholders}}` in its instruction text. The caller passes values by writing `## Push-Args` immediately after `## Push`:
+**Push-Args (arguments).** An operator can declare `{{placeholders}}` in its instruction text. The caller passes values by writing `## Push-Args` immediately after `## Push`:
 
 ```
 ## Push
-dynamics/answer-independently.md
+operators/answer-independently.md
 ## Push-Args
 question: When was X founded?
 draft: |
@@ -163,15 +163,15 @@ When `## Push-Args` is absent, no substitution is attempted; a target file with 
 
 Implementation: `parsePushArgs` and `removePushArgs` in `src/memory.ts`; `substitutePlaceholders` and the extended `applyPush` in `src/call-stack.ts`.
 
-**Pop.** When the dynamic sets state to `done`, the shell pops the top frame, restores the caller's instructions, and sets state to `{caller_state}_completed` — where `caller_state` is the state the caller was in at push time. The caller must have an instruction that matches `{caller_state}_completed` to consume the returned result.
+**Pop.** When the operator sets state to `done`, the shell pops the top frame, restores the caller's instructions, and sets state to `{caller_state}_completed` — where `caller_state` is the state the caller was in at push time. The caller must have an instruction that matches `{caller_state}_completed` to consume the returned result.
 
 The `_completed` suffix prevents an infinite loop: the caller's original `{caller_state}` instruction (which did the push) does not immediately re-fire.
 
-**Nesting.** Dynamics can push further dynamics. Each push adds a frame; pops cascade while state remains `done`.
+**Nesting.** Operators can push further operators. Each push adds a frame; pops cascade while state remains `done`.
 
 **Persistence.** The stack is persisted to `.call-stack.json` in the instance directory after every change. Snapshots in `history/NNNN-<hash>/` include a copy of the stack so past cycles are fully reconstructable.
 
-**Authoring dynamics.** Create `interpreters/<name>/dynamics/<thing>.md` alongside `INSTRUCTIONS.md`. The `new-instance.sh` script copies the whole `dynamics/` directory into each new instance. A dynamic file follows the same format as `INSTRUCTIONS.md` (a state machine with conditions/actions), must have an entry condition for state `empty`, and must eventually set state `done` to return control to the caller.
+**Authoring operators.** Create `interpreters/<name>/operators/<thing>.md` alongside `INSTRUCTIONS.md`. The `new-instance.sh` script copies the whole `operators/` directory into each new instance. An operator file follows the same format as `INSTRUCTIONS.md` (a state machine with conditions/actions), must have an entry condition for state `empty`, and must eventually set state `done` to return control to the caller.
 
 **Missing push targets.** If `## Push` points at a non-existent or empty file, the shell logs an error, strips `## Push` from MEMORY, and continues with the caller unchanged (no frame is pushed). The LLM sees the next cycle without the push request and can adapt.
 
@@ -209,7 +209,7 @@ instances/foo/
 └── logs/
 ```
 
-**Frame naming:** `frames/f<NNN>-<slug>` where NNN is a monotonically increasing counter (zero-padded to 3 digits, widens beyond 999) and slug is derived from the push target filename (e.g. `dynamics/verify.md` → `verify`). The root frame is always `frames/f000-strategy`.
+**Frame naming:** `frames/f<NNN>-<slug>` where NNN is a monotonically increasing counter (zero-padded to 3 digits, widens beyond 999) and slug is derived from the push target filename (e.g. `operators/verify.md` → `verify`). The root frame is always `frames/f000-strategy`.
 
 **Halt detection:** `state === "done"` AND `stack.length === 1` (only the root frame remains).
 
@@ -254,14 +254,14 @@ key: |
   value
 
 ## Return
-key: value      ← optional; written by a dynamic before setting state to done
+key: value      ← optional; written by an operator before setting state to done
 ```
 
 ### ## Return splicing
 
-When a dynamic sets `state: done`, the shell pops the frame and splices any `## Return` block into the caller's MEMORY. The grammar is identical to `## Push-Args` (key-value or key-pipe block scalar). Each entry becomes a top-level MEMORY section in the caller: key `foo` → `## Foo` (first character uppercased, rest preserved).
+When an operator sets `state: done`, the shell pops the frame and splices any `## Return` block into the caller's MEMORY. The grammar is identical to `## Push-Args` (key-value or key-pipe block scalar). Each entry becomes a top-level MEMORY section in the caller: key `foo` → `## Foo` (first character uppercased, rest preserved).
 
-Example: a dynamic writes:
+Example: an operator writes:
 
 ```
 ## Return
@@ -300,10 +300,10 @@ Interpreters live in `interpreters/<name>/`. Each has an `INSTRUCTIONS.md` and o
 
 - **default** (no argument to new-instance.sh) — Step-by-step executor. Reads PROGRAM.md steps, decomposes each into sub-instructions with verification.
 - **`interpreters/1-iterative-refinement/a-self-refine`** — Self-Refine (patterns.md Group 1). Single role drafts, critiques its own output via `self-critique.md`, iterates until accepted. Uses `./scoped/draft.md` for the current draft; returns `## Refined` via `## Return`.
-- **`interpreters/1-iterative-refinement/b-evaluator-optimizer`** — Evaluator–Optimizer (patterns.md Group 1). Generator produces attempts; external evaluator (`evaluate.md`) judges against an explicit `## Criterion` and returns pass/fail with feedback. `./scoped/attempt.md` and `./scoped/criterion.md` live in the strategy frame's scoped dir (the dynamic is a one-shot evaluator with no scoped state of its own); returns `## Verdict` + `## Feedback` via `## Return`.
+- **`interpreters/1-iterative-refinement/b-evaluator-optimizer`** — Evaluator–Optimizer (patterns.md Group 1). Generator produces attempts; external evaluator (`evaluate.md`) judges against an explicit `## Criterion` and returns pass/fail with feedback. `./scoped/attempt.md` and `./scoped/criterion.md` live in the strategy frame's scoped dir (the operator is a one-shot evaluator with no scoped state of its own); returns `## Verdict` + `## Feedback` via `## Return`.
 - **`interpreters/1-iterative-refinement/c-reflexion`** — Reflexion (patterns.md Group 1). Evaluator–Optimizer plus a `reflect.md` step that distils each failed attempt into a verbal lesson accumulated via surgical appends to `./scoped/lessons.md`. `./scoped/attempt.md`, `./scoped/criterion.md`, and `./scoped/lessons.md` live in the strategy frame's scoped dir. Returns `## Verdict` + `## Feedback` + `## Lesson` via `## Return`.
 - **`interpreters/1-iterative-refinement/d-cove`** — Chain-of-Verification (patterns.md Group 1, nested). Drafter pushes `verify.md`; verifier decomposes the draft into atomic claims and pushes `answer-independently.md` per claim (stack depth 2). Uses `./scoped/draft.md`; verifier uses its own `./scoped/verifications.md` with surgical `sed -i` updates; returns `## Revised` via `## Return`.
-- **`interpreters/2-planning-decomposition/a-plan-execute`** — Plan-and-Execute (patterns.md Group 2). Demo d1: minimal TypeScript Node.js project setup. INSTRUCTIONS + dynamics byte-equal across the three leaves in this group.
+- **`interpreters/2-planning-decomposition/a-plan-execute`** — Plan-and-Execute (patterns.md Group 2). Demo d1: minimal TypeScript Node.js project setup. INSTRUCTIONS + operators byte-equal across the three leaves in this group.
 - **`interpreters/2-planning-decomposition/b-orchestrator-workers`** — Orchestrator–Workers (Anthropic, Building Effective Agents). Demo d2: summarise 5 technical notes.
 - **`interpreters/2-planning-decomposition/c-deep-research`** — Deep Research (product pattern; Self-Ask ancestry). Demo d3: Raft/Paxos/Multi-Paxos comparison; exercises stack depth 2 via recursive plan.md push.
 - **`interpreters/5-fixed-sop-teams/a-metagpt`** — MetaGPT (Hong et al., ICLR 2024). Document hand-off SOP (PM → Architect → Engineer → QA). Shared PROGRAM.md with b-chatdev for comparison.
@@ -335,7 +335,7 @@ instances/foo/
 ├── .call-stack.json   # Saved call stack; stack[0] is always the root frame
 ├── .env               # Provider/model config (gitignored)
 ├── workspace/         # Project artifacts (has its own git repo)
-├── dynamics/          # Reusable instruction files copied from the interpreter (optional)
+├── operators/          # Reusable instruction files copied from the interpreter (optional)
 ├── frames/
 │   ├── f000-strategy/ # Root frame (always present)
 │   │   ├── INSTRUCTIONS.md   # Strategy + generated sub-instructions

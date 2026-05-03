@@ -17,8 +17,8 @@
 | T5  | Refactor `b-evaluator-optimizer`: `evaluate.md` consumes `{{attempt}}` + `{{criterion}}` | R8, R10, R11, R12, R13 |
 | T6  | Refactor `c-reflexion`: sync `evaluate.md` + `reflect.md` with push-args  | R9, R10, R11, R12, R13          |
 | T7  | Scaffold `d-cove`: INSTRUCTIONS.md, PROGRAM.md, README.md                 | R14, R15, R19, R22              |
-| T8  | Add `d-cove/dynamics/verify.md`                                            | R16, R17                        |
-| T9  | Add `d-cove/dynamics/answer-independently.md`                              | R17, R18                        |
+| T8  | Add `d-cove/operators/verify.md`                                            | R16, R17                        |
+| T9  | Add `d-cove/operators/answer-independently.md`                              | R17, R18                        |
 | T10 | Scripted integration test for d-cove (incl. depth-2 invariant)            | R20, R25                        |
 | T11 | Docs: CLAUDE.md, group README, agent-workflows §Phase 2, phase-2-notes.md | R21, R22, R23, R24              |
 | T12 | Live d-cove demo run + final validation                                   | R26, R27                        |
@@ -38,7 +38,7 @@
     ```typescript
     describe("parsePushArgs", () => {
       test("returns empty object when section absent", () => {
-        const memory = "## State\nfoo\n## Push\ndynamics/x.md";
+        const memory = "## State\nfoo\n## Push\noperators/x.md";
         assert.deepEqual(parsePushArgs(memory), {});
       });
 
@@ -499,7 +499,7 @@
 ## Task 4: Refactor `a-self-refine` (satisfies: R7, R10, R12, R13)
 
 **Files:**
-- Modify: `interpreters/1-iterative-refinement/a-self-refine/dynamics/self-critique.md`
+- Modify: `interpreters/1-iterative-refinement/a-self-refine/operators/self-critique.md`
 - Modify: `interpreters/1-iterative-refinement/a-self-refine/INSTRUCTIONS.md`
 - Modify: `src/test/phase-1-self-refine.test.ts`
 
@@ -510,7 +510,7 @@
     the `memory` declaration line with:
 
     ```typescript
-        const memory = '## State\ndrafted\n## Draft\nfirst attempt\n## Push\ndynamics/self-critique.md\n## Push-Args\ndraft: |\n  first attempt';
+        const memory = '## State\ndrafted\n## Draft\nfirst attempt\n## Push\noperators/self-critique.md\n## Push-Args\ndraft: |\n  first attempt';
     ```
 
     In the same test block, replace the assertion:
@@ -531,7 +531,7 @@
     Replace the `memory` declaration line with:
 
     ```typescript
-        let memory = '## State\ndrafted\n## Draft\nsecond attempt\n## Push\ndynamics/self-critique.md\n## Push-Args\ndraft: |\n  second attempt';
+        let memory = '## State\ndrafted\n## Draft\nsecond attempt\n## Push\noperators/self-critique.md\n## Push-Args\ndraft: |\n  second attempt';
     ```
 
 - [ ] **Step 2: Run the updated tests to verify they fail**
@@ -542,7 +542,7 @@
 
 - [ ] **Step 3: Refactor the dynamic**
 
-    Overwrite `interpreters/1-iterative-refinement/a-self-refine/dynamics/self-critique.md` with:
+    Overwrite `interpreters/1-iterative-refinement/a-self-refine/operators/self-critique.md` with:
 
     ```markdown
     # Dynamic: Self-Critique
@@ -575,7 +575,7 @@
     **Action:** Append the following to MEMORY (do not change state — the shell will set it to "empty" when it pushes the dynamic):
 
         ## Push
-        dynamics/self-critique.md
+        operators/self-critique.md
         ## Push-Args
         draft: |
           <verbatim contents of ## Draft, every line indented two spaces>
@@ -594,7 +594,7 @@
 - [ ] **Step 7: Commit**
 
     ```bash
-    git add interpreters/1-iterative-refinement/a-self-refine/dynamics/self-critique.md interpreters/1-iterative-refinement/a-self-refine/INSTRUCTIONS.md src/test/phase-1-self-refine.test.ts
+    git add interpreters/1-iterative-refinement/a-self-refine/operators/self-critique.md interpreters/1-iterative-refinement/a-self-refine/INSTRUCTIONS.md src/test/phase-1-self-refine.test.ts
     git commit -m "refactor(a-self-refine): self-critique receives draft as push-arg (satisfies: R7, R10, R12, R13)"
     ```
 
@@ -603,19 +603,19 @@
 ## Task 5: Refactor `b-evaluator-optimizer` (satisfies: R8, R10, R11, R12, R13)
 
 **Files:**
-- Modify: `interpreters/1-iterative-refinement/b-evaluator-optimizer/dynamics/evaluate.md`
+- Modify: `interpreters/1-iterative-refinement/b-evaluator-optimizer/operators/evaluate.md`
 - Modify: `interpreters/1-iterative-refinement/b-evaluator-optimizer/INSTRUCTIONS.md`
 - Modify: `src/test/phase-1-evaluator-optimizer.test.ts`
 
 - [ ] **Step 1: Update the test to reflect the new push payload shape**
 
     In `src/test/phase-1-evaluator-optimizer.test.ts`, locate every literal
-    memory string that contains `## Push\ndynamics/evaluate.md`. Each
+    memory string that contains `## Push\noperators/evaluate.md`. Each
     becomes:
 
     ```
     ## Push
-    dynamics/evaluate.md
+    operators/evaluate.md
     ## Push-Args
     attempt: |
       <attempt content, two-space indented>
@@ -641,7 +641,7 @@
 
 - [ ] **Step 3: Refactor the dynamic**
 
-    Overwrite `interpreters/1-iterative-refinement/b-evaluator-optimizer/dynamics/evaluate.md` with:
+    Overwrite `interpreters/1-iterative-refinement/b-evaluator-optimizer/operators/evaluate.md` with:
 
     ```markdown
     # Dynamic: Evaluate
@@ -670,7 +670,7 @@
     **Action:** Append the following to MEMORY (do not change state):
 
         ## Push
-        dynamics/evaluate.md
+        operators/evaluate.md
         ## Push-Args
         attempt: |
           <verbatim contents of ## Attempt, every line indented two spaces>
@@ -693,7 +693,7 @@
 - [ ] **Step 7: Commit (with the expected identity-test failure noted in the message)**
 
     ```bash
-    git add interpreters/1-iterative-refinement/b-evaluator-optimizer/dynamics/evaluate.md interpreters/1-iterative-refinement/b-evaluator-optimizer/INSTRUCTIONS.md src/test/phase-1-evaluator-optimizer.test.ts
+    git add interpreters/1-iterative-refinement/b-evaluator-optimizer/operators/evaluate.md interpreters/1-iterative-refinement/b-evaluator-optimizer/INSTRUCTIONS.md src/test/phase-1-evaluator-optimizer.test.ts
     git commit -m "refactor(b-evaluator-optimizer): evaluate receives attempt+criterion as push-args (satisfies: R8, R10, R12, R13)
 
     Note: phase-1-dynamics-identity test fails until Task 6 syncs c's
@@ -707,16 +707,16 @@
 ## Task 6: Refactor `c-reflexion`: sync `evaluate.md` + refactor `reflect.md` (satisfies: R9, R10, R11, R12, R13)
 
 **Files:**
-- Modify: `interpreters/1-iterative-refinement/c-reflexion/dynamics/evaluate.md` (byte-equal copy from b's)
-- Modify: `interpreters/1-iterative-refinement/c-reflexion/dynamics/reflect.md`
+- Modify: `interpreters/1-iterative-refinement/c-reflexion/operators/evaluate.md` (byte-equal copy from b's)
+- Modify: `interpreters/1-iterative-refinement/c-reflexion/operators/reflect.md`
 - Modify: `interpreters/1-iterative-refinement/c-reflexion/INSTRUCTIONS.md`
 - Modify: `src/test/phase-1-reflexion.test.ts`
 
 - [ ] **Step 1: Update the test to reflect new push payload shapes**
 
     In `src/test/phase-1-reflexion.test.ts`, locate every literal memory
-    string that has `## Push\ndynamics/evaluate.md` or
-    `## Push\ndynamics/reflect.md`. For evaluate, append:
+    string that has `## Push\noperators/evaluate.md` or
+    `## Push\noperators/reflect.md`. For evaluate, append:
     ```
     ## Push-Args
     attempt: |
@@ -746,13 +746,13 @@
     Run from repo root:
 
     ```bash
-    cp interpreters/1-iterative-refinement/b-evaluator-optimizer/dynamics/evaluate.md \
-       interpreters/1-iterative-refinement/c-reflexion/dynamics/evaluate.md
+    cp interpreters/1-iterative-refinement/b-evaluator-optimizer/operators/evaluate.md \
+       interpreters/1-iterative-refinement/c-reflexion/operators/evaluate.md
     ```
 
 - [ ] **Step 4: Refactor `reflect.md`**
 
-    Overwrite `interpreters/1-iterative-refinement/c-reflexion/dynamics/reflect.md`:
+    Overwrite `interpreters/1-iterative-refinement/c-reflexion/operators/reflect.md`:
 
     ```markdown
     # Dynamic: Reflect
@@ -788,7 +788,7 @@
     **Action:** Append the following to MEMORY (do not change state):
 
         ## Push
-        dynamics/reflect.md
+        operators/reflect.md
         ## Push-Args
         attempt: |
           <verbatim contents of ## Attempt, every line indented two spaces>
@@ -807,7 +807,7 @@
 - [ ] **Step 7: Commit**
 
     ```bash
-    git add interpreters/1-iterative-refinement/c-reflexion/dynamics/evaluate.md interpreters/1-iterative-refinement/c-reflexion/dynamics/reflect.md interpreters/1-iterative-refinement/c-reflexion/INSTRUCTIONS.md src/test/phase-1-reflexion.test.ts
+    git add interpreters/1-iterative-refinement/c-reflexion/operators/evaluate.md interpreters/1-iterative-refinement/c-reflexion/operators/reflect.md interpreters/1-iterative-refinement/c-reflexion/INSTRUCTIONS.md src/test/phase-1-reflexion.test.ts
     git commit -m "refactor(c-reflexion): sync evaluate.md + reflect receives push-args (satisfies: R9, R10, R11, R12, R13)"
     ```
 
@@ -819,7 +819,7 @@
 - Create: `interpreters/1-iterative-refinement/d-cove/INSTRUCTIONS.md`
 - Create: `interpreters/1-iterative-refinement/d-cove/PROGRAM.md`
 - Create: `interpreters/1-iterative-refinement/d-cove/README.md`
-- Create: `interpreters/1-iterative-refinement/d-cove/dynamics/.gitkeep` (or skip; verify.md and answer-independently.md land in T8/T9)
+- Create: `interpreters/1-iterative-refinement/d-cove/operators/.gitkeep` (or skip; verify.md and answer-independently.md land in T8/T9)
 
 - [ ] **Step 1: Create the directory and write `INSTRUCTIONS.md`**
 
@@ -847,7 +847,7 @@
     **Action:** Append the following to MEMORY (do not change state — the shell will set it to "empty" when it pushes the dynamic):
 
         ## Push
-        dynamics/verify.md
+        operators/verify.md
         ## Push-Args
         draft: |
           <verbatim contents of ## Draft, every line indented two spaces>
@@ -938,8 +938,8 @@
 
     | File | Receives | Produces | Notes |
     | --- | --- | --- | --- |
-    | `dynamics/verify.md` | `{{draft}}` | `## Revised` (in MEMORY, returned to caller) | Runs at depth 1; iterates over claims, pushing answer-independently per claim. |
-    | `dynamics/answer-independently.md` | `{{question}}` | `## Answer` | Single-instruction. Runs at depth 2. Has no access to draft (structurally — its instructions reference no caller MEMORY section). |
+    | `operators/verify.md` | `{{draft}}` | `## Revised` (in MEMORY, returned to caller) | Runs at depth 1; iterates over claims, pushing answer-independently per claim. |
+    | `operators/answer-independently.md` | `{{question}}` | `## Answer` | Single-instruction. Runs at depth 2. Has no access to draft (structurally — its instructions reference no caller MEMORY section). |
 
     ## Demo `PROGRAM.md`
 
@@ -975,7 +975,7 @@
 - [ ] **Step 4: Verify the structure exists**
 
     Run: `ls interpreters/1-iterative-refinement/d-cove/`
-    Expected: `INSTRUCTIONS.md`, `PROGRAM.md`, `README.md`, `dynamics/` (empty so far).
+    Expected: `INSTRUCTIONS.md`, `PROGRAM.md`, `README.md`, `operators/` (empty so far).
 
 - [ ] **Step 5: Commit**
 
@@ -986,14 +986,14 @@
 
 ---
 
-## Task 8: Add `d-cove/dynamics/verify.md` (satisfies: R16, R17)
+## Task 8: Add `d-cove/operators/verify.md` (satisfies: R16, R17)
 
 **Files:**
-- Create: `interpreters/1-iterative-refinement/d-cove/dynamics/verify.md`
+- Create: `interpreters/1-iterative-refinement/d-cove/operators/verify.md`
 
 - [ ] **Step 1: Write the dynamic**
 
-    Create `interpreters/1-iterative-refinement/d-cove/dynamics/verify.md`:
+    Create `interpreters/1-iterative-refinement/d-cove/operators/verify.md`:
 
     ```markdown
     # Dynamic: Verify
@@ -1003,7 +1003,7 @@
     Return: state done → caller sees {caller_state}_completed.
 
     Internal MEMORY scratch (cleared before pop): ## Verifications.
-    Pushes (depth 2): dynamics/answer-independently.md, once per claim.
+    Pushes (depth 2): operators/answer-independently.md, once per claim.
 
     ## Instruction: Pose questions
     **Condition:** MEMORY state is "empty"
@@ -1023,7 +1023,7 @@
     **Action:** Find the first V_i bullet whose status is `pending`. Append the following to MEMORY (do not change state):
 
         ## Push
-        dynamics/answer-independently.md
+        operators/answer-independently.md
         ## Push-Args
         question: |
           <verbatim text of V_i's verification question, two-space indented>
@@ -1044,27 +1044,27 @@
 
     Run:
     ```bash
-    test -s interpreters/1-iterative-refinement/d-cove/dynamics/verify.md && echo OK
+    test -s interpreters/1-iterative-refinement/d-cove/operators/verify.md && echo OK
     ```
     Expected: `OK`.
 
 - [ ] **Step 3: Commit**
 
     ```bash
-    git add interpreters/1-iterative-refinement/d-cove/dynamics/verify.md
+    git add interpreters/1-iterative-refinement/d-cove/operators/verify.md
     git commit -m "feat(d-cove): add verify.md depth-1 dynamic (satisfies: R16, R17)"
     ```
 
 ---
 
-## Task 9: Add `d-cove/dynamics/answer-independently.md` (satisfies: R17, R18)
+## Task 9: Add `d-cove/operators/answer-independently.md` (satisfies: R17, R18)
 
 **Files:**
-- Create: `interpreters/1-iterative-refinement/d-cove/dynamics/answer-independently.md`
+- Create: `interpreters/1-iterative-refinement/d-cove/operators/answer-independently.md`
 
 - [ ] **Step 1: Write the dynamic**
 
-    Create `interpreters/1-iterative-refinement/d-cove/dynamics/answer-independently.md`:
+    Create `interpreters/1-iterative-refinement/d-cove/operators/answer-independently.md`:
 
     ```markdown
     # Dynamic: Answer Independently
@@ -1091,14 +1091,14 @@
 
     Run:
     ```bash
-    test -s interpreters/1-iterative-refinement/d-cove/dynamics/answer-independently.md && echo OK
+    test -s interpreters/1-iterative-refinement/d-cove/operators/answer-independently.md && echo OK
     ```
     Expected: `OK`.
 
 - [ ] **Step 3: Commit**
 
     ```bash
-    git add interpreters/1-iterative-refinement/d-cove/dynamics/answer-independently.md
+    git add interpreters/1-iterative-refinement/d-cove/operators/answer-independently.md
     git commit -m "feat(d-cove): add answer-independently.md depth-2 leaf (satisfies: R17, R18)"
     ```
 
@@ -1162,8 +1162,8 @@
           "INSTRUCTIONS.md",
           "PROGRAM.md",
           "README.md",
-          "dynamics/verify.md",
-          "dynamics/answer-independently.md",
+          "operators/verify.md",
+          "operators/answer-independently.md",
         ]) {
           assert.ok(existsSync(resolve(INTERP, f)), `${f} missing`);
         }
@@ -1186,7 +1186,7 @@
       });
 
       test("verify.md declares the four internal states", () => {
-        const dyn = readFileSync(resolve(INTERP, "dynamics/verify.md"), "utf-8");
+        const dyn = readFileSync(resolve(INTERP, "operators/verify.md"), "utf-8");
         for (const needle of [
           'state is "empty"',
           'state is "asking"',
@@ -1203,7 +1203,7 @@
       });
 
       test("answer-independently.md is single-instruction and references no caller MEMORY section", () => {
-        const dyn = readFileSync(resolve(INTERP, "dynamics/answer-independently.md"), "utf-8");
+        const dyn = readFileSync(resolve(INTERP, "operators/answer-independently.md"), "utf-8");
         const instructionCount = (dyn.match(/^## Instruction:/gm) ?? []).length;
         assert.equal(instructionCount, 1, "expected exactly one instruction");
         assert.doesNotMatch(dyn, /## Draft\b/, "must not reference ## Draft");
@@ -1215,7 +1215,7 @@
         const strategy = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
         const memory =
           '## State\ndrafted\n## Draft\nA draft with claims\n' +
-          '## Push\ndynamics/verify.md\n' +
+          '## Push\noperators/verify.md\n' +
           '## Push-Args\ndraft: |\n  A draft with claims';
         const r = runStackBlock([], memory, strategy);
         assert.equal(r.halt, false);
@@ -1230,7 +1230,7 @@
         // First push: strategy → verify.md (depth 1)
         const memory1 =
           '## State\ndrafted\n## Draft\nclaim text\n' +
-          '## Push\ndynamics/verify.md\n' +
+          '## Push\noperators/verify.md\n' +
           '## Push-Args\ndraft: |\n  claim text';
         let r = runStackBlock([], memory1, strategy);
         assert.equal(r.stack.length, 1);
@@ -1241,7 +1241,7 @@
         const askingMemory =
           '## State\nasking\n' +
           '## Verifications\n- V1: Is X true?; pending\n' +
-          '## Push\ndynamics/answer-independently.md\n' +
+          '## Push\noperators/answer-independently.md\n' +
           '## Push-Args\nquestion: |\n  Is X true?';
         r = runStackBlock(r.stack, askingMemory, verifyInstr);
         assert.equal(r.halt, false);
@@ -1255,12 +1255,12 @@
         // Build a stack with strategy at 0, verify at 1, answer-indep at 2
         const memory1 =
           '## State\ndrafted\n## Draft\nclaim\n' +
-          '## Push\ndynamics/verify.md\n## Push-Args\ndraft: |\n  claim';
+          '## Push\noperators/verify.md\n## Push-Args\ndraft: |\n  claim';
         let r = runStackBlock([], memory1, strategy);
         const verifyInstr = r.instructions;
         const askingMemory =
           '## State\nasking\n## Verifications\n- V1: Q?; pending\n' +
-          '## Push\ndynamics/answer-independently.md\n## Push-Args\nquestion: |\n  Q?';
+          '## Push\noperators/answer-independently.md\n## Push-Args\nquestion: |\n  Q?';
         r = runStackBlock(r.stack, askingMemory, verifyInstr);
         assert.equal(r.stack.length, 2);
 
@@ -1316,7 +1316,7 @@
 
     ```
     ## Push
-    dynamics/answer-independently.md
+    operators/answer-independently.md
     ## Push-Args
     question: When was X founded?
     draft: |
@@ -1534,7 +1534,7 @@
     actual observations from the run. At minimum:
     - Cycle count to halt.
     - Whether all V_i were genuinely answered before revision (count
-      `## Push: dynamics/answer-independently.md` occurrences in
+      `## Push: operators/answer-independently.md` occurrences in
       `instances/p2-cove/logs/run-*.log`).
     - The final `## Revised` content verbatim.
     - Whether it matches the unique solution; if not, which step

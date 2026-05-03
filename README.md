@@ -124,7 +124,7 @@ indicating a recommended exploration order, not strict prerequisites.
     `## Lessons` across retries.
 - **`interpreters/2-planning-decomposition/`** — Plan-and-Execute family
   ([patterns.md Group 2](docs/agent-workflows/patterns.md)). Three
-  leaves with byte-equal `INSTRUCTIONS.md` and `dynamics/` differing
+  leaves with byte-equal `INSTRUCTIONS.md` and `operators/` differing
   only in their demo `PROGRAM.md`:
   - `a-plan-execute` — d1: TypeScript project setup.
   - `b-orchestrator-workers` — d2: summarise N technical notes.
@@ -149,7 +149,7 @@ group of `patterns.md`.
 Create a directory `interpreters/<group-number>-<group-slug>/<letter>-<slug>/`
 with at least `INSTRUCTIONS.md`. Add optional `*.md` files for role
 descriptions, templates, etc. — they're copied into instances.
-Optional `dynamics/` directory holds reusable instruction files (see
+Optional `operators/` directory holds reusable instruction files (see
 below).
 
 `INSTRUCTIONS.md` structure:
@@ -199,28 +199,28 @@ Key patterns:
 5. **Project artifacts** go in `workspace/` (which has its own git
    repo). MEMORY.md and INSTRUCTIONS.md stay in the instance root.
 
-## Dynamics (Call Stack)
+## Operators (Call Stack)
 
-A **dynamic** is a reusable instruction file invoked like a
+An **operator** is a reusable instruction file invoked like a
 subroutine. The running instruction set delegates by writing
 `## Push` in MEMORY:
 
 ```
 ## Push
-dynamics/self-critique.md
+operators/self-critique.md
 ```
 
 The shell saves the current `{state, instructions}` onto a call stack,
-loads the dynamic as the new `INSTRUCTIONS.md`, and sets state to
-`empty`. When the dynamic sets state to `done`, the shell pops the
+loads the operator as the new `INSTRUCTIONS.md`, and sets state to
+`empty`. When the operator sets state to `done`, the shell pops the
 stack, restores the caller's instructions, and sets state to
 `{caller_state}_completed` — preventing the caller's original
 instruction from immediately re-firing.
 
 ```
     ┌─── caller ───┐
-    │ state: drafted                       ┌─ dynamic ──┐
-    │ ## Push: dynamics/self-critique.md ─►│ state: empty
+    │ state: drafted                       ┌─ operator ─┐
+    │ ## Push: operators/self-critique.md ─►│ state: empty
     └──────────────┘                       │ ...
                                            │ state: done ───┐
     ┌─── caller ───┐                       └────────────────┘
@@ -228,7 +228,7 @@ instruction from immediately re-firing.
     └──────────────┘
 ```
 
-- Dynamics can nest (a dynamic can push another).
+- Operators can nest (an operator can push another).
 - The stack is persisted to `.call-stack.json` and snapshotted into
   every `history/` entry.
 - Missing push targets are logged and ignored — no frame is pushed.
@@ -241,8 +241,8 @@ under `src/test/`.
 
 The shell intercepts these MEMORY states before each LLM invocation:
 
-- **`done`** — if the call stack is empty, the machine halts. If a
-  dynamic is active, the shell pops one frame and sets state to
+- **`done`** — if the call stack is empty, the machine halts. If an
+  operator is active, the shell pops one frame and sets state to
   `{caller_state}_completed`. Cascade-pops while state remains `done`.
 - **`waiting_for_user`** — the shell reads `## Pending Questions` from
   MEMORY, prompts the user one at a time (via stdin or Telegram if
@@ -292,12 +292,12 @@ The machine git ignores `workspace/.git/` so nested repos don't conflict.
 ```
 instances/foo/
 ├── PROGRAM.md         # User's program (read-only to machine)
-├── INSTRUCTIONS.md    # Strategy + generated sub-instructions (swapped when a dynamic is active)
+├── INSTRUCTIONS.md    # Strategy + generated sub-instructions (swapped when an operator is active)
 ├── MEMORY.md          # Current state; may carry ## Push to delegate
 ├── .call-stack.json   # Saved call stack (empty at depth 0)
 ├── .env               # Provider/model config (gitignored)
 ├── workspace/         # Project artifacts (own git repo)
-├── dynamics/          # Reusable instruction files (optional, provided by the interpreter)
+├── operators/          # Reusable instruction files (optional, provided by the interpreter)
 ├── run.sh             # Launch script
 ├── *.md               # Interpreter support files (role descriptions, templates)
 ├── .api_key           # Cached API key (gitignored)
@@ -333,7 +333,7 @@ instances/foo/
   group numbering.
 - [`docs/agent-workflows/requirements.md`](docs/agent-workflows/requirements.md)
   — phased rollout plan: which patterns become interpreters in which
-  order, and which dynamics they share.
+  order, and which operators they share.
 - [`docs/agent-workflows/phase-1-notes.md`](docs/agent-workflows/phase-1-notes.md)
   — implementation notes from Phase 1 (iterative refinement).
 - [`CLAUDE.md`](CLAUDE.md) — project-specific guidance for Claude Code

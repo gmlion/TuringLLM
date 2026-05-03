@@ -22,7 +22,7 @@ detail and caveats below. Outcomes recorded against
   triggered by a step failure; the LLM completed all 7 plan steps
   successfully on first attempt without needing to replan. The
   *structural* replan path is in place (`Route after step` →
-  needs_replan branch → `## Push dynamics/plan.md`); whether a given
+  needs_replan branch → `## Push operators/plan.md`); whether a given
   live run actually exercises it depends on the LLM's per-cycle
   judgement of step acceptability. Same caveat as Phase-1 R11
   (Reflexion lessons quantitative gate). Re-run if R17 is needed in
@@ -73,7 +73,7 @@ detail and caveats below. Outcomes recorded against
 - **R33 satisfied.** Final MEMORY contains all four phase-outcome
   sections: `## Design Doc`, `## Code`, `## Test Report`,
   `## Documentation`.
-- **R34 caveat — workspace empty.** The dialogue.md dynamic produced
+- **R34 caveat — workspace empty.** The dialogue.md operator produced
   text artefacts (the `## Code` section's body contains the wc-plus
   source) but did not write code files to `workspace/`. The dialogue
   pattern emphasizes converged transcripts over file emission; if
@@ -97,7 +97,7 @@ T12 commit and these live runs. Listed in order of discovery:
   in `b-chatdev` strategy passing `input:` (with `(none — first phase)`
   for Initialize, prior phase output for the rest).
 - **C3**: `roles/` subdirectory of an interpreter never reached the
-  instance. `new-instance.sh` only copied top-level `*.md`, `dynamics/`,
+  instance. `new-instance.sh` only copied top-level `*.md`, `operators/`,
   and `PROGRAM.md`. Fixed by adding `cp -r $INTERP_DIR/roles $DIR/roles`
   and updating `dialogue.md` to use `../../roles/<name>.md` (instance
   root, two `..` from a frame dir).
@@ -151,7 +151,7 @@ RULE" header.
    The shell sets caller state to `<returnState_at_push>_completed`
    on pop. If the strategy's absorber instruction expects
    `planning_completed`, the caller MUST be in state `planning` at
-   push time. Document this prominently in the dynamics/strategy
+   push time. Document this prominently in the operators/strategy
    guide.
 3. **Push + state-change in one cycle needs atomic-heredoc syntax.**
    When an instruction must both set MEMORY state AND emit a
@@ -159,7 +159,7 @@ RULE" header.
    are described as separate operations. Use a single
    `cat > MEMORY.md << 'MEMEOF'` that includes the push block to
    force atomicity.
-4. **Interpreter-shipped subdirectories beyond `dynamics/` need
+4. **Interpreter-shipped subdirectories beyond `operators/` need
    explicit copy-into-instance support.** `roles/` (b-chatdev) and
    `workspace/` (b-orchestrator-workers) both surfaced this. The
    fix in `new-instance.sh` is small and additive.
@@ -167,16 +167,16 @@ RULE" header.
    dependent.** Soften to "at least N" or "approximately N" for
    future quantitative R#s.
 
-## Plan dynamics-table sync (R50) — drifts found
+## Plan operators-table sync (R50) — drifts found
 
-Audit of the "Reusable dynamics library" table in
-`docs/agent-workflows/requirements.md` against the dynamics actually
+Audit of the "Reusable operators library" table in
+`docs/agent-workflows/requirements.md` against the operators actually
 shipped by this spec uncovered three drifts. They are corrected in
 the same commit as this notes file.
 
 1. **`role-<name>.md` stack depth.** Table previously listed `1`. The
    PM/Architect/Engineer roles do run at depth 1, but **`role-qa.md`
-   pushes `dynamics/evaluate.md` at depth 2** (the QA role's verdict
+   pushes `operators/evaluate.md` at depth 2** (the QA role's verdict
    is produced by the shared evaluator). The depth column now reads
    `1 (qa: 2)` to capture this.
 
@@ -193,7 +193,7 @@ the same commit as this notes file.
    now reads `1 (acceptance=true: 2)`.
 
 The Phase 3 rows (`plan.md`, `execute-step.md`, `synthesize.md`) all
-match the actual contracts; Phase 3 dynamics consume push-args rather
+match the actual contracts; Phase 3 operators consume push-args rather
 than caller-MEMORY sections, but the table's existing convention
 already documents push-args as `## CapitalizedKey` (cf. `verify.md` /
 `answer-independently.md` rows from Phase 2), so no change there.
@@ -229,11 +229,11 @@ required:
    table for return keys (`prd → PRD`, `qa → QA`). Out of scope for
    this spec.
 
-## Phase 3a — three leaves, byte-equal `INSTRUCTIONS.md` and `dynamics/`
+## Phase 3a — three leaves, byte-equal `INSTRUCTIONS.md` and `operators/`
 
 The collapse rationale ("four named patterns, one implementation")
 held up cleanly across the three leaves. The byte-equal invariant is
-asserted by `src/test/phase-3-dynamics-identity.test.ts` and held
+asserted by `src/test/phase-operators-identity.test.ts` and held
 without any ad-hoc fixup once T6 lifted the canonical files into
 `a-plan-execute/`. No accidental drift between the three trees during
 this spec.
@@ -250,7 +250,7 @@ manual run.
 The `c-deep-research` recursion demo (`execute-step.md` re-pushing
 `plan.md`) is asserted at the integration-test level by inducing the
 recursion programmatically. The live-demo signature (a `## Push:
-dynamics/plan.md` block written from inside an `execute-step.md`
+operators/plan.md` block written from inside an `execute-step.md`
 frame, captured in `history/`) requires the manual run.
 
 ## Phase 4 — shared `PROGRAM.md` between MetaGPT and ChatDev

@@ -362,7 +362,7 @@
       test("one push edge and one pop edge per push/pop pair", () => {
         const events: EventRecord[] = [
           { seq: 1, ts: "", cycle: 1, frame: "frames/f000-strategy", type: "cycle_start" },
-          { seq: 2, ts: "", cycle: 1, frame: "frames/f000-strategy", type: "push", target: "dynamics/dialogue.md", frameDir: "frames/f001-dialogue", depth: 1 },
+          { seq: 2, ts: "", cycle: 1, frame: "frames/f000-strategy", type: "push", target: "operators/dialogue.md", frameDir: "frames/f001-dialogue", depth: 1 },
           { seq: 3, ts: "", cycle: 2, frame: "frames/f001-dialogue", type: "cycle_start" },
           { seq: 4, ts: "", cycle: 2, frame: "frames/f001-dialogue", type: "pop", frameDir: "frames/f001-dialogue", returnState: "active_completed", depth: 0 },
           { seq: 5, ts: "", cycle: 3, frame: "frames/f000-strategy", type: "cycle_start" },
@@ -379,9 +379,9 @@
       test("multiple pushes from the same caller produce parallel edges", () => {
         const events: EventRecord[] = [
           { seq: 1, ts: "", cycle: 1, frame: "frames/f000-strategy", type: "cycle_start" },
-          { seq: 2, ts: "", cycle: 1, frame: "frames/f000-strategy", type: "push", target: "dynamics/dialogue.md", frameDir: "frames/f001-dialogue", depth: 1 },
+          { seq: 2, ts: "", cycle: 1, frame: "frames/f000-strategy", type: "push", target: "operators/dialogue.md", frameDir: "frames/f001-dialogue", depth: 1 },
           { seq: 3, ts: "", cycle: 2, frame: "frames/f001-dialogue", type: "pop", frameDir: "frames/f001-dialogue", returnState: "x", depth: 0 },
-          { seq: 4, ts: "", cycle: 3, frame: "frames/f000-strategy", type: "push", target: "dynamics/dialogue.md", frameDir: "frames/f002-dialogue", depth: 1 },
+          { seq: 4, ts: "", cycle: 3, frame: "frames/f000-strategy", type: "push", target: "operators/dialogue.md", frameDir: "frames/f002-dialogue", depth: 1 },
           { seq: 5, ts: "", cycle: 4, frame: "frames/f002-dialogue", type: "pop", frameDir: "frames/f002-dialogue", returnState: "y", depth: 0 },
         ];
         const g = buildPerFrameGraph(events, null);
@@ -548,7 +548,7 @@
       test("push edge connects caller@push_cycle to child@first_cycle_of_child", () => {
         const events: EventRecord[] = [
           { seq: 1, ts: "", cycle: 1, frame: "frames/f000-strategy", type: "cycle_start" },
-          { seq: 2, ts: "", cycle: 1, frame: "frames/f000-strategy", type: "push", target: "dynamics/dialogue.md", frameDir: "frames/f001-dialogue", depth: 1 },
+          { seq: 2, ts: "", cycle: 1, frame: "frames/f000-strategy", type: "push", target: "operators/dialogue.md", frameDir: "frames/f001-dialogue", depth: 1 },
           { seq: 3, ts: "", cycle: 2, frame: "frames/f001-dialogue", type: "cycle_start" },
           { seq: 4, ts: "", cycle: 2, frame: "frames/f001-dialogue", type: "pop", frameDir: "frames/f001-dialogue", returnState: "x", depth: 0 },
           { seq: 5, ts: "", cycle: 3, frame: "frames/f000-strategy", type: "cycle_start" },

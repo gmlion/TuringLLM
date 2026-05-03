@@ -82,3 +82,24 @@ describe("R54: existing tests don't reference dynamics/", () => {
     assert.equal(out, "", `unexpected dynamics/ in: ${out}`);
   });
 });
+
+describe("R10: no 'dynamics/' substring outside frozen spec dirs", () => {
+  test("git grep returns nothing", () => {
+    const excludes = [
+      ":!docs/specs/2026-04-23-agent-workflows-phase-2b-push-returns/",
+      ":!docs/specs/2026-04-24-implement-phase-3-and-4/",
+      ":!docs/specs/2026-04-30-agent-workflows-phase-6/",
+      ":!docs/specs/2026-05-01-implement-phase-6b/",
+      ":!docs/specs/2026-05-02-phase-7-including-cove-and-1b-in-addition-or-instead-of-1a/",
+      ":!src/test/_phase-7-rename.test.ts",
+    ].join(" ");
+    let out = "";
+    try {
+      out = execSync(`git grep -l "dynamics/" -- ${excludes}`, { cwd: REPO, encoding: "utf-8" }).trim();
+    } catch (e: any) {
+      // git grep exits 1 when no matches; that's success
+      out = "";
+    }
+    assert.equal(out, "", `unexpected 'dynamics/' references: ${out}`);
+  });
+});

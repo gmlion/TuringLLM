@@ -20,7 +20,7 @@ layout self-describing.
 | R#  | Summary                                                            | Addressed in                                              |
 | --- | ------------------------------------------------------------------ | --------------------------------------------------------- |
 | R1  | Three interpreter dirs under `1-iterative-refinement/`             | §Architecture, §File layout                               |
-| R2  | Three dynamics placed under each interpreter's `dynamics/`         | §File layout, §Dynamics                                   |
+| R2  | Three dynamics placed under each interpreter's `operators/`         | §File layout, §Dynamics                                   |
 | R3  | `self-critique.md` MEMORY contract                                 | §Dynamics → self-critique                                 |
 | R4  | `evaluate.md` MEMORY contract                                      | §Dynamics → evaluate                                      |
 | R5  | `reflect.md` MEMORY contract                                       | §Dynamics → reflect                                       |
@@ -83,8 +83,8 @@ required to deliver R1–R12.
 ### Why not a shared `evaluate.md` at the group level
 
 A single canonical `evaluate.md` lives under `b-evaluator-optimizer/
-dynamics/`. `c-reflexion/dynamics/` holds a byte-identical copy.
-Justification: `new-instance.sh` copies only `$INTERP_DIR/dynamics/`
+operators/`. `c-reflexion/operators/` holds a byte-identical copy.
+Justification: `new-instance.sh` copies only `$INTERP_DIR/operators/`
 verbatim; reaching outside the interpreter directory would require
 extending the bootstrap script (R14 territory, and the cost is not paid
 back in Phase 1 since there is exactly one duplicated file). A unit test
@@ -102,17 +102,17 @@ interpreters/
     ├── a-self-refine/                 # R1
     │   ├── INSTRUCTIONS.md             # strategy — §State machines → a
     │   ├── PROGRAM.md                  # R7: "write a concise docstring" demo
-    │   └── dynamics/
+    │   └── operators/
     │       └── self-critique.md        # R2, R3
     ├── b-evaluator-optimizer/         # R1
     │   ├── INSTRUCTIONS.md             # §State machines → b
     │   ├── PROGRAM.md                  # R7: "rewrite paragraph to target register" demo
-    │   └── dynamics/
+    │   └── operators/
     │       └── evaluate.md             # R2, R4 — canonical copy
     └── c-reflexion/                   # R1
         ├── INSTRUCTIONS.md             # §State machines → c
         ├── PROGRAM.md                  # R7: palindrome-function-with-hidden-tests demo
-        └── dynamics/
+        └── operators/
             ├── evaluate.md             # byte-equal copy of b's — enforced by test
             └── reflect.md              # R2, R5
 ```
@@ -165,7 +165,7 @@ IMPORTANT: Everything between "# Strategy" and "# Sub-instructions" …
 
 ## Instruction: Request critique              // satisfies R2, R3, R6
 **Condition:** state is "drafted" and ## Draft is present
-**Action:** Write ## Push = dynamics/self-critique.md (shell pushes on
+**Action:** Write ## Push = operators/self-critique.md (shell pushes on
   the next cycle).
 
 ## Instruction: Evaluate refinement           // satisfies R10 (loop)
@@ -203,7 +203,7 @@ empty ─► drafted ─(push)─► [self-critique dynamic] ─(pop)─► draf
 
 ## Instruction: Request evaluation            // R2, R4, R6
 **Condition:** state is "attempted" and ## Attempt and ## Criterion are present
-**Action:** Write ## Push = dynamics/evaluate.md.
+**Action:** Write ## Push = operators/evaluate.md.
 
 ## Instruction: Handle verdict                // R10
 **Condition:** state is "attempted_completed" and ## Verdict is present
@@ -232,7 +232,7 @@ empty ─► drafted ─(push)─► [self-critique dynamic] ─(pop)─► draf
 
 ## Instruction: Request evaluation            // R2, R4, R6
 **Condition:** state is "attempted" and ## Attempt is present
-**Action:** Write ## Push = dynamics/evaluate.md.
+**Action:** Write ## Push = operators/evaluate.md.
 
 ## Instruction: Route on verdict
 **Condition:** state is "attempted_completed"
@@ -242,7 +242,7 @@ empty ─► drafted ─(push)─► [self-critique dynamic] ─(pop)─► draf
 ## Instruction: Reflect                       // R2, R5, R6, R11
 **Condition:** state is "failed_attempt" and ## Attempt and ## Verdict
   are present
-**Action:** Write ## Push = dynamics/reflect.md.
+**Action:** Write ## Push = operators/reflect.md.
 
 ## Instruction: Accumulate lesson              // R11
 **Condition:** state is "failed_attempt_completed" and ## Lesson is present

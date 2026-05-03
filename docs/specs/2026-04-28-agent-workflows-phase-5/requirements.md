@@ -30,7 +30,7 @@ The defining property of Multi-Agent Debate is **strict round isolation**: each 
 
 ### Round/agent execution
 
-- **R8**: WHEN the strategy enters the dispatch state with an unprocessed (round, agent) pair, THE SYSTEM SHALL push `dynamics/opine.md` exactly once with push-args `round`, `persona_name`, `persona_description`, `question`, and `transcript` for that pair.
+- **R8**: WHEN the strategy enters the dispatch state with an unprocessed (round, agent) pair, THE SYSTEM SHALL push `operators/opine.md` exactly once with push-args `round`, `persona_name`, `persona_description`, `question`, and `transcript` for that pair.
 - **R9**: WHEN `opine.md` returns control to the strategy (state suffix `_completed` with `## Opinion` present), THE SYSTEM SHALL surgically append the returned opinion — labelled with its round number and persona name — to a single growing transcript file.
 - **R10**: THE SYSTEM SHALL execute exactly R rounds and exactly N opinions per round; it SHALL NOT terminate early on apparent consensus in v1.
 - **R11**: WHEN the K-th opinion of round R has been absorbed and K equals N, THE SYSTEM SHALL execute a dedicated round-transition cycle that increments the round counter and resets the agent counter to zero before any further dispatch.

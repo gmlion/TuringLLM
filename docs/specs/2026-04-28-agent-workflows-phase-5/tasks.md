@@ -36,7 +36,7 @@ Every R# (R1–R20 from `requirements.md`) appears in at least one task.
 ## Task 1: Scaffold `opine.md` dynamic + test file   (satisfies: R14, R15, R16, R20)
 
 **Files:**
-- Create: `interpreters/4-peer-collaboration/a-debate/dynamics/opine.md`
+- Create: `interpreters/4-peer-collaboration/a-debate/operators/opine.md`
 - Create: `src/test/phase-5-debate.test.ts`
 
 - [ ] **Step 1: Write the failing test**
@@ -71,19 +71,19 @@ Every R# (R1–R20 from `requirements.md`) appears in at least one task.
     }
 
     describe("phase-5 a-debate: opine.md dynamic (R14, R15, R16)", () => {
-      test("dynamics/opine.md exists", () => {
-        assert.ok(existsSync(resolve(INTERP, "dynamics/opine.md")), "opine.md missing");
+      test("operators/opine.md exists", () => {
+        assert.ok(existsSync(resolve(INTERP, "operators/opine.md")), "opine.md missing");
       });
 
       test("opine.md declares all five push-arg placeholders (R14)", () => {
-        const s = readFileSync(resolve(INTERP, "dynamics/opine.md"), "utf-8");
+        const s = readFileSync(resolve(INTERP, "operators/opine.md"), "utf-8");
         for (const ph of ["{{round}}", "{{persona_name}}", "{{persona_description}}", "{{question}}", "{{transcript}}"]) {
           assert.match(s, new RegExp(escapeRegExp(ph)), `opine.md missing placeholder ${ph}`);
         }
       });
 
       test("opine.md is single-cycle empty -> done (R15)", () => {
-        const s = readFileSync(resolve(INTERP, "dynamics/opine.md"), "utf-8");
+        const s = readFileSync(resolve(INTERP, "operators/opine.md"), "utf-8");
         const headers = (s.match(/^## Instruction:/gm) || []);
         assert.equal(headers.length, 1, "opine.md must have exactly one instruction");
         assert.match(s, /MEMORY state is "empty"/);
@@ -91,12 +91,12 @@ Every R# (R1–R20 from `requirements.md`) appears in at least one task.
       });
 
       test("opine.md returns one key 'opinion' via ## Return (R15)", () => {
-        const s = readFileSync(resolve(INTERP, "dynamics/opine.md"), "utf-8");
+        const s = readFileSync(resolve(INTERP, "operators/opine.md"), "utf-8");
         assert.match(s, /## Return\s*\n\s*opinion:\s*\|/);
       });
 
       test("opine.md does not push further dynamics (R16)", () => {
-        const s = readFileSync(resolve(INTERP, "dynamics/opine.md"), "utf-8");
+        const s = readFileSync(resolve(INTERP, "operators/opine.md"), "utf-8");
         assert.doesNotMatch(s, /^## Push\s*\ndynamics\//m);
       });
     });
@@ -109,7 +109,7 @@ Every R# (R1–R20 from `requirements.md`) appears in at least one task.
 
 - [ ] **Step 3: Write minimal implementation**
 
-    Create the directory and write `interpreters/4-peer-collaboration/a-debate/dynamics/opine.md`:
+    Create the directory and write `interpreters/4-peer-collaboration/a-debate/operators/opine.md`:
 
     ````markdown
     # Dynamic: Opine
@@ -168,7 +168,7 @@ Every R# (R1–R20 from `requirements.md`) appears in at least one task.
 - [ ] **Step 5: Commit**
 
     ```bash
-    git add interpreters/4-peer-collaboration/a-debate/dynamics/opine.md src/test/phase-5-debate.test.ts
+    git add interpreters/4-peer-collaboration/a-debate/operators/opine.md src/test/phase-5-debate.test.ts
     git commit -m "feat(debate): scaffold opine.md dynamic and test file (satisfies: R14, R15, R16, R20)"
     ```
 
@@ -615,7 +615,7 @@ Every R# (R1–R20 from `requirements.md`) appears in at least one task.
         ## Result
         Push queued.
         ## Push
-        dynamics/opine.md
+        operators/opine.md
         ## Push-Args
         round: $ROUND
         persona_name: $PERSONA_NAME
@@ -977,7 +977,7 @@ Every R# (R1–R20 from `requirements.md`) appears in at least one task.
         assert.match(s, /Multi-Agent Debate/);
       });
 
-      test("dynamics/ contains exactly opine.md (R20)", () => {
+      test("operators/ contains exactly opine.md (R20)", () => {
         const dyns = readdirSync(resolve(INTERP, "dynamics"));
         assert.deepEqual(dyns.sort(), ["opine.md"], `expected only opine.md, found ${dyns.join(", ")}`);
       });
@@ -1016,7 +1016,7 @@ Every R# (R1–R20 from `requirements.md`) appears in at least one task.
     ## Mechanism
 
     - **Round coordinator strategy** at `INSTRUCTIONS.md`. State machine: `empty` → `dispatch_stage` → `dispatch_push` → `dispatching_completed` → (`dispatch_stage` | `round_transition`) → … → `concluding` → `done`.
-    - **One dynamic** at `dynamics/opine.md`, depth 1. Receives one persona's worth of context plus the prior-rounds transcript; returns one opinion via `## Return opinion: |`.
+    - **One dynamic** at `operators/opine.md`, depth 1. Receives one persona's worth of context plus the prior-rounds transcript; returns one opinion via `## Return opinion: |`.
     - **Strict round isolation** is enforced by the strategy: at stage time, the `transcript` push-arg is built by concatenating only completed prior-round snapshot files (`scoped/round-1.md` … `scoped/round-{R-1}.md`). The in-progress current round is excluded.
     - **No `reflect.md` reuse.** Inter-round nudging is deferred (`reflect.md`'s contract requires a `verdict` that debate has no analogue for). See `docs/specs/2026-04-28-agent-workflows-phase-5/`.
     - **No aggregator dynamic.** Synthesis is the strategy's own inline cycle, not a pushed dynamic — keeps Phase 5 inside Group 4 and prevents drift toward Phase 5b's MoA aggregator.

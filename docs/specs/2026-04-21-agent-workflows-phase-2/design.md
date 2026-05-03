@@ -60,22 +60,22 @@ interpreters/1-iterative-refinement/
 ├── README.md                  # ← updated (add d-cove row + convention)
 ├── a-self-refine/
 │   ├── INSTRUCTIONS.md        # ← updated (Request critique emits ## Push-Args)
-│   └── dynamics/
+│   └── operators/
 │       └── self-critique.md   # ← refactored ({{draft}} arg)
 ├── b-evaluator-optimizer/
 │   ├── INSTRUCTIONS.md        # ← updated (Request evaluation emits ## Push-Args)
-│   └── dynamics/
+│   └── operators/
 │       └── evaluate.md        # ← refactored ({{attempt}}, {{criterion}}; canonical)
 ├── c-reflexion/
 │   ├── INSTRUCTIONS.md        # ← updated (Request evaluation + Reflect emit ## Push-Args)
-│   └── dynamics/
+│   └── operators/
 │       ├── evaluate.md        # ← byte-equal copy of b's refactored version
 │       └── reflect.md         # ← refactored ({{attempt}}, {{verdict}}, {{feedback}})
 └── d-cove/                    # ← NEW
     ├── INSTRUCTIONS.md        # one-shot strategy
     ├── PROGRAM.md             # knights-and-knaves demo
     ├── README.md              # leaf README in sibling format
-    └── dynamics/
+    └── operators/
         ├── verify.md          # depth-1 dynamic, fans out depth-2 children
         └── answer-independently.md  # depth-2 leaf, {{question}} arg
 
@@ -358,7 +358,7 @@ passes. Example for `a-self-refine/INSTRUCTIONS.md` "Request critique":
 **Action:** Append the following to MEMORY (do not change state):
 
     ## Push
-    dynamics/self-critique.md
+    operators/self-critique.md
     ## Push-Args
     draft: |
       <current ## Draft content, indented two spaces>
@@ -422,7 +422,7 @@ Four instructions:
   Find the first V_i whose status is "pending". Append to MEMORY:
   ```
   ## Push
-  dynamics/answer-independently.md
+  operators/answer-independently.md
   ## Push-Args
   question: |
     <V_i question text, with any minimum premise context required>
@@ -571,11 +571,11 @@ rechecking.
 - **`src/test/phase-1-self-refine.test.ts`** — the constructed push
   memory string changes from
   ```
-  ## State\ndrafted\n## Draft\n...\n## Push\ndynamics/self-critique.md
+  ## State\ndrafted\n## Draft\n...\n## Push\noperators/self-critique.md
   ```
   to
   ```
-  ## State\ndrafted\n## Draft\n...\n## Push\ndynamics/self-critique.md\n## Push-Args\ndraft: |\n  ...
+  ## State\ndrafted\n## Draft\n...\n## Push\noperators/self-critique.md\n## Push-Args\ndraft: |\n  ...
   ```
   Tests still assert push succeeds, stack depth = 1, instructions
   loaded, etc.
@@ -584,7 +584,7 @@ rechecking.
 - **`src/test/phase-1-reflexion.test.ts`** — same, plus reflect's
   `attempt`/`verdict`/`feedback` args.
 - **`src/test/phase-1-dynamics-identity.test.ts`** — unchanged (still
-  asserts `b/dynamics/evaluate.md` byte-equals `c/dynamics/evaluate.md`
+  asserts `b/operators/evaluate.md` byte-equals `c/operators/evaluate.md`
   after the refactor; R11).
 
 ### Live demo gate (R26)

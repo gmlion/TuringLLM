@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add comprehensive unit + integration tests for the dynamics/call-stack feature, refactor the push/pop handlers into pure testable transforms, and bring CLAUDE.md + README.md up to date with the new feature.
+**Goal:** Add comprehensive unit + integration tests for the operators/call-stack feature, refactor the push/pop handlers into pure testable transforms, and bring CLAUDE.md + README.md up to date with the new feature.
 
-**Architecture:** Extract the push/pop per-cycle logic from `main.ts` into pure functions (`applyPush`, `applyPop`) in `call-stack.ts`. These take `{stack, memory, instructions}` plus an injected file-reader and return the new state — the shell keeps all file I/O. Tests use Node's built-in `node:test` runner (zero new deps). Docs add a "Dynamics" section wherever push/pop semantics, `.call-stack.json` persistence, or the `dynamics/` directory convention affect a reader's mental model.
+**Architecture:** Extract the push/pop per-cycle logic from `main.ts` into pure functions (`applyPush`, `applyPop`) in `call-stack.ts`. These take `{stack, memory, instructions}` plus an injected file-reader and return the new state — the shell keeps all file I/O. Tests use Node's built-in `node:test` runner (zero new deps). Docs add a "Dynamics" section wherever push/pop semantics, `.call-stack.json` persistence, or the `operators/` directory convention affect a reader's mental model.
 
 **Tech Stack:** TypeScript 5.3, Node 21, `node:test` + `node:assert/strict`, existing `tsc` build.
 
@@ -245,11 +245,11 @@ Append to `src/test/memory.test.ts`:
 ```typescript
 describe("parsePush", () => {
   test("extracts path after ## Push header", () => {
-    assert.equal(parsePush("## State\nfoo\n## Push\ndynamics/consult.md"), "dynamics/consult.md");
+    assert.equal(parsePush("## State\nfoo\n## Push\noperators/consult.md"), "operators/consult.md");
   });
 
   test("trims whitespace from path", () => {
-    assert.equal(parsePush("## Push\n  dynamics/consult.md  \n"), "dynamics/consult.md");
+    assert.equal(parsePush("## Push\n  operators/consult.md  \n"), "operators/consult.md");
   });
 
   test("returns null when ## Push is missing", () => {
@@ -496,8 +496,8 @@ Replace the full contents of `src/call-stack.ts` with:
  * call-stack.ts — Instruction call stack: persistence and per-cycle transforms.
  *
  * The call stack enables hierarchical instruction dispatch: a running
- * instruction set can "push" a dynamic (reusable instruction file), and
- * the shell automatically restores the caller on "pop" (when the dynamic
+ * instruction set can "push" an operator (reusable instruction file), and
+ * the shell automatically restores the caller on "pop" (when the operator
  * sets state to "done").
  *
  * The push/pop transforms are pure — no file I/O — so stack semantics can
@@ -607,15 +607,15 @@ describe("applyPush", () => {
   });
 
   test("successful push: saves caller, swaps instructions, sets state to empty, removes ## Push", () => {
-    const memory = "## State\nplanning\n## Push\ndynamics/consult.md";
+    const memory = "## State\nplanning\n## Push\noperators/consult.md";
     const r = applyPush([], memory, "# Strategy", (p) => {
-      assert.equal(p, "dynamics/consult.md");
+      assert.equal(p, "operators/consult.md");
       return "# Dynamic";
     });
 
     assert.equal(r.ok, true);
     if (r.ok) {
-      assert.equal(r.target, "dynamics/consult.md");
+      assert.equal(r.target, "operators/consult.md");
       assert.equal(r.stack.length, 1);
       assert.deepEqual(r.stack[0], { returnState: "planning", instructions: "# Strategy" });
       assert.equal(r.instructions, "# Dynamic");
@@ -626,7 +626,7 @@ describe("applyPush", () => {
 
   test("nested push: frame appended, prior frames preserved", () => {
     const existing: StackEntry[] = [{ returnState: "outer", instructions: "# Outer" }];
-    const memory = "## State\ninner_task\n## Push\ndynamics/sub.md";
+    const memory = "## State\ninner_task\n## Push\noperators/sub.md";
     const r = applyPush(existing, memory, "# Inner", () => "# Sub");
 
     assert.equal(r.ok, true);
@@ -672,7 +672,7 @@ export type PushResult =
  *
  * On success: saves {returnState, instructions} onto the stack, replaces
  * instructions with the target file's contents, strips ## Push, and sets
- * state to "empty" so the dynamic starts fresh.
+ * state to "empty" so the operator starts fresh.
  *
  * On missing target: returns memory with ## Push stripped so the LLM
  * doesn't retry the same bad push every cycle; the caller logs the error.
@@ -880,12 +880,12 @@ describe("stack integration", () => {
   });
 
   test("push then done pops back to caller", () => {
-    const files = { "dynamics/consult.md": "# Dynamic" };
+    const files = { "operators/consult.md": "# Dynamic" };
 
     // Cycle 1: caller writes ## Push; block pushes it.
     const c1 = runStackBlock(
       [],
-      "## State\nneeds_opinion\n## Push\ndynamics/consult.md",
+      "## State\nneeds_opinion\n## Push\noperators/consult.md",
       "# Strategy",
       files,
     );
@@ -894,7 +894,7 @@ describe("stack integration", () => {
     assert.equal(c1.instructions, "# Dynamic");
     assert.match(c1.memory, /## State\nempty/);
 
-    // Cycle 2: dynamic runs, eventually sets state=done.
+    // Cycle 2: operator runs, eventually sets state=done.
     const memAfterDynamic = setState(c1.memory, "done");
 
     // Cycle 3 (pre-LLM block): should pop back to caller.
@@ -907,18 +907,18 @@ describe("stack integration", () => {
 
   test("nested push: outer → inner → pop → pop → halt", () => {
     const files = {
-      "dynamics/a.md": "# A",
-      "dynamics/b.md": "# B",
+      "operators/a.md": "# A",
+      "operators/b.md": "# B",
     };
 
     // Outer pushes A.
-    let r = runStackBlock([], "## State\nouter\n## Push\ndynamics/a.md", "# Strategy", files);
+    let r = runStackBlock([], "## State\nouter\n## Push\noperators/a.md", "# Strategy", files);
     assert.equal(r.stack.length, 1);
     assert.equal(r.instructions, "# A");
 
     // Inside A, push B.
     const memInA = setState(r.memory, "inside_a");
-    const memInAwithPush = memInA + "\n## Push\ndynamics/b.md";
+    const memInAwithPush = memInA + "\n## Push\noperators/b.md";
     r = runStackBlock(r.stack, memInAwithPush, r.instructions, files);
     assert.equal(r.stack.length, 2);
     assert.equal(r.instructions, "# B");
@@ -943,15 +943,15 @@ describe("stack integration", () => {
   });
 
   test("done + push in the same cycle: pop runs first, push is evaluated against restored caller", () => {
-    // Caller's saved state was "x"; dynamic sets state=done AND writes ## Push.
+    // Caller's saved state was "x"; operator sets state=done AND writes ## Push.
     // Expected main.ts behaviour: pop restores caller (state -> x_completed),
     // then push fires from the caller's context onto a fresh frame.
-    const files = { "dynamics/other.md": "# Other" };
+    const files = { "operators/other.md": "# Other" };
     const stack: StackEntry[] = [{ returnState: "x", instructions: "# Caller" }];
 
     const r = runStackBlock(
       stack,
-      "## State\ndone\n## Push\ndynamics/other.md",
+      "## State\ndone\n## Push\noperators/other.md",
       "# Dynamic",
       files,
     );
@@ -1022,8 +1022,8 @@ describe("getSystemPrompt", () => {
   test("api provider: base prompt includes Dynamics section and API_TOOLS_SECTION", () => {
     delete process.env.TURING_STATEFUL;
     const p = getSystemPrompt("api");
-    assert.match(p, /# Dynamics \(Push\/Pop\)/);
-    assert.match(p, /## Push\n[\s\S]*dynamics\/consult\.md/);
+    assert.match(p, /# Operators \(Push\/Pop\)/);
+    assert.match(p, /## Push\n[\s\S]*operators\/consult\.md/);
     assert.match(p, /\*\*bash\*\*: Run a shell command/);
   });
 
@@ -1034,7 +1034,7 @@ describe("getSystemPrompt", () => {
     assert.doesNotMatch(p, /\*\*update_instructions\*\*:/);
   });
 
-  test("ollama provider: returns the compact Ollama-specific prompt with dynamics", () => {
+  test("ollama provider: returns the compact Ollama-specific prompt with operators", () => {
     delete process.env.TURING_STATEFUL;
     const p = getSystemPrompt("ollama");
     assert.match(p, /You are a Turing machine/);
@@ -1046,7 +1046,7 @@ describe("getSystemPrompt", () => {
     process.env.TURING_STATEFUL = "1";
     const p = getSystemPrompt("api");
     assert.match(p, /===SYSCALLS===/);
-    assert.match(p, /# Dynamics \(Push\/Pop\)/);
+    assert.match(p, /# Operators \(Push\/Pop\)/);
   });
 });
 
@@ -1154,7 +1154,7 @@ Replace the `## Well-Known States` block with:
 
 The shell intercepts these MEMORY states before each LLM invocation:
 
-- `done` — If the call stack is empty, halts the machine. If the call stack has frames (a dynamic is active), the shell pops one frame: restores the caller's instructions and sets state to `{returnState}_completed` (where `returnState` is the state the caller was in when it pushed). Cascade-pops while state remains `done`.
+- `done` — If the call stack is empty, halts the machine. If the call stack has frames (an operator is active), the shell pops one frame: restores the caller's instructions and sets state to `{returnState}_completed` (where `returnState` is the state the caller was in when it pushed). Cascade-pops while state remains `done`.
 - `waiting_for_user` — reads `## Pending Questions` from MEMORY, prompts user one question at a time, writes answers to `## Answers` in MEMORY, sets state to `user_responded`. Questions are non-blocking: the LLM adds them to `## Pending Questions` without changing state and keeps working. Only sets `waiting_for_user` when all remaining work is blocked on unanswered questions.
 
 The shell also intercepts the `## Push` MEMORY section (see Dynamics below).
@@ -1166,32 +1166,32 @@ Insert this new section immediately before the `## Interpreters` section:
 ```markdown
 ## Dynamics (Call Stack)
 
-A **dynamic** is a reusable instruction file that can be invoked from the running instruction set via push/pop semantics — like calling a subroutine. The shell owns the stack; the LLM signals intent through MEMORY.
+An **operator** is a reusable instruction file that can be invoked from the running instruction set via push/pop semantics — like calling a subroutine. The shell owns the stack; the LLM signals intent through MEMORY.
 
 **Push.** The LLM writes `## Push` in MEMORY with a file path relative to the instance directory:
 
 ```
 ## Push
-dynamics/consult.md
+operators/consult.md
 ```
 
 Before the next LLM invocation, the shell:
 1. Saves the current `{state, instructions}` as a new frame on the call stack.
 2. Loads the target file as the new `INSTRUCTIONS.md`.
 3. Strips the `## Push` section from MEMORY.
-4. Sets state to `empty` so the dynamic starts fresh.
+4. Sets state to `empty` so the operator starts fresh.
 
-The dynamic can then run its own state machine over the MEMORY the caller left behind (the caller is expected to write any context the dynamic needs into dedicated MEMORY sections before pushing).
+The operator can then run its own state machine over the MEMORY the caller left behind (the caller is expected to write any context the operator needs into dedicated MEMORY sections before pushing).
 
-**Pop.** When the dynamic sets state to `done`, the shell pops the top frame, restores the caller's instructions, and sets state to `{caller_state}_completed` — where `caller_state` is the state the caller was in at push time. The caller must have an instruction that matches `{caller_state}_completed` to consume the returned result.
+**Pop.** When the operator sets state to `done`, the shell pops the top frame, restores the caller's instructions, and sets state to `{caller_state}_completed` — where `caller_state` is the state the caller was in at push time. The caller must have an instruction that matches `{caller_state}_completed` to consume the returned result.
 
 The `_completed` suffix prevents an infinite loop: the caller's original `{caller_state}` instruction (which did the push) does not immediately re-fire.
 
-**Nesting.** Dynamics can push further dynamics. The stack is unbounded in principle; each push adds a frame. On cascade-pop (e.g., the LLM sets `done` and the top caller's restored state is still `done`), the shell pops again — in practice this only happens if a caller pushed from state `done`, which is unusual.
+**Nesting.** Operators can push further operators. The stack is unbounded in principle; each push adds a frame. On cascade-pop (e.g., the LLM sets `done` and the top caller's restored state is still `done`), the shell pops again — in practice this only happens if a caller pushed from state `done`, which is unusual.
 
 **Persistence.** The stack is persisted to `.call-stack.json` in the instance directory after every change. Snapshots in `history/NNNN-<hash>/` include a copy of the stack so past cycles are fully reconstructable.
 
-**Authoring dynamics.** Create `interpreters/<name>/dynamics/<thing>.md` alongside `INSTRUCTIONS.md`. The `new-instance.sh` script copies the whole `dynamics/` directory into each new instance. A dynamic file follows the same format as `INSTRUCTIONS.md` (a state machine with conditions/actions), must have an entry condition for state `empty`, and must eventually set state `done` to return control to the caller.
+**Authoring operators.** Create `interpreters/<name>/operators/<thing>.md` alongside `INSTRUCTIONS.md`. The `new-instance.sh` script copies the whole `operators/` directory into each new instance. An operator file follows the same format as `INSTRUCTIONS.md` (a state machine with conditions/actions), must have an entry condition for state `empty`, and must eventually set state `done` to return control to the caller.
 
 **Missing push targets.** If `## Push` points at a non-existent or empty file, the shell logs an error, strips `## Push` from MEMORY, and continues with the caller unchanged (no frame is pushed). The LLM will see the next cycle without the push request and can adapt.
 
@@ -1207,12 +1207,12 @@ Replace the `## Instance Layout` block at the bottom with:
 ```
 instances/foo/
 ├── PROGRAM.md         # User's program (read-only to machine)
-├── INSTRUCTIONS.md    # Strategy + generated sub-instructions (or a dynamic, while one is active)
-├── MEMORY.md          # Current state; may contain ## Push to delegate to a dynamic
+├── INSTRUCTIONS.md    # Strategy + generated sub-instructions (or an operator, while one is active)
+├── MEMORY.md          # Current state; may contain ## Push to delegate to an operator
 ├── .call-stack.json   # Saved call stack (empty array at depth 0)
 ├── .env               # Provider/model config (gitignored)
 ├── workspace/         # Project artifacts (has its own git repo)
-├── dynamics/          # Reusable instruction files copied from the interpreter (optional)
+├── operators/          # Reusable instruction files copied from the interpreter (optional)
 ├── run.sh             # Launch script
 ├── .api_key           # Cached API key (gitignored)
 ├── .gitignore         # Ignores .api_key, .env, logs/, history/, workspace/.git/
@@ -1235,13 +1235,13 @@ Read `CLAUDE.md` end-to-end. Confirm:
 - Source Files list includes every `src/*.ts` file and the test dir
 - Well-Known States mentions both halt and pop behaviour for `done`
 - Dynamics section is present and precedes Interpreters
-- Instance Layout shows `.call-stack.json` and `dynamics/`
+- Instance Layout shows `.call-stack.json` and `operators/`
 
 - [ ] **Step 7: Commit**
 
 ```bash
 git add CLAUDE.md
-git commit -m "docs: document dynamics/call-stack in CLAUDE.md"
+git commit -m "docs: document operators/call-stack in CLAUDE.md"
 ```
 
 ---
@@ -1258,19 +1258,19 @@ Insert this section immediately before the `## Interpreters` section (around lin
 ```markdown
 ## Dynamics (Call Stack)
 
-A **dynamic** is a reusable instruction file invoked like a subroutine. The running instruction set delegates by writing `## Push` in MEMORY:
+An **operator** is a reusable instruction file invoked like a subroutine. The running instruction set delegates by writing `## Push` in MEMORY:
 
 ```
 ## Push
-dynamics/consult-team.md
+operators/consult-team.md
 ```
 
-The shell saves the current `{state, instructions}` onto a call stack, loads the dynamic as the new `INSTRUCTIONS.md`, and sets state to `empty`. When the dynamic sets state to `done`, the shell pops the stack, restores the caller's instructions, and sets state to `{caller_state}_completed`.
+The shell saves the current `{state, instructions}` onto a call stack, loads the operator as the new `INSTRUCTIONS.md`, and sets state to `empty`. When the operator sets state to `done`, the shell pops the stack, restores the caller's instructions, and sets state to `{caller_state}_completed`.
 
 ```
     ┌─── caller ───┐
-    │ state: needs_opinion                 ┌─ dynamic ─┐
-    │ ## Push: dynamics/consult.md ──────► │ state: empty
+    │ state: needs_opinion                 ┌─ operator ─┐
+    │ ## Push: operators/consult.md ──────► │ state: empty
     └──────────────┘                       │ ...
                                            │ state: done ───┐
     ┌─── caller ───┐                       └────────────────┘
@@ -1278,15 +1278,15 @@ The shell saves the current `{state, instructions}` onto a call stack, loads the
     └──────────────┘
 ```
 
-- Dynamics can nest (a dynamic can push another).
+- Operators can nest (an operator can push another).
 - Stack is persisted to `.call-stack.json` and snapshotted into each `history/` entry.
 - Missing push targets are logged and ignored — no frame is pushed.
-- Author dynamics in `interpreters/<name>/dynamics/*.md`; they are copied into each new instance.
+- Author operators in `interpreters/<name>/operators/*.md`; they are copied into each new instance.
 
 Implementation: `src/call-stack.ts` (pure `applyPush` / `applyPop` transforms), called from the cycle loop in `src/main.ts`. Unit-tested under `src/test/`.
 ```
 
-- [ ] **Step 2: Update Instance Structure to include `.call-stack.json` and `dynamics/`**
+- [ ] **Step 2: Update Instance Structure to include `.call-stack.json` and `operators/`**
 
 Replace the `## Instance Structure` block at the bottom with:
 ```markdown
@@ -1295,11 +1295,11 @@ Replace the `## Instance Structure` block at the bottom with:
 ```
 instances/foo/
 ├── PROGRAM.md         # User's program (read-only to machine)
-├── INSTRUCTIONS.md    # Strategy + generated sub-instructions (swapped when a dynamic is active)
+├── INSTRUCTIONS.md    # Strategy + generated sub-instructions (swapped when an operator is active)
 ├── MEMORY.md          # Current state; may carry ## Push to delegate
 ├── .call-stack.json   # Saved call stack (empty at depth 0)
 ├── workspace/         # Project artifacts (own git repo)
-├── dynamics/          # Reusable instruction files (optional, provided by the interpreter)
+├── operators/          # Reusable instruction files (optional, provided by the interpreter)
 ├── run.sh             # Launch script
 ├── *.md               # Interpreter support files (role descriptions, etc.)
 ├── .api_key           # Cached API key (gitignored)
@@ -1319,7 +1319,7 @@ instances/foo/
 
 ```bash
 git add README.md
-git commit -m "docs: document dynamics/call-stack in README"
+git commit -m "docs: document operators/call-stack in README"
 ```
 
 ---
