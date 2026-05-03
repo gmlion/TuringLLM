@@ -731,3 +731,48 @@ describe("R27: cross-cutting marker-file pin for all migrated leaves", () => {
     }
   });
 });
+
+describe("F1: every bimodal operator's done transition writes ## Return inline", () => {
+  // Bug discovered during smoke test: at depth>=2 the shell pops on state=done
+  // BEFORE any subsequent instruction can run. So an operator that splits
+  // "set state=done" from "write ## Return in a separate Finish instruction"
+  // pops with no Return — caller sees empty ## Answer.
+  // Fix invariant: every instruction body that writes "## State\ndone" must
+  // also contain "## Return" in the SAME instruction body.
+  const BIMODAL_OPS = [
+    "interpreters/1-iterative-refinement/a-self-refine/operators/self-refine.md",
+    "interpreters/1-iterative-refinement/b-evaluator-optimizer/operators/refine.md",
+    "interpreters/1-iterative-refinement/c-reflexion/operators/reflexion.md",
+    "interpreters/1-iterative-refinement/d-cove/operators/cove.md",
+    "interpreters/2-planning-decomposition/a-plan-execute/operators/plan-execute.md",
+    "interpreters/2-planning-decomposition/b-orchestrator-workers/operators/plan-execute.md",
+    "interpreters/2-planning-decomposition/c-deep-research/operators/plan-execute.md",
+    "interpreters/3-search/a-tot/operators/tot.md",
+    "interpreters/3-search/b-lats/operators/lats.md",
+    "interpreters/4-peer-collaboration/a-debate/operators/debate.md",
+    "interpreters/5-fixed-sop-teams/a-metagpt/operators/metagpt.md",
+    "interpreters/5-fixed-sop-teams/b-chatdev/operators/chatdev.md",
+    "interpreters/7-meta-framework/a-aflow-lite/operators/refine.md",
+    "interpreters/7-meta-framework/a-aflow-lite/operators/reflexion.md",
+    "interpreters/7-meta-framework/a-aflow-lite/operators/cove.md",
+    "interpreters/7-meta-framework/a-aflow-lite/operators/plan-execute.md",
+    "interpreters/7-meta-framework/a-aflow-lite/operators/debate.md",
+  ];
+  for (const op of BIMODAL_OPS) {
+    test(`${op}: no Finish-on-done dead instruction (would never fire at depth>=2)`, () => {
+      const content = readFileSync(resolve(REPO, op), "utf-8");
+      const blocks = content.split(/^## Instruction:/m);
+      for (let i = 1; i < blocks.length; i++) {
+        const body = blocks[i];
+        const headerLine = body.split("\n")[0].trim();
+        const condMatch = body.match(/\*\*Condition:\*\*\s*([^\n]+)/);
+        if (!condMatch) continue;
+        const condition = condMatch[1].trim();
+        // If the Condition matches state == "done" (any quote/wording), the instruction
+        // is dead under depth>=2 because the shell pops on done before the instruction runs.
+        const isDoneOnly = /(MEMORY\s+)?state\s+is\s+["']done["']\s*\.?\s*$|(MEMORY\s+)?state\s*==\s*["']done["']\s*\.?\s*$/i.test(condition);
+        assert.ok(!isDoneOnly, `${op} — instruction "${headerLine}" matches state=done as its sole condition. At depth >= 2 the shell pops on done BEFORE this instruction can run, so any ## Return it writes is unreachable. Fold its body into the instruction that transitions to done.`);
+      }
+    });
+  }
+});
