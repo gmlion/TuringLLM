@@ -126,16 +126,20 @@ describe("phase-6b b-lats: rollout.md dynamic (R10, R11, R12, R13)", () => {
 });
 
 describe("phase-6b b-lats: strategy preamble (structural)", () => {
-  const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
-  test("strategy is bounded by # Strategy / # Sub-instructions and is verbatim-required", () => {
-    assert.match(s, /^# Strategy/m);
+  test("INSTRUCTIONS.md is a single-line marker pointing at operators/lats.md", () => {
+    const inst = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8").trim();
+    assert.equal(inst, "operators/lats.md");
+  });
+
+  test("operators/lats.md is the canonical strategy (# Operator: header present)", () => {
+    const s = readFileSync(resolve(INTERP, "operators/lats.md"), "utf-8");
+    assert.match(s, /^# Operator:/m);
     assert.match(s, /^# Sub-instructions/m);
-    assert.match(s, /VERBATIM/);
   });
 });
 
 describe("phase-6b b-lats: Initialize (R34, R35, R36)", () => {
-  const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+  const s = readFileSync(resolve(INTERP, "operators/lats.md"), "utf-8");
   const init = extractInstructionBody(s, "Initialize");
 
   test("Initialize copies PROGRAM.md to ./scoped/task.md (R34)", () => {
@@ -179,7 +183,7 @@ describe("phase-6b b-lats: Initialize (R34, R35, R36)", () => {
 });
 
 describe("phase-6b b-lats: tree ledger primitives (R37, R38, R39, R40, R41)", () => {
-  const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+  const s = readFileSync(resolve(INTERP, "operators/lats.md"), "utf-8");
 
   test("strategy preamble documents the six required ledger keys (R38)", () => {
     for (const k of ["id", "parent_id", "depth", "q", "n", "status"]) {
@@ -198,7 +202,7 @@ describe("phase-6b b-lats: tree ledger primitives (R37, R38, R39, R40, R41)", ()
     assert.match(s, /grep\s+-c\s+'\^id:\s*n'/);
   });
 
-  test("INSTRUCTIONS.md uses awk-based surgical edits (R39)", () => {
+  test("operators/lats.md uses awk-based surgical edits (R39)", () => {
     const initBody = extractInstructionBody(s, "Initialize");
     const sWithoutInit = s.replace(initBody, "");
     assert.doesNotMatch(sWithoutInit, /cat\s*>\s*\.\/scoped\/tree\.md\b/);
@@ -211,7 +215,7 @@ describe("phase-6b b-lats: tree ledger primitives (R37, R38, R39, R40, R41)", ()
 });
 
 describe("phase-6b b-lats: Compose-partial-state primitive (R48, R66)", () => {
-  const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+  const s = readFileSync(resolve(INTERP, "operators/lats.md"), "utf-8");
 
   test("preamble defines a compose_partial_state function or primitive (R48)", () => {
     assert.match(s, /compose_partial_state/);
@@ -231,7 +235,7 @@ describe("phase-6b b-lats: Compose-partial-state primitive (R48, R66)", () => {
 });
 
 describe("phase-6b b-lats: lessons append-only convention (R64, R65)", () => {
-  const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+  const s = readFileSync(resolve(INTERP, "operators/lats.md"), "utf-8");
 
   test("lessons files are written with >> (append) anywhere they're touched (R65)", () => {
     const lessonWriteLines = s.split("\n").filter((l) => l.includes("lessons-"));
@@ -245,7 +249,7 @@ describe("phase-6b b-lats: lessons append-only convention (R64, R65)", () => {
 });
 
 describe("phase-6b b-lats: Select (R44, R45, R46)", () => {
-  const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+  const s = readFileSync(resolve(INTERP, "operators/lats.md"), "utf-8");
   const sel = extractInstructionBody(s, "Select");
 
   test("Select declares condition state == selecting (R44)", () => {
@@ -276,7 +280,7 @@ describe("phase-6b b-lats: Select (R44, R45, R46)", () => {
 });
 
 describe("phase-6b b-lats: Expand-push (R47)", () => {
-  const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+  const s = readFileSync(resolve(INTERP, "operators/lats.md"), "utf-8");
   const ep = extractInstructionBody(s, "Expand-push");
 
   test("Expand-push pushes operators/expand-node.md (R47)", () => {
@@ -296,7 +300,7 @@ describe("phase-6b b-lats: Expand-push (R47)", () => {
 });
 
 describe("phase-6b b-lats: Expand-absorb (R49, R50)", () => {
-  const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+  const s = readFileSync(resolve(INTERP, "operators/lats.md"), "utf-8");
   const ea = extractInstructionBody(s, "Expand-absorb");
 
   test("Expand-absorb writes ./scoped/state-${NEW_ID}.md per child (R49)", () => {
@@ -337,7 +341,7 @@ describe("phase-6b b-lats: Expand-absorb (R49, R50)", () => {
 });
 
 describe("phase-6b b-lats: Simulate-push (R51)", () => {
-  const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+  const s = readFileSync(resolve(INTERP, "operators/lats.md"), "utf-8");
   const sp = extractInstructionBody(s, "Simulate-push");
 
   test("Simulate-push pushes operators/rollout.md (R51)", () => {
@@ -355,7 +359,7 @@ describe("phase-6b b-lats: Simulate-push (R51)", () => {
 });
 
 describe("phase-6b b-lats: Simulate-absorb (R52, R53)", () => {
-  const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+  const s = readFileSync(resolve(INTERP, "operators/lats.md"), "utf-8");
   const sa = extractInstructionBody(s, "Simulate-absorb");
 
   test("Simulate-absorb persists ## Terminal State to ./scoped/last_terminal.md (R52)", () => {
@@ -380,7 +384,7 @@ describe("phase-6b b-lats: Simulate-absorb (R52, R53)", () => {
 });
 
 describe("phase-6b b-lats: Back-prop primitive (R55)", () => {
-  const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+  const s = readFileSync(resolve(INTERP, "operators/lats.md"), "utf-8");
 
   test("preamble defines a backprop function (R55)", () => {
     assert.match(s, /\bbackprop\b/);
@@ -402,7 +406,7 @@ describe("phase-6b b-lats: Back-prop primitive (R55)", () => {
 });
 
 describe("phase-6b b-lats: Evaluate-absorb (R54, R56, R57, R82)", () => {
-  const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+  const s = readFileSync(resolve(INTERP, "operators/lats.md"), "utf-8");
   const ea = extractInstructionBody(s, "Evaluate-absorb");
 
   test("Evaluate-absorb maps verdict to reward 0/1 (R54)", () => {
@@ -432,7 +436,7 @@ describe("phase-6b b-lats: Evaluate-absorb (R54, R56, R57, R82)", () => {
 });
 
 describe("phase-6b b-lats: Reflect-push (R58)", () => {
-  const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+  const s = readFileSync(resolve(INTERP, "operators/lats.md"), "utf-8");
   const rp = extractInstructionBody(s, "Reflect-push");
 
   test("Reflect-push pushes operators/reflect.md (R58)", () => {
@@ -447,7 +451,7 @@ describe("phase-6b b-lats: Reflect-push (R58)", () => {
 });
 
 describe("phase-6b b-lats: Reflect-absorb (R59, R60, R61, R63)", () => {
-  const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+  const s = readFileSync(resolve(INTERP, "operators/lats.md"), "utf-8");
   const ra = extractInstructionBody(s, "Reflect-absorb");
 
   test("Reflect-absorb appends to ./scoped/lessons-${CC}.md with >> (R59, R65)", () => {
@@ -480,7 +484,7 @@ describe("phase-6b b-lats: Reflect-absorb (R59, R60, R61, R63)", () => {
 });
 
 describe("phase-6b b-lats: termination invariants (R62, R63)", () => {
-  const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+  const s = readFileSync(resolve(INTERP, "operators/lats.md"), "utf-8");
 
   test("every state==done write co-occurs with Solution or No Solution Found (R63)", () => {
     const heredocs = s.match(/cat\s*>\s*\.\/MEMORY\.md\s*<<\s*[A-Z_]+_EOF[\s\S]+?[A-Z_]+_EOF/g) || [];
@@ -535,7 +539,7 @@ describe("phase-6b b-lats: leaf README content (R3)", () => {
 });
 
 describe("phase-6b b-lats: negative-requirement pins (R76–R83)", () => {
-  const inst = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+  const inst = readFileSync(resolve(INTERP, "operators/lats.md"), "utf-8");
 
   test("strategy never references workspace/ (R76)", () => {
     assert.doesNotMatch(inst, /\.\.\/\.\.\/workspace/);
@@ -582,14 +586,14 @@ describe("phase-6b b-lats: negative-requirement pins (R76–R83)", () => {
     assert.doesNotMatch(inst, /frames\/f\d+/);
   });
 
-  test("INSTRUCTIONS.md vocabulary check (R83)", () => {
+  test("operators/lats.md vocabulary check (R83)", () => {
     const banned = [
       "Game of 24", "arithmetic", "+", "−", "×", "÷",
       "maze", "code", "function", "test suite", "puzzle numbers",
     ];
     for (const word of banned) {
       if (word.length > 1) {
-        assert.ok(!inst.includes(word), `INSTRUCTIONS.md contains banned domain word: "${word}"`);
+        assert.ok(!inst.includes(word), `operators/lats.md contains banned domain word: "${word}"`);
       }
     }
   });
@@ -663,5 +667,94 @@ describe("phase-6b: backwards compatibility (R28, R85, R86)", () => {
   test("new-instance.sh copies operators at creation (R86 supports backward compat)", () => {
     const sh = readFileSync(resolve(REPO, "new-instance.sh"), "utf-8");
     assert.match(sh, /cp\s+-r\s+"\$INTERP_DIR\/operators"\s+"\$DIR\/operators"/);
+  });
+});
+
+// =============================================================================
+// Phase-7 migration tests: R20-R27, R45-R47 (marker + canonical operator/lats.md)
+// =============================================================================
+
+describe("R20-R27 Phase-7 migration: marker INSTRUCTIONS.md + canonical operators/lats.md (3b lats)", () => {
+  const OP = resolve(INTERP, "operators/lats.md");
+  const op = readFileSync(OP, "utf-8");
+
+  test("R21: INSTRUCTIONS.md is single-line marker pointing at operators/lats.md", () => {
+    const inst = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8").trim();
+    assert.equal(inst, "operators/lats.md");
+  });
+
+  test("R20/R45: operators/lats.md exists and is the canonical LATS strategy", () => {
+    assert.ok(existsSync(OP));
+    assert.match(op, /^# Operator:.*Language Agent Tree Search/im);
+  });
+
+  test("R46: bimodal header declares both {{program}} and {{task}} push-args", () => {
+    assert.match(op, /\{\{program\}\}/);
+    assert.match(op, /\{\{task\}\}/);
+    assert.match(op, /\{\{prior_answer\}\}/);
+  });
+
+  test("R47: bimodal Initialize detects mode via grep -qF '{{task}}' ./INSTRUCTIONS.md", () => {
+    const init = extractInstructionBody(op, "Initialize");
+    assert.match(init, /grep.*-qF.*'\{\{task\}\}'.*\.\/INSTRUCTIONS\.md/);
+  });
+
+  test("R47: standalone mode copies ../../PROGRAM.md to ./scoped/task.md", () => {
+    const init = extractInstructionBody(op, "Initialize");
+    assert.match(init, /cp\s+\.\.\/\.\.\/PROGRAM\.md\s+\.\/scoped\/task\.md/);
+  });
+
+  test("R47: AFlow-lite mode writes {{task}} content to ./scoped/task.md", () => {
+    const init = extractInstructionBody(op, "Initialize");
+    assert.match(init, /cat\s*>\s*\.\/scoped\/task\.md/);
+    assert.match(init, /\{\{task\}\}/);
+  });
+
+  test("R22/R23: Evaluate-absorb (solved) terminal cycle emits ## Return with answer: key", () => {
+    const ea = extractInstructionBody(op, "Evaluate-absorb");
+    assert.match(ea, /## Return\s*\n\s*answer:/);
+  });
+
+  test("R24: ## Solution is preserved alongside ## Return in Evaluate-absorb (solved)", () => {
+    const ea = extractInstructionBody(op, "Evaluate-absorb");
+    assert.match(ea, /## Solution/);
+    assert.match(ea, /## Return\s*\n\s*answer:/);
+  });
+
+  test("R22/R23: Reflect-absorb (budget exhausted) terminal cycle emits ## Return with answer: key", () => {
+    const ra = extractInstructionBody(op, "Reflect-absorb");
+    assert.match(ra, /## No Solution Found/);
+    assert.match(ra, /## Return\s*\n\s*answer:/);
+  });
+
+  test("R24: ## No Solution Found is preserved alongside ## Return in Reflect-absorb (budget exhausted)", () => {
+    const ra = extractInstructionBody(op, "Reflect-absorb");
+    assert.match(ra, /## No Solution Found/);
+    assert.match(ra, /## Return\s*\n\s*answer:/);
+  });
+
+  test("R25: internal push paths use operators/ (no legacy renamed-dir references)", () => {
+    const forbidden = new RegExp("dyn" + "amics/");
+    assert.doesNotMatch(op, forbidden);
+    assert.match(op, /operators\/expand-node\.md/);
+    assert.match(op, /operators\/rollout\.md/);
+    assert.match(op, /operators\/evaluate\.md/);
+    assert.match(op, /operators\/reflect\.md/);
+  });
+
+  test("R27: all state==done heredocs in operators/lats.md co-occur with Solution or No Solution Found + ## Return answer:", () => {
+    const heredocs = op.match(/cat\s*>\s*\.\/MEMORY\.md\s*<<\s*[A-Z_]+_EOF[\s\S]+?[A-Z_]+_EOF/g) || [];
+    for (const h of heredocs) {
+      if (/## State\s*\n\s*done/.test(h)) {
+        assert.ok(
+          /## Solution/.test(h) || /## No Solution Found/.test(h),
+          "found state==done heredoc without Solution/No-Solution-Found: " + h.slice(0, 200),
+        );
+        assert.ok(
+          /## Return\s*\n\s*answer:/.test(h),
+          "found state==done heredoc without ## Return answer: " + h.slice(0, 200),
+        );
+      }
+    }
   });
 });
