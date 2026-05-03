@@ -5,6 +5,7 @@ import { join, resolve, dirname } from "path";
 import { fileURLToPath, pathToFileURL } from "url";
 import { tmpdir } from "os";
 
+
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 
 function makeTmpInstance(rootOperatorContent: string, programContent: string, operatorBody: string): string {
@@ -72,6 +73,49 @@ describe("R12: {{program}} substitution at bootstrap — edge cases", () => {
       const inst = readFileSync(join(dir, "frames/f000-test-op/INSTRUCTIONS.md"), "utf-8");
       assert.match(inst, /No placeholder here\./);
       assert.doesNotMatch(inst, /\{\{program\}\}/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("R13/R18/R19: OUTPUT.md emission on halt", () => {
+  test("done@depth1 with ## Return\\nanswer: writes ## Answer to OUTPUT.md", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "turing-bootstrap-"));
+    try {
+      const { emitOutputMd } = await import(pathToFileURL(resolve(REPO, "dist/main.js")).href);
+      const fakeMemory = "## State\ndone\n## Return\nanswer: 42\n";
+      emitOutputMd(dir, fakeMemory);
+      const out = readFileSync(join(dir, "OUTPUT.md"), "utf-8");
+      assert.match(out, /## Answer\n42/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("done@depth1 with no ## Return writes diagnostic", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "turing-bootstrap-"));
+    try {
+      const { emitOutputMd } = await import(pathToFileURL(resolve(REPO, "dist/main.js")).href);
+      const fakeMemory = "## State\ndone\n## Last Action\nfoo\n";
+      emitOutputMd(dir, fakeMemory);
+      const out = readFileSync(join(dir, "OUTPUT.md"), "utf-8");
+      assert.match(out, /# OUTPUT \(no return values\)/);
+      assert.match(out, /halted without a ## Return/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("done@depth1 with multiple ## Return keys writes multiple sections", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "turing-bootstrap-"));
+    try {
+      const { emitOutputMd } = await import(pathToFileURL(resolve(REPO, "dist/main.js")).href);
+      const fakeMemory = "## State\ndone\n## Return\nanswer: 18\nverdict: pass\n";
+      emitOutputMd(dir, fakeMemory);
+      const out = readFileSync(join(dir, "OUTPUT.md"), "utf-8");
+      assert.match(out, /## Answer\n18/);
+      assert.match(out, /## Verdict\npass/);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

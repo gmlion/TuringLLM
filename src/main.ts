@@ -28,7 +28,7 @@ import {
 } from "./config.js";
 import {
   parseState, parsePendingQuestions, getAnswersSection,
-  writeAnswer, setState, type PendingQuestion,
+  writeAnswer, setState, parseReturn, type PendingQuestion,
 } from "./memory.js";
 import {
   loadCallStack, saveCallStack,
@@ -537,6 +537,35 @@ export function startupBootstrap(baseDir: string): BootstrapResult {
   };
 }
 
+// --- Phase-7 OUTPUT.md emission ---
+
+/**
+ * Write `instances/<name>/OUTPUT.md` from the root frame's ## Return block.
+ *
+ * Each key in ## Return becomes a `## <CapitalizedKey>` section.
+ * If ## Return is absent or empty, writes a diagnostic message instead.
+ *
+ * Satisfies: R13 (OUTPUT.md written on halt), R18 (exit 0 — caller is
+ * responsible for the exit), R19 (diagnostic when ## Return is absent).
+ */
+export function emitOutputMd(baseDir: string, rootMemory: string): void {
+  const { entries } = parseReturn(rootMemory);
+  let outputBody: string;
+  if (Object.keys(entries).length === 0) {
+    outputBody =
+      "# OUTPUT (no return values)\n\n" +
+      "The root operator halted without a ## Return block. " +
+      "Inspect frames/f000-<slug>/MEMORY.md for terminal state.\n";
+  } else {
+    outputBody = "";
+    for (const [key, value] of Object.entries(entries)) {
+      const sectionTitle = key.charAt(0).toUpperCase() + key.slice(1);
+      outputBody += `## ${sectionTitle}\n${value}\n\n`;
+    }
+  }
+  writeFileSync(join(baseDir, "OUTPUT.md"), outputBody);
+}
+
 // --- Main loop ---
 
 async function main() {
@@ -590,6 +619,11 @@ async function main() {
     // Deterministic stack management (before LLM invocation)
     if (runStackBlock(callStack)) {
       log(`\nMachine halted: done`);
+      // Emit OUTPUT.md from the root frame's ## Return block (R13, R18, R19).
+      const rootFrameDir = callStack.stack[0].frameDir;
+      const rootMemory = readFile(resolve(BASE_DIR, rootFrameDir, "MEMORY.md"));
+      emitOutputMd(BASE_DIR, rootMemory);
+      log(`  OUTPUT.md written to ${BASE_DIR}`);
       clearCycleContext();
       emitHalt("done");
       return;
