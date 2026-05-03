@@ -13,7 +13,7 @@ describe("R40: shell features re-homed from game-team", () => {
     const candidates = [
       "interpreters/2-planning-decomposition/a-plan-execute/operators/plan-execute.md",
       "interpreters/5-fixed-sop-teams/a-metagpt/operators/metagpt.md",
-      "interpreters/5-fixed-sop-teams/b-chatdev/INSTRUCTIONS.md",
+      "interpreters/5-fixed-sop-teams/b-chatdev/operators/chatdev.md",
     ];
     const fuzzyRe = /suggests|indicates|appears|is successful|looks|signals|reads as/i;
     const hits = candidates.filter((c) => fuzzyRe.test(readFileSync(resolve(REPO, c), "utf-8")));
@@ -36,11 +36,11 @@ describe("R40: shell features re-homed from game-team", () => {
   });
 
   test("R40 (c) strategy-level push present in every new strategy", () => {
-    // After Phase-7 migration, 2a/INSTRUCTIONS.md is a marker; the strategy lives in the operator file.
+    // After Phase-7 migration, INSTRUCTIONS.md is a marker; the strategy lives in the operator file.
     const strategies = [
       "interpreters/2-planning-decomposition/a-plan-execute/operators/plan-execute.md",
       "interpreters/5-fixed-sop-teams/a-metagpt/operators/metagpt.md",
-      "interpreters/5-fixed-sop-teams/b-chatdev/INSTRUCTIONS.md",
+      "interpreters/5-fixed-sop-teams/b-chatdev/operators/chatdev.md",
     ];
     for (const s of strategies) {
       const body = readFileSync(resolve(REPO, s), "utf-8");

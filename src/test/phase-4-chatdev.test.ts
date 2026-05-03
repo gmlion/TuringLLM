@@ -15,6 +15,7 @@ describe("phase-4 b-chatdev: layout, dialogue, PROGRAM parity", () => {
       "INSTRUCTIONS.md",
       "PROGRAM.md",
       "README.md",
+      "operators/chatdev.md",
       "operators/dialogue.md",
       "operators/evaluate.md",
       "roles/ceo.md",
@@ -35,14 +36,14 @@ describe("phase-4 b-chatdev: layout, dialogue, PROGRAM parity", () => {
   });
 
   test("strategy walks four phases (design, coding, testing, documenting)", () => {
-    const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+    const s = readFileSync(resolve(INTERP, "operators/chatdev.md"), "utf-8");
     for (const phase of ["design", "coding", "testing", "documenting"]) {
       assert.match(s, new RegExp(phase, "i"), `strategy missing phase: ${phase}`);
     }
   });
 
   test("strategy pushes dialogue.md with correct participant pairs", () => {
-    const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+    const s = readFileSync(resolve(INTERP, "operators/chatdev.md"), "utf-8");
     // design: ceo+cto (no reviewer) → acceptance=false
     // coding/testing/documenting pair with reviewer → acceptance=true
     assert.match(s, /ceo.*cto|cto.*ceo/);
@@ -69,5 +70,69 @@ describe("phase-4 b-chatdev: layout, dialogue, PROGRAM parity", () => {
     const r = readFileSync(resolve(INTERP, "README.md"), "utf-8");
     assert.match(r, /ChatDev/);
     assert.match(r, /Qian/);
+  });
+});
+
+describe("phase-7 b-chatdev: canonical operator migration (R20, R21, R22, R23, R24, R25, R27, R45, R46, R47)", () => {
+  test("INSTRUCTIONS.md is a single-line marker pointing at operators/chatdev.md (R21, R46)", () => {
+    const inst = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8").trim();
+    assert.equal(inst, "operators/chatdev.md");
+  });
+
+  test("operators/chatdev.md exists (R22)", () => {
+    assert.ok(existsSync(resolve(INTERP, "operators/chatdev.md")), "operators/chatdev.md missing");
+  });
+
+  test("operators/chatdev.md has bimodal header (# Operator:) and # Sub-instructions (R20, R22, R45)", () => {
+    const s = readFileSync(resolve(INTERP, "operators/chatdev.md"), "utf-8");
+    assert.match(s, /^# Operator:/m);
+    assert.match(s, /^# Sub-instructions/m);
+  });
+
+  test("operators/chatdev.md has bimodal push-args: {{program}} and {{task}} + {{prior_answer}} (R47)", () => {
+    const s = readFileSync(resolve(INTERP, "operators/chatdev.md"), "utf-8");
+    assert.match(s, /\{\{program\}\}/);
+    assert.match(s, /\{\{task\}\}/);
+    assert.match(s, /\{\{prior_answer\}\}/);
+  });
+
+  test("operators/chatdev.md Initialize detects mode via {{task}} grep (R47)", () => {
+    const s = readFileSync(resolve(INTERP, "operators/chatdev.md"), "utf-8");
+    const initM = s.match(/^## Instruction:\s*Initialize\b([\s\S]*?)(?=^## Instruction:|^# Sub-instructions)/m);
+    const init = initM ? initM[1] : "";
+    assert.match(init, /grep.*\{\{task\}\}/);
+  });
+
+  test("operators/chatdev.md Initialize does NOT hardcode cat ../../PROGRAM.md (R23)", () => {
+    const s = readFileSync(resolve(INTERP, "operators/chatdev.md"), "utf-8");
+    const initM = s.match(/^## Instruction:\s*Initialize\b([\s\S]*?)(?=^## Instruction:|^# Sub-instructions)/m);
+    const init = initM ? initM[1] : "";
+    assert.doesNotMatch(init, /cat\s+\.\.\/\.\.\/PROGRAM\.md/);
+  });
+
+  test("operators/chatdev.md Finish adds ## Return answer: pointing at documentation output (R23, R24)", () => {
+    const s = readFileSync(resolve(INTERP, "operators/chatdev.md"), "utf-8");
+    const finishM = s.match(/^## Instruction:\s*Finish\b([\s\S]*?)(?=^## Instruction:|^# Sub-instructions)/m);
+    const finish = finishM ? finishM[1] : "";
+    assert.match(finish, /## Return\s*\n\s*answer:/);
+  });
+
+  test("operators/chatdev.md internal sub-pushes use operators/ paths (R25)", () => {
+    const s = readFileSync(resolve(INTERP, "operators/chatdev.md"), "utf-8");
+    assert.match(s, /## Push\s*\n\s*operators\/dialogue\.md/);
+  });
+
+  test("operators/chatdev.md describes both standalone and aflow-lite invocation modes (R27)", () => {
+    const s = readFileSync(resolve(INTERP, "operators/chatdev.md"), "utf-8");
+    assert.match(s, /mode 1.*standalone|standalone.*mode 1/i);
+    assert.match(s, /mode 2.*aflow|aflow.*mode 2/i);
+  });
+
+  test("operators/chatdev.md Sub-instructions section is empty (this operator needs none)", () => {
+    const s = readFileSync(resolve(INTERP, "operators/chatdev.md"), "utf-8");
+    const idx = s.search(/^# Sub-instructions/m);
+    assert.ok(idx >= 0, "# Sub-instructions section missing");
+    const sub = s.slice(idx).replace(/^# Sub-instructions\s*\n/, "").trim();
+    assert.match(sub, /\(none/, `sub-instructions section should declare "(none …)", got: ${sub.slice(0, 80)}`);
   });
 });
