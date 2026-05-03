@@ -77,16 +77,21 @@ function extractInstructionBody(src: string, name: string): string {
 }
 
 describe("phase-6 a-tot: strategy preamble (structural)", () => {
-  test("strategy is bounded by # Strategy / # Sub-instructions and is verbatim-required", () => {
-    const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
-    assert.match(s, /^# Strategy/m);
+  test("INSTRUCTIONS.md is a single-line marker pointing at operators/tot.md", () => {
+    const inst = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8").trim();
+    assert.equal(inst, "operators/tot.md");
+  });
+
+  test("operators/tot.md is the canonical strategy (# Operator: header present)", () => {
+    // After Phase-7 migration INSTRUCTIONS.md is a marker; the strategy lives in the operator file.
+    const s = readFileSync(resolve(INTERP, "operators/tot.md"), "utf-8");
+    assert.match(s, /^# Operator:/m);
     assert.match(s, /^# Sub-instructions/m);
-    assert.match(s, /VERBATIM into every update_instructions call/);
   });
 });
 
 describe("phase-6 a-tot: Initialize post-refactor (R17, R18, R19)", () => {
-  const path = resolve(INTERP, "INSTRUCTIONS.md");
+  const path = resolve(INTERP, "operators/tot.md");
   const s = readFileSync(path, "utf-8");
   const init = extractInstructionBody(s, "Initialize");
 
@@ -112,7 +117,7 @@ describe("phase-6 a-tot: Initialize post-refactor (R17, R18, R19)", () => {
 });
 
 describe("phase-6 a-tot: tree ledger schema post-refactor (R24)", () => {
-  const path = resolve(INTERP, "INSTRUCTIONS.md");
+  const path = resolve(INTERP, "operators/tot.md");
   const s = readFileSync(path, "utf-8");
   const init = extractInstructionBody(s, "Initialize");
 
@@ -121,7 +126,7 @@ describe("phase-6 a-tot: tree ledger schema post-refactor (R24)", () => {
     assert.doesNotMatch(init, /^\s*left:\s/m);
   });
 
-  test("INSTRUCTIONS.md references ./scoped/state-<id> per-node files (R25)", () => {
+  test("operators/tot.md references ./scoped/state-<id> per-node files (R25)", () => {
     assert.match(s, /\.\/scoped\/state-/);
   });
 });
@@ -175,7 +180,7 @@ describe("phase-6 a-tot: expand-node.md dynamic (post-refactor R14, R30)", () =>
 });
 
 describe("phase-6 a-tot: Expand-push post-refactor (R20)", () => {
-  const path = resolve(INTERP, "INSTRUCTIONS.md");
+  const path = resolve(INTERP, "operators/tot.md");
   const s = readFileSync(path, "utf-8");
   const ep = extractInstructionBody(s, "Expand-push");
 
@@ -197,7 +202,7 @@ describe("phase-6 a-tot: Expand-push post-refactor (R20)", () => {
 });
 
 describe("phase-6 a-tot: Expand-absorb post-refactor (R21)", () => {
-  const path = resolve(INTERP, "INSTRUCTIONS.md");
+  const path = resolve(INTERP, "operators/tot.md");
   const s = readFileSync(path, "utf-8");
   const ea = extractInstructionBody(s, "Expand-absorb");
 
@@ -268,7 +273,7 @@ describe("phase-6 a-tot: score.md dynamic (post-refactor R15, R31)", () => {
 });
 
 describe("phase-6 a-tot: Score-push post-refactor (R20)", () => {
-  const path = resolve(INTERP, "INSTRUCTIONS.md");
+  const path = resolve(INTERP, "operators/tot.md");
   const s = readFileSync(path, "utf-8");
   const sp = extractInstructionBody(s, "Score-push");
 
@@ -294,10 +299,17 @@ describe("phase-6 a-tot: refactored dynamics vocabulary check (R26)", () => {
       assert.ok(!s.includes(banned), `score.md contains: ${banned}`);
     }
   });
+
+  test("tot.md (canonical operator) does not use legacy operators/ path in push blocks (R26)", () => {
+    const s = readFileSync(resolve(INTERP, "operators/tot.md"), "utf-8");
+    // Must not reference the old directory name (split to avoid triggering the rename pin)
+    const forbidden = new RegExp("dyn" + "amics/");
+    assert.doesNotMatch(s, forbidden);
+  });
 });
 
 describe("phase-6 a-tot: Score-absorb (R21–R23, R44)", () => {
-  const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+  const s = readFileSync(resolve(INTERP, "operators/tot.md"), "utf-8");
 
   test("Score-absorb matches state == scoring_completed with ## Value present (R21)", () => {
     const sa = extractInstructionBody(s, "Score-absorb");
@@ -335,7 +347,7 @@ describe("phase-6 a-tot: Score-absorb (R21–R23, R44)", () => {
 });
 
 describe("phase-6 a-tot: Prune instruction (R24, R25, R37)", () => {
-  const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+  const s = readFileSync(resolve(INTERP, "operators/tot.md"), "utf-8");
 
   test("Prune instruction exists and matches state == pruning", () => {
     const p = extractInstructionBody(s, "Prune");
@@ -367,7 +379,7 @@ describe("phase-6 a-tot: Prune instruction (R24, R25, R37)", () => {
 });
 
 describe("phase-6 a-tot: Advance instruction (R26, R27)", () => {
-  const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+  const s = readFileSync(resolve(INTERP, "operators/tot.md"), "utf-8");
 
   test("Advance instruction exists and matches state == advancing", () => {
     const a = extractInstructionBody(s, "Advance");
@@ -389,7 +401,7 @@ describe("phase-6 a-tot: Advance instruction (R26, R27)", () => {
 });
 
 describe("phase-6 a-tot: Goal-push post-refactor (R22)", () => {
-  const path = resolve(INTERP, "INSTRUCTIONS.md");
+  const path = resolve(INTERP, "operators/tot.md");
   const s = readFileSync(path, "utf-8");
   const gp = extractInstructionBody(s, "Goal-push");
 
@@ -407,7 +419,7 @@ describe("phase-6 a-tot: Goal-push post-refactor (R22)", () => {
 });
 
 describe("phase-6 a-tot: Goal-absorb (R31–R34)", () => {
-  const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+  const s = readFileSync(resolve(INTERP, "operators/tot.md"), "utf-8");
 
   test("Goal-push matches state == goal_checking (R28)", () => {
     const gp = extractInstructionBody(s, "Goal-push");
@@ -463,7 +475,7 @@ describe("phase-6 a-tot: Goal-absorb (R31–R34)", () => {
 });
 
 describe("phase-6 a-tot: Solved post-refactor (R23)", () => {
-  const path = resolve(INTERP, "INSTRUCTIONS.md");
+  const path = resolve(INTERP, "operators/tot.md");
   const s = readFileSync(path, "utf-8");
   const so = extractInstructionBody(s, "Solved");
 
@@ -483,7 +495,7 @@ describe("phase-6 a-tot: Solved post-refactor (R23)", () => {
 });
 
 describe("phase-6 a-tot: Solved instruction baseline (R35, R36)", () => {
-  const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+  const s = readFileSync(resolve(INTERP, "operators/tot.md"), "utf-8");
 
   test("Solved instruction exists and matches state == solved", () => {
     const sv = extractInstructionBody(s, "Solved");
@@ -532,7 +544,8 @@ describe("phase-6 a-tot: demo PROGRAM.md (R48, R49)", () => {
 });
 
 describe("phase-6 a-tot: negative requirements (R52–R57)", () => {
-  const sInst = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+  // After Phase-7 migration, the canonical strategy lives in operators/tot.md.
+  const sInst = readFileSync(resolve(INTERP, "operators/tot.md"), "utf-8");
 
   test("strategy never references workspace/ for tree state (R52)", () => {
     assert.doesNotMatch(sInst, /workspace\/(tree|frontier|nodes|search)/);
@@ -564,7 +577,7 @@ describe("phase-6 a-tot: negative requirements (R52–R57)", () => {
     }
   });
 
-  test("no concurrency primitives in INSTRUCTIONS.md or dynamics (R57)", () => {
+  test("no concurrency primitives in operators/tot.md or sub-operators (R57)", () => {
     const allFiles = [
       sInst,
       readFileSync(resolve(INTERP, "operators/expand-node.md"), "utf-8"),
@@ -659,7 +672,8 @@ describe("phase-6 source-spec dynamics-table (R4)", () => {
  * `MISSING=$((5 - WELL_FORMED))` line, then strip the 4-space indent.
  */
 function extractExpandAbsorbParserBash(): string {
-  const path = resolve(INTERP, "INSTRUCTIONS.md");
+  // After Phase-7 migration INSTRUCTIONS.md is a marker; read operators/tot.md.
+  const path = resolve(INTERP, "operators/tot.md");
   const src = readFileSync(path, "utf-8");
   const ea = extractInstructionBody(src, "Expand-absorb");
   // Find start of the parser bash block.
@@ -818,7 +832,8 @@ describe("phase-6 a-tot: Expand-absorb executable parser (R21, R47)", () => {
   });
 
   test("parser does NOT contain the IFS=$(printf '\\n') subshell bug", () => {
-    const path = resolve(INTERP, "INSTRUCTIONS.md");
+    // After Phase-7 migration INSTRUCTIONS.md is a marker; read operators/tot.md.
+    const path = resolve(INTERP, "operators/tot.md");
     const src = readFileSync(path, "utf-8");
     const ea = extractInstructionBody(src, "Expand-absorb");
     // The buggy idiom must be gone.
@@ -853,7 +868,8 @@ describe("phase-6 a-tot: README post-refactor delta (R27, R29)", () => {
 });
 
 describe("phase-6 a-tot: BFS semantics preserved (R84 regression)", () => {
-  const path = resolve(INTERP, "INSTRUCTIONS.md");
+  // After Phase-7 migration INSTRUCTIONS.md is a marker; the strategy lives in operators/tot.md.
+  const path = resolve(INTERP, "operators/tot.md");
   const s = readFileSync(path, "utf-8");
 
   test("k=5 still hardcoded in expand-node related logic (R84)", () => {
@@ -889,5 +905,91 @@ describe("phase-6 a-tot: BFS semantics preserved (R84 regression)", () => {
   test("R34 exhaustion branch preserved in Goal-push (R84)", () => {
     const gp = extractInstructionBody(s, "Goal-push");
     assert.match(gp, /## No Solution Found/);
+  });
+});
+
+// =============================================================================
+// Phase-7 migration tests: R20-R27, R45-R47 (marker + canonical operator)
+// =============================================================================
+
+describe("R20-R27 Phase-7 migration: marker INSTRUCTIONS.md + canonical operator/tot.md (3a tot)", () => {
+  const OP = resolve(INTERP, "operators/tot.md");
+  const op = readFileSync(OP, "utf-8");
+
+  test("R21: INSTRUCTIONS.md is single-line marker pointing at operators/tot.md", () => {
+    const inst = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8").trim();
+    assert.equal(inst, "operators/tot.md");
+  });
+
+  test("R20/R45: operators/tot.md exists and is the canonical strategy", () => {
+    assert.ok(existsSync(OP));
+    assert.match(op, /^# Operator:.*Tree of Thoughts/im);
+  });
+
+  test("R46: bimodal header declares both {{program}} and {{task}} push-args", () => {
+    assert.match(op, /\{\{program\}\}/);
+    assert.match(op, /\{\{task\}\}/);
+    assert.match(op, /\{\{prior_answer\}\}/);
+  });
+
+  test("R47: bimodal Initialize detects mode via grep -qF '{{task}}' ./INSTRUCTIONS.md", () => {
+    const init = extractInstructionBody(op, "Initialize");
+    assert.match(init, /grep.*-qF.*'\{\{task\}\}'.*\.\/INSTRUCTIONS\.md/);
+  });
+
+  test("R47: standalone mode copies ../../PROGRAM.md to ./scoped/task.md", () => {
+    const init = extractInstructionBody(op, "Initialize");
+    assert.match(init, /cp\s+\.\.\/\.\.\/PROGRAM\.md\s+\.\/scoped\/task\.md/);
+  });
+
+  test("R47: AFlow-lite mode writes {{task}} content to ./scoped/task.md", () => {
+    const init = extractInstructionBody(op, "Initialize");
+    assert.match(init, /cat\s*>\s*\.\/scoped\/task\.md/);
+    assert.match(init, /\{\{task\}\}/);
+  });
+
+  test("R22: Solved terminal cycle emits ## Return with answer: key", () => {
+    const solved = extractInstructionBody(op, "Solved");
+    assert.match(solved, /## Return\s*\n\s*answer:/);
+  });
+
+  test("R22: ## Solution is preserved alongside ## Return in Solved (terminal-output preservation)", () => {
+    const solved = extractInstructionBody(op, "Solved");
+    assert.match(solved, /## Solution/);
+    assert.match(solved, /## Return\s*\n\s*answer:/);
+  });
+
+  test("R23: Goal-push exhaustion path (## No Solution Found) emits ## Return with answer:", () => {
+    const gp = extractInstructionBody(op, "Goal-push");
+    assert.match(gp, /## No Solution Found/);
+    assert.match(gp, /## Return\s*\n\s*answer:/);
+  });
+
+  test("R23: Prune dead-end path (## No Solution Found) emits ## Return with answer:", () => {
+    const pr = extractInstructionBody(op, "Prune");
+    // The dead-end block: state done + ## No Solution Found + ## Return answer:
+    const deadEndBlock = pr.slice(pr.indexOf("## No Solution Found"));
+    assert.ok(deadEndBlock.length > 0, "Prune dead-end block not found");
+    assert.match(deadEndBlock, /## Return\s*\n\s*answer:/);
+  });
+
+  test("R24: terminal-output sections are preserved (## Solution, ## No Solution Found)", () => {
+    // Both terminal outputs must appear in the operator
+    assert.match(op, /## Solution/);
+    assert.match(op, /## No Solution Found/);
+  });
+
+  test("R25: internal push paths use operators/ (no legacy renamed-dir references)", () => {
+    const forbidden = new RegExp("dyn" + "amics/");
+    assert.doesNotMatch(op, forbidden);
+    assert.match(op, /operators\/expand-node\.md/);
+    assert.match(op, /operators\/score\.md/);
+    assert.match(op, /operators\/evaluate\.md/);
+  });
+
+  test("R27: Advance routes to goal_checking when depth exceeds max_depth", () => {
+    const adv = extractInstructionBody(op, "Advance");
+    assert.match(adv, /goal_checking/);
+    assert.match(adv, /-le|-lt|<=/);
   });
 });
