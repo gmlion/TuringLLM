@@ -15,8 +15,8 @@ describe("phase-3 b-orchestrator-workers: layout, PROGRAM, inputs, README", () =
       "INSTRUCTIONS.md",
       "PROGRAM.md",
       "README.md",
-      "dynamics/plan.md",
-      "dynamics/tackle.md",
+      "operators/plan.md",
+      "operators/tackle.md",
     ]) {
       assert.ok(existsSync(resolve(INTERP, f)), `${f} missing`);
     }

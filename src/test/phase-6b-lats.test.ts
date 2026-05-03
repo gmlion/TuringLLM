@@ -29,15 +29,15 @@ describe("phase-6b b-lats: directory layout (R1, R4, R5)", () => {
   test("interpreter dir interpreters/3-search/b-lats/ exists (R1)", () => {
     assert.ok(existsSync(INTERP), "interpreter directory missing");
   });
-  test("interpreter has INSTRUCTIONS.md, PROGRAM.md, README.md, dynamics/ (R1)", () => {
+  test("interpreter has INSTRUCTIONS.md, PROGRAM.md, README.md, operators/ (R1)", () => {
     for (const f of ["INSTRUCTIONS.md", "PROGRAM.md", "README.md"]) {
       assert.ok(existsSync(resolve(INTERP, f)), `${f} missing`);
     }
-    assert.ok(existsSync(resolve(INTERP, "dynamics")), "dynamics/ missing");
+    assert.ok(existsSync(resolve(INTERP, "operators")), "operators/ missing");
   });
-  test("dynamics/ does NOT contain score.md (R5, R77)", () => {
-    assert.ok(!existsSync(resolve(INTERP, "dynamics/score.md")),
-      "score.md must NOT be shipped in b-lats/dynamics/");
+  test("operators/ does NOT contain score.md (R5, R77)", () => {
+    assert.ok(!existsSync(resolve(INTERP, "operators/score.md")),
+      "score.md must NOT be shipped in b-lats/operators/");
   });
 });
 
@@ -54,19 +54,19 @@ describe("phase-6b b-lats: group README delta (R2)", () => {
 });
 
 describe("phase-6b b-lats: reused dynamics byte-equality (R6, R7, R8)", () => {
-  test("dynamics/expand-node.md is byte-equal to a-tot post-refactor copy (R6)", () => {
-    const canon = readFileSync(resolve(REPO, "interpreters/3-search/a-tot/dynamics/expand-node.md"));
-    const here = readFileSync(resolve(INTERP, "dynamics/expand-node.md"));
+  test("operators/expand-node.md is byte-equal to a-tot post-refactor copy (R6)", () => {
+    const canon = readFileSync(resolve(REPO, "interpreters/3-search/a-tot/operators/expand-node.md"));
+    const here = readFileSync(resolve(INTERP, "operators/expand-node.md"));
     assert.ok(canon.equals(here), "expand-node.md diverged from a-tot canonical");
   });
-  test("dynamics/evaluate.md is byte-equal to canonical 1b copy (R7)", () => {
-    const canon = readFileSync(resolve(REPO, "interpreters/1-iterative-refinement/b-evaluator-optimizer/dynamics/evaluate.md"));
-    const here = readFileSync(resolve(INTERP, "dynamics/evaluate.md"));
+  test("operators/evaluate.md is byte-equal to canonical 1b copy (R7)", () => {
+    const canon = readFileSync(resolve(REPO, "interpreters/1-iterative-refinement/b-evaluator-optimizer/operators/evaluate.md"));
+    const here = readFileSync(resolve(INTERP, "operators/evaluate.md"));
     assert.ok(canon.equals(here), "evaluate.md diverged from canonical");
   });
-  test("dynamics/reflect.md is byte-equal to canonical 1c copy (R8)", () => {
-    const canon = readFileSync(resolve(REPO, "interpreters/1-iterative-refinement/c-reflexion/dynamics/reflect.md"));
-    const here = readFileSync(resolve(INTERP, "dynamics/reflect.md"));
+  test("operators/reflect.md is byte-equal to canonical 1c copy (R8)", () => {
+    const canon = readFileSync(resolve(REPO, "interpreters/1-iterative-refinement/c-reflexion/operators/reflect.md"));
+    const here = readFileSync(resolve(INTERP, "operators/reflect.md"));
     assert.ok(canon.equals(here), "reflect.md diverged from canonical");
   });
 });
@@ -80,9 +80,9 @@ describe("phase-6b b-lats: demo PROGRAM.md (R69)", () => {
 });
 
 describe("phase-6b b-lats: rollout.md dynamic (R10, R11, R12, R13)", () => {
-  const path = resolve(INTERP, "dynamics/rollout.md");
+  const path = resolve(INTERP, "operators/rollout.md");
 
-  test("dynamics/rollout.md exists", () => {
+  test("operators/rollout.md exists", () => {
     assert.ok(existsSync(path), "rollout.md missing");
   });
 
@@ -279,8 +279,8 @@ describe("phase-6b b-lats: Expand-push (R47)", () => {
   const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
   const ep = extractInstructionBody(s, "Expand-push");
 
-  test("Expand-push pushes dynamics/expand-node.md (R47)", () => {
-    assert.match(ep, /## Push\s*\n\s*dynamics\/expand-node\.md/);
+  test("Expand-push pushes operators/expand-node.md (R47)", () => {
+    assert.match(ep, /## Push\s*\n\s*operators\/expand-node\.md/);
   });
 
   test("Expand-push push-args are partial_state and task only (R47)", () => {
@@ -340,8 +340,8 @@ describe("phase-6b b-lats: Simulate-push (R51)", () => {
   const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
   const sp = extractInstructionBody(s, "Simulate-push");
 
-  test("Simulate-push pushes dynamics/rollout.md (R51)", () => {
-    assert.match(sp, /## Push\s*\n\s*dynamics\/rollout\.md/);
+  test("Simulate-push pushes operators/rollout.md (R51)", () => {
+    assert.match(sp, /## Push\s*\n\s*operators\/rollout\.md/);
   });
 
   test("Simulate-push reads from chosen_child not cursor (R51)", () => {
@@ -363,7 +363,7 @@ describe("phase-6b b-lats: Simulate-absorb (R52, R53)", () => {
   });
 
   test("Simulate-absorb pushes evaluate.md with attempt and criterion (R52)", () => {
-    assert.match(sa, /## Push\s*\n\s*dynamics\/evaluate\.md/);
+    assert.match(sa, /## Push\s*\n\s*operators\/evaluate\.md/);
     assert.match(sa, /attempt:\s*\|/);
     assert.match(sa, /criterion:\s*\|/);
   });
@@ -435,8 +435,8 @@ describe("phase-6b b-lats: Reflect-push (R58)", () => {
   const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
   const rp = extractInstructionBody(s, "Reflect-push");
 
-  test("Reflect-push pushes dynamics/reflect.md (R58)", () => {
-    assert.match(rp, /## Push\s*\n\s*dynamics\/reflect\.md/);
+  test("Reflect-push pushes operators/reflect.md (R58)", () => {
+    assert.match(rp, /## Push\s*\n\s*operators\/reflect\.md/);
   });
 
   test("Reflect-push push-args attempt + verdict=fail + feedback (R58)", () => {
@@ -542,8 +542,8 @@ describe("phase-6b b-lats: negative-requirement pins (R76–R83)", () => {
     assert.doesNotMatch(inst, /\bworkspace\//);
   });
 
-  test("dynamics/ does not contain score.md (R77)", () => {
-    assert.ok(!existsSync(resolve(INTERP, "dynamics/score.md")));
+  test("operators/ does not contain score.md (R77)", () => {
+    assert.ok(!existsSync(resolve(INTERP, "operators/score.md")));
   });
 
   test("strategy declares no Prune instruction (R78)", () => {
@@ -594,11 +594,11 @@ describe("phase-6b b-lats: negative-requirement pins (R76–R83)", () => {
     }
   });
 
-  test("dynamics/ vocabulary check — none of the four contains domain vocab (R83)", () => {
+  test("operators/ vocabulary check — none of the four contains domain vocab (R83)", () => {
     const dyns = ["expand-node.md", "rollout.md", "evaluate.md", "reflect.md"];
     const banned = ["Game of 24", "Game-of-24", "arithmetic", "maze", "function", "test suite"];
     for (const dy of dyns) {
-      const s = readFileSync(resolve(INTERP, "dynamics", dy), "utf-8");
+      const s = readFileSync(resolve(INTERP, "operators", dy), "utf-8");
       for (const word of banned) {
         assert.ok(!s.includes(word), `${dy} contains banned domain word: "${word}"`);
       }
@@ -631,7 +631,7 @@ describe("phase-6b: parent doc updates (R73, R74, R75)", () => {
   test("Phase 6b section no longer claims 'no new dynamics' (R74)", () => {
     const m6b = parent.match(/## Phase 6b[^]+?(?=^## Phase 7|\z)/m);
     assert.ok(m6b, "Phase 6b section missing");
-    assert.doesNotMatch(m6b[0], /no new dynamics/i);
+    assert.doesNotMatch(m6b[0], /no new operators/i);
   });
 
   test("Phase 6 section mentions generalisation in Phase 6b (R75)", () => {

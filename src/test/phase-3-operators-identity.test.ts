@@ -16,11 +16,11 @@ const LEAVES = [
 
 const FILES = [
   "INSTRUCTIONS.md",
-  "dynamics/plan.md",
-  "dynamics/tackle.md",
+  "operators/plan.md",
+  "operators/tackle.md",
 ];
 
-describe("phase-3 dynamics identity", () => {
+describe("phase-3 operators identity", () => {
   for (const file of FILES) {
     test(`${file} is byte-equal across the three leaves`, () => {
       const contents = LEAVES.map((leaf) => {

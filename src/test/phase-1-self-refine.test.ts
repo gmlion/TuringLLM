@@ -15,7 +15,7 @@ describe("1a self-refine", () => {
   test("interpreter files exist at the Group-1 path", () => {
     assert.ok(existsSync(resolve(INTERP, "INSTRUCTIONS.md")), "INSTRUCTIONS.md missing");
     assert.ok(existsSync(resolve(INTERP, "PROGRAM.md")), "PROGRAM.md missing");
-    assert.ok(existsSync(resolve(INTERP, "dynamics/self-critique.md")), "dynamics/self-critique.md missing");
+    assert.ok(existsSync(resolve(INTERP, "operators/self-critique.md")), "operators/self-critique.md missing");
   });
 
   test("strategy declares the four required states", () => {
@@ -31,7 +31,7 @@ describe("1a self-refine", () => {
   });
 
   test("self-critique dynamic declares the empty and critiqued states", () => {
-    const dyn = readFileSync(resolve(INTERP, "dynamics/self-critique.md"), "utf-8");
+    const dyn = readFileSync(resolve(INTERP, "operators/self-critique.md"), "utf-8");
     assert.match(dyn, /state is "empty"/);
     assert.match(dyn, /state is "critiqued"/);
     // The Refine instruction writes state=done (as a MEMORY value via the canonical heredoc).
@@ -46,7 +46,7 @@ describe("1a self-refine", () => {
   });
 
   test("self-critique dynamic uses ## Return block with critique and refined", () => {
-    const dyn = readFileSync(resolve(INTERP, "dynamics/self-critique.md"), "utf-8");
+    const dyn = readFileSync(resolve(INTERP, "operators/self-critique.md"), "utf-8");
     assert.match(dyn, /## Return/, "dynamic should use ## Return");
     assert.match(dyn, /critique:/, "dynamic ## Return should have critique key");
     assert.match(dyn, /refined:/, "dynamic ## Return should have refined key");
@@ -77,7 +77,7 @@ describe("1a self-refine", () => {
     test("push on drafted state -> dynamic gets draft arg substituted", () => {
       // Write the draft to the scoped file.
       const { cs, rootMemPath } = setupRootFrame(
-        "## State\ndrafted\n## Push\ndynamics/self-critique.md\n## Push-Args\ndraft: |\n  first attempt\n  line two"
+        "## State\ndrafted\n## Push\noperators/self-critique.md\n## Push-Args\ndraft: |\n  first attempt\n  line two"
       );
       mkdirSync(resolve(tmp, "frames/f000-strategy/scoped"), { recursive: true });
       writeFileSync(resolve(tmp, "frames/f000-strategy/scoped/draft.md"), "first attempt\nline two\n", "utf-8");
@@ -85,10 +85,10 @@ describe("1a self-refine", () => {
       const rootMem = readFileSync(rootMemPath, "utf-8");
 
       // Use the real dynamic file from the interpreter.
-      const selfCritiqueContent = readFileSync(resolve(INTERP, "dynamics/self-critique.md"), "utf-8");
+      const selfCritiqueContent = readFileSync(resolve(INTERP, "operators/self-critique.md"), "utf-8");
 
       const pushed = applyPush(cs, rootMem, (p) =>
-        p === "dynamics/self-critique.md" ? selfCritiqueContent : null
+        p === "operators/self-critique.md" ? selfCritiqueContent : null
       );
       assert.equal(pushed.ok, true, "push should succeed");
       if (!pushed.ok) return;
@@ -121,14 +121,14 @@ describe("1a self-refine", () => {
 
     test("child writes ## Return -> pop splices ## Critique and ## Refined into caller", () => {
       const { cs, rootMemPath } = setupRootFrame(
-        "## State\ndrafted\n## Push\ndynamics/self-critique.md\n## Push-Args\ndraft: |\n  original draft"
+        "## State\ndrafted\n## Push\noperators/self-critique.md\n## Push-Args\ndraft: |\n  original draft"
       );
 
-      const selfCritiqueContent = readFileSync(resolve(INTERP, "dynamics/self-critique.md"), "utf-8");
+      const selfCritiqueContent = readFileSync(resolve(INTERP, "operators/self-critique.md"), "utf-8");
       const rootMem = readFileSync(rootMemPath, "utf-8");
 
       const pushed = applyPush(cs, rootMem, (p) =>
-        p === "dynamics/self-critique.md" ? selfCritiqueContent : null
+        p === "operators/self-critique.md" ? selfCritiqueContent : null
       );
       assert.equal(pushed.ok, true);
       if (!pushed.ok) return;
@@ -170,16 +170,16 @@ describe("1a self-refine", () => {
 
     test("second loop: accepted refinement -> state=done -> halts at depth 0", () => {
       const { cs, rootMemPath } = setupRootFrame(
-        "## State\ndrafted\n## Push\ndynamics/self-critique.md\n## Push-Args\ndraft: |\n  second attempt"
+        "## State\ndrafted\n## Push\noperators/self-critique.md\n## Push-Args\ndraft: |\n  second attempt"
       );
       mkdirSync(resolve(tmp, "frames/f000-strategy/scoped"), { recursive: true });
       writeFileSync(resolve(tmp, "frames/f000-strategy/scoped/draft.md"), "second attempt\n", "utf-8");
 
-      const selfCritiqueContent = readFileSync(resolve(INTERP, "dynamics/self-critique.md"), "utf-8");
+      const selfCritiqueContent = readFileSync(resolve(INTERP, "operators/self-critique.md"), "utf-8");
       const rootMem = readFileSync(rootMemPath, "utf-8");
 
       const pushed = applyPush(cs, rootMem, (p) =>
-        p === "dynamics/self-critique.md" ? selfCritiqueContent : null
+        p === "operators/self-critique.md" ? selfCritiqueContent : null
       );
       assert.equal(pushed.ok, true);
       if (!pushed.ok) return;

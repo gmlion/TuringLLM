@@ -58,3 +58,27 @@ describe("R7: source identifiers use 'operator' not 'dynamic' (where it means a 
     assert.match(s, /operator/i);
   });
 });
+
+describe("R9: phase-operators-identity.test.ts exists; phase-dynamics-identity.test.ts is gone", () => {
+  test("phase-operators-identity.test.ts exists", () => {
+    assert.ok(existsSync(resolve(REPO, "src/test/phase-operators-identity.test.ts")));
+  });
+  test("phase-dynamics-identity.test.ts does NOT exist", () => {
+    assert.ok(!existsSync(resolve(REPO, "src/test/phase-dynamics-identity.test.ts")));
+  });
+});
+
+describe("R54: existing tests don't reference dynamics/", () => {
+  test("no dynamics/ in src/test/*.ts files", () => {
+    let out = "";
+    try {
+      out = execSync(
+        'git grep -l "dynamics/" -- "src/test/*.ts" ":(exclude)src/test/_phase-7-rename.test.ts"',
+        { cwd: REPO, encoding: "utf-8" }
+      ).trim();
+    } catch (e: any) {
+      out = "";
+    }
+    assert.equal(out, "", `unexpected dynamics/ in: ${out}`);
+  });
+});

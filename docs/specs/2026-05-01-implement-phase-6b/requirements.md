@@ -31,7 +31,7 @@ The bundled demo PROGRAM.md is a byte-equal copy of Phase 6's Game of 24 puzzle,
 - **R6**: THE FILE `interpreters/3-search/b-lats/dynamics/expand-node.md` SHALL be byte-equal to the refactored `interpreters/3-search/a-tot/dynamics/expand-node.md` (see R30–R33 below).
 - **R7**: THE FILE `interpreters/3-search/b-lats/dynamics/evaluate.md` SHALL be byte-equal to the canonical `interpreters/1-iterative-refinement/b-evaluator-optimizer/dynamics/evaluate.md`.
 - **R8**: THE FILE `interpreters/3-search/b-lats/dynamics/reflect.md` SHALL be byte-equal to the canonical `interpreters/1-iterative-refinement/c-reflexion/dynamics/reflect.md`.
-- **R9**: `src/test/phase-dynamics-identity.test.ts` SHALL be extended to assert byte equality of all three reused dynamics (R6, R7, R8) between Phase 6b's `dynamics/` and their canonical sources.
+- **R9**: `src/test/phase-operators-identity.test.ts` SHALL be extended to assert byte equality of all three reused dynamics (R6, R7, R8) between Phase 6b's `dynamics/` and their canonical sources.
 
 ### `rollout.md` dynamic contract (NEW)
 

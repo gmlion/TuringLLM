@@ -295,15 +295,15 @@ describe("applyPush", () => {
   });
 
   test("successful push: saves returnState, returns childInstructions and childMemory", () => {
-    const memory = "## State\nplanning\n## Push\ndynamics/consult.md";
+    const memory = "## State\nplanning\n## Push\noperators/consult.md";
     const r = applyPush(makeCs(), memory, (p) => {
-      assert.equal(p, "dynamics/consult.md");
+      assert.equal(p, "operators/consult.md");
       return "# Dynamic";
     });
 
     assert.equal(r.ok, true);
     if (r.ok) {
-      assert.equal(r.target, "dynamics/consult.md");
+      assert.equal(r.target, "operators/consult.md");
       assert.equal(r.callStack.stack.length, 2);
       assert.equal(r.callStack.stack[1].returnState, "planning");
       assert.equal(r.childInstructions, "# Dynamic");
@@ -314,7 +314,7 @@ describe("applyPush", () => {
 
   test("nested push: frame appended, prior frames preserved", () => {
     const cs = makeCs(1); // already 1 dynamic frame at depth 1
-    const memory = "## State\ninner_task\n## Push\ndynamics/sub.md";
+    const memory = "## State\ninner_task\n## Push\noperators/sub.md";
     const r = applyPush(cs, memory, () => "# Sub");
 
     assert.equal(r.ok, true);

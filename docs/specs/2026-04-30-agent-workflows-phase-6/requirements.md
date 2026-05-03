@@ -101,7 +101,7 @@ Phase 6 establishes scaffolding that Phase 6b (LATS) imports verbatim — `expan
 ### `evaluate.md` reuse
 
 - **R45**: THE INTERPRETER SHALL ship `interpreters/3-search/a-tot/dynamics/evaluate.md` as a byte-equal copy of the canonical `interpreters/1-iterative-refinement/b-evaluator-optimizer/dynamics/evaluate.md`.
-- **R46**: `src/test/phase-dynamics-identity.test.ts` SHALL be extended to assert byte equality of `evaluate.md` between the canonical location and `interpreters/3-search/a-tot/dynamics/evaluate.md`.
+- **R46**: `src/test/phase-operators-identity.test.ts` SHALL be extended to assert byte equality of `evaluate.md` between the canonical location and `interpreters/3-search/a-tot/dynamics/evaluate.md`.
 
 ### Robustness — malformed `expand-node.md` output
 

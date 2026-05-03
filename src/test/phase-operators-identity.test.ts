@@ -9,22 +9,22 @@ const __dirname = dirname(__filename);
 const REPO = resolve(__dirname, "../..");
 
 const EVALUATE_PATHS = [
-  "interpreters/1-iterative-refinement/b-evaluator-optimizer/dynamics/evaluate.md",
-  "interpreters/1-iterative-refinement/c-reflexion/dynamics/evaluate.md",
-  "interpreters/5-fixed-sop-teams/a-metagpt/dynamics/evaluate.md",
-  "interpreters/5-fixed-sop-teams/b-chatdev/dynamics/evaluate.md",
-  "interpreters/3-search/a-tot/dynamics/evaluate.md",
-  "interpreters/3-search/b-lats/dynamics/evaluate.md",
+  "interpreters/1-iterative-refinement/b-evaluator-optimizer/operators/evaluate.md",
+  "interpreters/1-iterative-refinement/c-reflexion/operators/evaluate.md",
+  "interpreters/5-fixed-sop-teams/a-metagpt/operators/evaluate.md",
+  "interpreters/5-fixed-sop-teams/b-chatdev/operators/evaluate.md",
+  "interpreters/3-search/a-tot/operators/evaluate.md",
+  "interpreters/3-search/b-lats/operators/evaluate.md",
 ];
 
 const REFLECT_PATHS = [
-  "interpreters/1-iterative-refinement/c-reflexion/dynamics/reflect.md",
-  "interpreters/3-search/b-lats/dynamics/reflect.md",
+  "interpreters/1-iterative-refinement/c-reflexion/operators/reflect.md",
+  "interpreters/3-search/b-lats/operators/reflect.md",
 ];
 
 const EXPAND_NODE_PATHS = [
-  "interpreters/3-search/a-tot/dynamics/expand-node.md",
-  "interpreters/3-search/b-lats/dynamics/expand-node.md",
+  "interpreters/3-search/a-tot/operators/expand-node.md",
+  "interpreters/3-search/b-lats/operators/expand-node.md",
 ];
 
 describe("evaluate.md identity across phases", () => {

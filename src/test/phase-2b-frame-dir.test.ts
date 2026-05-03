@@ -4,15 +4,15 @@ import { formatFrameDir, slugFromTarget } from "../call-stack.js";
 
 describe("slugFromTarget", () => {
   test("basic dynamic path", () => {
-    assert.equal(slugFromTarget("dynamics/verify.md"), "verify");
+    assert.equal(slugFromTarget("operators/verify.md"), "verify");
   });
 
   test("hyphens preserved, extension stripped", () => {
-    assert.equal(slugFromTarget("dynamics/answer-independently.md"), "answer-independently");
+    assert.equal(slugFromTarget("operators/answer-independently.md"), "answer-independently");
   });
 
   test("non-alphanumeric characters replaced with _", () => {
-    assert.equal(slugFromTarget("dynamics/foo.bar baz.md"), "foo_bar_baz");
+    assert.equal(slugFromTarget("operators/foo.bar baz.md"), "foo_bar_baz");
   });
 
   test("path without leading directory", () => {

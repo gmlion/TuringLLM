@@ -670,7 +670,7 @@ Return:
 
 ### `evaluate.md` (R45, R46)
 
-Byte-equal copy of `interpreters/1-iterative-refinement/b-evaluator-optimizer/dynamics/evaluate.md`. Push-args `{{attempt}}`, `{{criterion}}`. Returns `verdict` (`pass`/`fail`) and `feedback`. Identity is enforced by the extended `phase-dynamics-identity.test.ts` (see §Test strategy).
+Byte-equal copy of `interpreters/1-iterative-refinement/b-evaluator-optimizer/dynamics/evaluate.md`. Push-args `{{attempt}}`, `{{criterion}}`. Returns `verdict` (`pass`/`fail`) and `feedback`. Identity is enforced by the extended `phase-operators-identity.test.ts` (see §Test strategy).
 
 The `evaluate.md` will run in **text-only mode** for ToT (R30's criterion is plain prose with no `../../workspace/` paths), so no filesystem inspection is required.
 
@@ -728,7 +728,7 @@ The (R50)-style end-state shape (depth coverage, b=5 cap, samples invariant, his
 
 If a future Phase-6 follow-up wants live-execution validation, the natural home is a manual smoke check in the README's Run-it section, not the unit-test file.
 
-### `src/test/phase-dynamics-identity.test.ts` — EXTENDED (R46)
+### `src/test/phase-operators-identity.test.ts` — EXTENDED (R46)
 
 Append `interpreters/3-search/a-tot/dynamics/evaluate.md` to the existing `EVALUATE_PATHS` constant. The existing assertion ("evaluate.md is byte-equal across all consumers") then transparently covers ToT.
 

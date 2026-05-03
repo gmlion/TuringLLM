@@ -120,11 +120,11 @@ describe("parsePendingQuestions", () => {
 
 describe("parsePush", () => {
   test("extracts path after ## Push header", () => {
-    assert.equal(parsePush("## State\nfoo\n## Push\ndynamics/consult.md"), "dynamics/consult.md");
+    assert.equal(parsePush("## State\nfoo\n## Push\noperators/consult.md"), "operators/consult.md");
   });
 
   test("trims whitespace from path", () => {
-    assert.equal(parsePush("## Push\n  dynamics/consult.md  \n"), "dynamics/consult.md");
+    assert.equal(parsePush("## Push\n  operators/consult.md  \n"), "operators/consult.md");
   });
 
   test("returns null when ## Push is missing", () => {
@@ -164,7 +164,7 @@ describe("removePush", () => {
 
 describe("parsePushArgs", () => {
   test("returns empty object when section absent", () => {
-    const memory = "## State\nfoo\n## Push\ndynamics/x.md";
+    const memory = "## State\nfoo\n## Push\noperators/x.md";
     assert.deepEqual(parsePushArgs(memory), {});
   });
 

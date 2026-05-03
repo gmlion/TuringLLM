@@ -121,7 +121,7 @@ describe("applyPush with ## Push-Args", () => {
   });
 
   test("frameDir slug derived from target filename", () => {
-    const memory = "## State\nworking\n## Push\ndynamics/verify-claims.md";
+    const memory = "## State\nworking\n## Push\noperators/verify-claims.md";
     const target = "# Verify";
     const cs = makeRootStack(3);
     const result = applyPush(cs, memory, () => target);

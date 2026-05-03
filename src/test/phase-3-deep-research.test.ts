@@ -15,8 +15,8 @@ describe("phase-3 c-deep-research: layout, PROGRAM, recursion support", () => {
       "INSTRUCTIONS.md",
       "PROGRAM.md",
       "README.md",
-      "dynamics/plan.md",
-      "dynamics/tackle.md",
+      "operators/plan.md",
+      "operators/tackle.md",
     ]) {
       assert.ok(existsSync(resolve(INTERP, f)), `${f} missing`);
     }
@@ -31,11 +31,11 @@ describe("phase-3 c-deep-research: layout, PROGRAM, recursion support", () => {
   });
 
   test("tackle.md contains the recursion branch (Try → composite path pushes plan.md; iteration pushes tackle.md recursively)", () => {
-    const t = readFileSync(resolve(INTERP, "dynamics/tackle.md"), "utf-8");
+    const t = readFileSync(resolve(INTERP, "operators/tackle.md"), "utf-8");
     // Composite path -> plan.md
-    assert.match(t, /## Push[\s\S]*dynamics\/plan\.md/);
+    assert.match(t, /## Push[\s\S]*operators\/plan\.md/);
     // Recursive -> tackle.md
-    assert.match(t, /## Push[\s\S]*dynamics\/tackle\.md/);
+    assert.match(t, /## Push[\s\S]*operators\/tackle\.md/);
     // Adversarial classification language somewhere in Try
     assert.match(t, /atomic|composite|single tool call/i);
   });

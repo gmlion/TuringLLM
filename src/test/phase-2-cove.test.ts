@@ -34,8 +34,8 @@ describe("d-cove", () => {
       "INSTRUCTIONS.md",
       "PROGRAM.md",
       "README.md",
-      "dynamics/verify.md",
-      "dynamics/answer-independently.md",
+      "operators/verify.md",
+      "operators/answer-independently.md",
     ]) {
       assert.ok(existsSync(resolve(INTERP, f)), `${f} missing`);
     }
@@ -65,7 +65,7 @@ describe("d-cove", () => {
   });
 
   test("verify.md declares three internal states and state=done in template", () => {
-    const dyn = readFileSync(resolve(INTERP, "dynamics/verify.md"), "utf-8");
+    const dyn = readFileSync(resolve(INTERP, "operators/verify.md"), "utf-8");
     for (const needle of [
       'state is "empty"',
       'state is "asking"',
@@ -84,7 +84,7 @@ describe("d-cove", () => {
   });
 
   test("verify.md uses ./scoped/verifications.md and surgical sed for updates", () => {
-    const dyn = readFileSync(resolve(INTERP, "dynamics/verify.md"), "utf-8");
+    const dyn = readFileSync(resolve(INTERP, "operators/verify.md"), "utf-8");
     assert.match(dyn, /\.\/scoped\/verifications\.md/, "verify.md should reference ./scoped/verifications.md");
     assert.match(dyn, /sed -i/, "verify.md must use sed -i for surgical updates");
     // Strategy header (preamble before any ## Instruction) must forbid wholesale rewrites
@@ -98,14 +98,14 @@ describe("d-cove", () => {
   });
 
   test("verify.md returns `revised:` via ## Return (not ## Revised directly)", () => {
-    const dyn = readFileSync(resolve(INTERP, "dynamics/verify.md"), "utf-8");
+    const dyn = readFileSync(resolve(INTERP, "operators/verify.md"), "utf-8");
     assert.match(dyn, /## Return/, "verify.md should use ## Return");
     assert.match(dyn, /revised:/, "verify.md ## Return should have revised key");
     assert.doesNotMatch(dyn, /^## Revised\n/m, "verify.md must not write ## Revised section directly");
   });
 
   test("answer-independently.md is single-instruction and returns `answer:` via ## Return", () => {
-    const dyn = readFileSync(resolve(INTERP, "dynamics/answer-independently.md"), "utf-8");
+    const dyn = readFileSync(resolve(INTERP, "operators/answer-independently.md"), "utf-8");
     const instructionCount = (dyn.match(/^## Instruction:/gm) ?? []).length;
     assert.equal(instructionCount, 1, "expected exactly one instruction");
     assert.match(dyn, /## Return/, "answer-independently.md should use ## Return");
@@ -114,14 +114,14 @@ describe("d-cove", () => {
   });
 
   test("answer-independently.md references no caller MEMORY section", () => {
-    const dyn = readFileSync(resolve(INTERP, "dynamics/answer-independently.md"), "utf-8");
+    const dyn = readFileSync(resolve(INTERP, "operators/answer-independently.md"), "utf-8");
     assert.doesNotMatch(dyn, /## Draft\b/, "must not reference ## Draft");
     assert.doesNotMatch(dyn, /## Verifications\b/, "must not reference ## Verifications");
     assert.doesNotMatch(dyn, /## Revised\b/, "must not reference ## Revised");
   });
 
   test("answer-independently.md declares state is empty condition", () => {
-    const dyn = readFileSync(resolve(INTERP, "dynamics/answer-independently.md"), "utf-8");
+    const dyn = readFileSync(resolve(INTERP, "operators/answer-independently.md"), "utf-8");
     assert.match(dyn, /state is "empty"/, "answer-independently.md should have empty-state condition");
   });
 
@@ -136,15 +136,15 @@ describe("d-cove", () => {
 
     test("strategy push of verify.md -> draft arg substituted, depth=2", () => {
       const { cs, rootMemPath } = setupRootFrame(tmp,
-        "## State\ndrafted\n## Push\ndynamics/verify.md\n## Push-Args\ndraft: |\n  A draft with claims"
+        "## State\ndrafted\n## Push\noperators/verify.md\n## Push-Args\ndraft: |\n  A draft with claims"
       );
       writeFileSync(resolve(tmp, "frames/f000-strategy/scoped/draft.md"), "A draft with claims\n", "utf-8");
 
       const rootMem = readFileSync(rootMemPath, "utf-8");
-      const verifyContent = readFileSync(resolve(INTERP, "dynamics/verify.md"), "utf-8");
+      const verifyContent = readFileSync(resolve(INTERP, "operators/verify.md"), "utf-8");
 
       const pushed = applyPush(cs, rootMem, (p) =>
-        p === "dynamics/verify.md" ? verifyContent : null
+        p === "operators/verify.md" ? verifyContent : null
       );
       assert.equal(pushed.ok, true, "push should succeed");
       if (!pushed.ok) return;
@@ -177,14 +177,14 @@ describe("d-cove", () => {
     test("R27 depth-3 invariant: verify pushes answer-independently.md -> stack.length === 3", () => {
       // Step 1: strategy (depth 1) pushes verify.md (depth 2)
       const { cs: cs0, rootMemPath } = setupRootFrame(tmp,
-        "## State\ndrafted\n## Push\ndynamics/verify.md\n## Push-Args\ndraft: |\n  claim text"
+        "## State\ndrafted\n## Push\noperators/verify.md\n## Push-Args\ndraft: |\n  claim text"
       );
       const rootMem = readFileSync(rootMemPath, "utf-8");
-      const verifyContent = readFileSync(resolve(INTERP, "dynamics/verify.md"), "utf-8");
-      const answerContent = readFileSync(resolve(INTERP, "dynamics/answer-independently.md"), "utf-8");
+      const verifyContent = readFileSync(resolve(INTERP, "operators/verify.md"), "utf-8");
+      const answerContent = readFileSync(resolve(INTERP, "operators/answer-independently.md"), "utf-8");
 
       const push1 = applyPush(cs0, rootMem, (p) =>
-        p === "dynamics/verify.md" ? verifyContent : null
+        p === "operators/verify.md" ? verifyContent : null
       );
       assert.equal(push1.ok, true, "first push should succeed");
       if (!push1.ok) return;
@@ -198,11 +198,11 @@ describe("d-cove", () => {
       // Step 2: verify (depth 2) pushes answer-independently.md (depth 3)
       const askingMemory =
         "## State\nasking\n" +
-        "## Push\ndynamics/answer-independently.md\n" +
+        "## Push\noperators/answer-independently.md\n" +
         "## Push-Args\nquestion: |\n  Is X true?";
 
       const push2 = applyPush(push1.callStack, askingMemory, (p) =>
-        p === "dynamics/answer-independently.md" ? answerContent : null
+        p === "operators/answer-independently.md" ? answerContent : null
       );
       assert.equal(push2.ok, true, "second push should succeed");
       if (!push2.ok) return;
@@ -222,14 +222,14 @@ describe("d-cove", () => {
     test("answer-independently pops back to verify with asking_completed and ## Answer spliced", () => {
       // Build stack: strategy (0) -> verify (1) -> answer-indep (2)
       const { cs: cs0, rootMemPath } = setupRootFrame(tmp,
-        "## State\ndrafted\n## Push\ndynamics/verify.md\n## Push-Args\ndraft: |\n  claim"
+        "## State\ndrafted\n## Push\noperators/verify.md\n## Push-Args\ndraft: |\n  claim"
       );
       const rootMem = readFileSync(rootMemPath, "utf-8");
-      const verifyContent = readFileSync(resolve(INTERP, "dynamics/verify.md"), "utf-8");
-      const answerContent = readFileSync(resolve(INTERP, "dynamics/answer-independently.md"), "utf-8");
+      const verifyContent = readFileSync(resolve(INTERP, "operators/verify.md"), "utf-8");
+      const answerContent = readFileSync(resolve(INTERP, "operators/answer-independently.md"), "utf-8");
 
       const push1 = applyPush(cs0, rootMem, (p) =>
-        p === "dynamics/verify.md" ? verifyContent : null
+        p === "operators/verify.md" ? verifyContent : null
       );
       assert.equal(push1.ok, true);
       if (!push1.ok) return;
@@ -238,9 +238,9 @@ describe("d-cove", () => {
       writeFileSync(rootMemPath, push1.callerMemoryAfter, "utf-8");
 
       const askingMemory =
-        "## State\nasking\n## Push\ndynamics/answer-independently.md\n## Push-Args\nquestion: |\n  Q?";
+        "## State\nasking\n## Push\noperators/answer-independently.md\n## Push-Args\nquestion: |\n  Q?";
       const push2 = applyPush(push1.callStack, askingMemory, (p) =>
-        p === "dynamics/answer-independently.md" ? answerContent : null
+        p === "operators/answer-independently.md" ? answerContent : null
       );
       assert.equal(push2.ok, true);
       if (!push2.ok) return;
@@ -272,13 +272,13 @@ describe("d-cove", () => {
 
     test("verify pops back to strategy with drafted_completed and ## Revised spliced", () => {
       const { cs: cs0, rootMemPath } = setupRootFrame(tmp,
-        "## State\ndrafted\n## Push\ndynamics/verify.md\n## Push-Args\ndraft: |\n  my draft"
+        "## State\ndrafted\n## Push\noperators/verify.md\n## Push-Args\ndraft: |\n  my draft"
       );
       const rootMem = readFileSync(rootMemPath, "utf-8");
-      const verifyContent = readFileSync(resolve(INTERP, "dynamics/verify.md"), "utf-8");
+      const verifyContent = readFileSync(resolve(INTERP, "operators/verify.md"), "utf-8");
 
       const push1 = applyPush(cs0, rootMem, (p) =>
-        p === "dynamics/verify.md" ? verifyContent : null
+        p === "operators/verify.md" ? verifyContent : null
       );
       assert.equal(push1.ok, true);
       if (!push1.ok) return;

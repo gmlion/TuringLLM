@@ -14,7 +14,7 @@ describe("1b evaluator-optimizer", () => {
   test("interpreter files exist at the Group-1 path", () => {
     assert.ok(existsSync(resolve(INTERP, "INSTRUCTIONS.md")), "INSTRUCTIONS.md missing");
     assert.ok(existsSync(resolve(INTERP, "PROGRAM.md")), "PROGRAM.md missing");
-    assert.ok(existsSync(resolve(INTERP, "dynamics/evaluate.md")), "dynamics/evaluate.md missing");
+    assert.ok(existsSync(resolve(INTERP, "operators/evaluate.md")), "operators/evaluate.md missing");
   });
 
   test("strategy declares the four required states", () => {
@@ -39,7 +39,7 @@ describe("1b evaluator-optimizer", () => {
   });
 
   test("evaluate dynamic uses {{attempt}} and {{criterion}} placeholders and writes ## Return", () => {
-    const dyn = readFileSync(resolve(INTERP, "dynamics/evaluate.md"), "utf-8");
+    const dyn = readFileSync(resolve(INTERP, "operators/evaluate.md"), "utf-8");
     assert.match(dyn, /\{\{attempt\}\}/, "evaluate.md should use {{attempt}} placeholder");
     assert.match(dyn, /\{\{criterion\}\}/, "evaluate.md should use {{criterion}} placeholder");
     assert.match(dyn, /## Return/, "evaluate.md should use ## Return");
@@ -50,7 +50,7 @@ describe("1b evaluator-optimizer", () => {
   });
 
   test("evaluate dynamic declares state=done (as MEMORY value)", () => {
-    const dyn = readFileSync(resolve(INTERP, "dynamics/evaluate.md"), "utf-8");
+    const dyn = readFileSync(resolve(INTERP, "operators/evaluate.md"), "utf-8");
     assert.match(dyn, /^\s*## State\s*\n\s*done\b/m, "evaluate.md Return block should set state to done");
     assert.match(dyn, /state is "empty"/, "evaluate.md should have empty-state condition");
   });
@@ -84,16 +84,16 @@ describe("1b evaluator-optimizer", () => {
 
     test("push on attempted state -> dynamic gets attempt and criterion args substituted", () => {
       const { cs, rootMemPath } = setupRootFrame(
-        "## State\nattempted\n## Push\ndynamics/evaluate.md\n## Push-Args\nattempt: |\n  first attempt\n  line two\ncriterion: |\n  must do X\n  must do Y"
+        "## State\nattempted\n## Push\noperators/evaluate.md\n## Push-Args\nattempt: |\n  first attempt\n  line two\ncriterion: |\n  must do X\n  must do Y"
       );
       writeFileSync(resolve(tmp, "frames/f000-strategy/scoped/attempt.md"), "first attempt\nline two\n", "utf-8");
       writeFileSync(resolve(tmp, "frames/f000-strategy/scoped/criterion.md"), "must do X\nmust do Y\n", "utf-8");
 
       const rootMem = readFileSync(rootMemPath, "utf-8");
-      const evaluateContent = readFileSync(resolve(INTERP, "dynamics/evaluate.md"), "utf-8");
+      const evaluateContent = readFileSync(resolve(INTERP, "operators/evaluate.md"), "utf-8");
 
       const pushed = applyPush(cs, rootMem, (p) =>
-        p === "dynamics/evaluate.md" ? evaluateContent : null
+        p === "operators/evaluate.md" ? evaluateContent : null
       );
       assert.equal(pushed.ok, true, "push should succeed");
       if (!pushed.ok) return;
@@ -129,14 +129,14 @@ describe("1b evaluator-optimizer", () => {
 
     test("child writes ## Return -> pop splices ## Verdict and ## Feedback into caller", () => {
       const { cs, rootMemPath } = setupRootFrame(
-        "## State\nattempted\n## Push\ndynamics/evaluate.md\n## Push-Args\nattempt: |\n  original attempt\ncriterion: |\n  must do X"
+        "## State\nattempted\n## Push\noperators/evaluate.md\n## Push-Args\nattempt: |\n  original attempt\ncriterion: |\n  must do X"
       );
 
-      const evaluateContent = readFileSync(resolve(INTERP, "dynamics/evaluate.md"), "utf-8");
+      const evaluateContent = readFileSync(resolve(INTERP, "operators/evaluate.md"), "utf-8");
       const rootMem = readFileSync(rootMemPath, "utf-8");
 
       const pushed = applyPush(cs, rootMem, (p) =>
-        p === "dynamics/evaluate.md" ? evaluateContent : null
+        p === "operators/evaluate.md" ? evaluateContent : null
       );
       assert.equal(pushed.ok, true);
       if (!pushed.ok) return;
@@ -178,14 +178,14 @@ describe("1b evaluator-optimizer", () => {
 
     test("pass verdict -> state=done -> halts at depth 0", () => {
       const { cs, rootMemPath } = setupRootFrame(
-        "## State\nattempted\n## Push\ndynamics/evaluate.md\n## Push-Args\nattempt: |\n  second attempt\ncriterion: |\n  must do X"
+        "## State\nattempted\n## Push\noperators/evaluate.md\n## Push-Args\nattempt: |\n  second attempt\ncriterion: |\n  must do X"
       );
 
-      const evaluateContent = readFileSync(resolve(INTERP, "dynamics/evaluate.md"), "utf-8");
+      const evaluateContent = readFileSync(resolve(INTERP, "operators/evaluate.md"), "utf-8");
       const rootMem = readFileSync(rootMemPath, "utf-8");
 
       const pushed = applyPush(cs, rootMem, (p) =>
-        p === "dynamics/evaluate.md" ? evaluateContent : null
+        p === "operators/evaluate.md" ? evaluateContent : null
       );
       assert.equal(pushed.ok, true);
       if (!pushed.ok) return;

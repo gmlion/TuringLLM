@@ -261,7 +261,7 @@ comparable. The PROGRAM byte-equal invariant is enforced by
 `src/test/phase-4-chatdev.test.ts` (the `cmp` against the a-metagpt
 copy). The four-way `evaluate.md` byte-equal invariant
 (b-evaluator-optimizer / c-reflexion / a-metagpt / b-chatdev) is
-enforced by `src/test/phase-dynamics-identity.test.ts`. No drift
+enforced by `src/test/phase-operators-identity.test.ts`. No drift
 observed during T8 / T9 / T10.
 
 ## Phase 4 — dialogue turn cap

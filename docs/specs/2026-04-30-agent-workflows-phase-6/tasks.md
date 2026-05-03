@@ -167,12 +167,12 @@
 
 **Files:**
 - Create: `interpreters/3-search/a-tot/dynamics/evaluate.md` (byte-equal copy)
-- Modify: `src/test/phase-dynamics-identity.test.ts`
+- Modify: `src/test/phase-operators-identity.test.ts`
 - Modify: `src/test/phase-6-tot.test.ts` (append assertions)
 
 - [ ] **Step 1: Write the failing test**
 
-    First, extend `src/test/phase-dynamics-identity.test.ts` by appending one path to the `EVALUATE_PATHS` array:
+    First, extend `src/test/phase-operators-identity.test.ts` by appending one path to the `EVALUATE_PATHS` array:
 
     ```typescript
     // Replace the existing EVALUATE_PATHS array with:
@@ -207,7 +207,7 @@
 
 - [ ] **Step 2: Run test to verify it fails**
 
-    Run: `npm test 2>&1 | grep -E "phase-6|phase-dynamics-identity|FAIL"`
+    Run: `npm test 2>&1 | grep -E "phase-6|phase-operators-identity|FAIL"`
     Expected: FAIL with substring `evaluate.md missing in a-tot/dynamics/` and FAIL in the identity test for "evaluate.md diverged between … and interpreters/3-search/a-tot/dynamics/evaluate.md".
 
 - [ ] **Step 3: Write minimal implementation**
@@ -221,14 +221,14 @@
 
 - [ ] **Step 4: Run test to verify it passes**
 
-    Run: `npm test 2>&1 | grep -E "phase-6|phase-dynamics-identity|FAIL"`
+    Run: `npm test 2>&1 | grep -E "phase-6|phase-operators-identity|FAIL"`
     Expected: PASS for both `evaluate.md exists in a-tot` and the byte-equal assertions; no FAIL output.
 
 - [ ] **Step 5: Commit**
 
     ```bash
     git add interpreters/3-search/a-tot/dynamics/evaluate.md \
-            src/test/phase-dynamics-identity.test.ts \
+            src/test/phase-operators-identity.test.ts \
             src/test/phase-6-tot.test.ts
     git commit -m "feat(phase-6): copy evaluate.md byte-equal + extend identity test (satisfies: R45, R46)"
     ```
@@ -2002,7 +2002,7 @@
     | `dynamics/score.md` | `thought`, `target` | `value` ∈ {`sure`, `likely`, `impossible`} | 1 (pushed 3× per child) |
     | `dynamics/evaluate.md` | `attempt`, `criterion` | `verdict` ∈ {`pass`, `fail`}, `feedback` | 1 |
 
-    `evaluate.md` is the canonical 1b copy, byte-equal — pinned by `src/test/phase-dynamics-identity.test.ts`.
+    `evaluate.md` is the canonical 1b copy, byte-equal — pinned by `src/test/phase-operators-identity.test.ts`.
 
     ## Demo `PROGRAM.md`
 
@@ -2123,5 +2123,5 @@
 - [ ] Every task heading ends with `(satisfies: R#, …)`.
 - [ ] No `// TODO`, `// fill in`, or "see other task" placeholders in any code step.
 - [ ] All commit messages reference the task's R# tag.
-- [ ] After T16, `npm test` runs green end-to-end, including `phase-dynamics-identity.test.ts` and the new `phase-6-tot.test.ts`.
+- [ ] After T16, `npm test` runs green end-to-end, including `phase-operators-identity.test.ts` and the new `phase-6-tot.test.ts`.
 - [ ] After T16, the smoke-check in T15's "Run it" section is *manually* executed once on a default provider (Claude Code or Anthropic API) and produces either `## Solution` (preferred) or `## No Solution Found` for the demo PROGRAM.md. R50's full end-state assertions are validated here, not in `npm test`.

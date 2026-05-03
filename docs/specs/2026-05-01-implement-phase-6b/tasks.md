@@ -20,7 +20,7 @@
 | T6  | Phase 6 leaf README delta + BFS-preservation regression test            | R27, R29, R84                                      |
 | T7  | Bootstrap LATS dir + group README delta + test-file skeleton            | R1, R2, R4, R5, R72                                |
 | T8  | Copy three reused dynamics into `b-lats/dynamics/`                      | R6, R7, R8                                         |
-| T9  | Extend `phase-dynamics-identity.test.ts` for the three reused copies    | R9                                                 |
+| T9  | Extend `phase-operators-identity.test.ts` for the three reused copies    | R9                                                 |
 | T10 | LATS demo `PROGRAM.md` (byte-equal Phase 6)                             | R69                                                |
 | T11 | New `rollout.md` dynamic                                                | R10, R11, R12, R13                                 |
 | T12 | LATS strategy preamble + Initialize                                     | R34, R35, R36                                      |
@@ -989,14 +989,14 @@
 
 ---
 
-## Task 9: Extend `phase-dynamics-identity.test.ts` for the three reused copies   (satisfies: R9)
+## Task 9: Extend `phase-operators-identity.test.ts` for the three reused copies   (satisfies: R9)
 
 **Files:**
-- Modify: `src/test/phase-dynamics-identity.test.ts`
+- Modify: `src/test/phase-operators-identity.test.ts`
 
 - [ ] **Step 1: Write the failing test**
 
-    Edit `src/test/phase-dynamics-identity.test.ts`. Append `interpreters/3-search/b-lats/dynamics/evaluate.md` to the existing `EVALUATE_PATHS` array (last entry). Add two new identity blocks below the `evaluate.md` describe:
+    Edit `src/test/phase-operators-identity.test.ts`. Append `interpreters/3-search/b-lats/dynamics/evaluate.md` to the existing `EVALUATE_PATHS` array (last entry). Add two new identity blocks below the `evaluate.md` describe:
 
     ```typescript
     const EVALUATE_PATHS = [
@@ -1062,7 +1062,7 @@
 - [ ] **Step 5: Commit**
 
     ```bash
-    git add src/test/phase-dynamics-identity.test.ts
+    git add src/test/phase-operators-identity.test.ts
     git commit -m "test(phase-6b): identity test covers reused expand-node/evaluate/reflect (satisfies: R9)"
     ```
 
@@ -2588,7 +2588,7 @@
     | `dynamics/evaluate.md` | `attempt`, `criterion` | `verdict` ∈ {`pass`, `fail`}, `feedback` | 1 |
     | `dynamics/reflect.md` | `attempt`, `verdict`, `feedback` | `lesson` | 1 |
 
-    `expand-node.md`, `evaluate.md`, and `reflect.md` are byte-equal copies pinned by `src/test/phase-dynamics-identity.test.ts`. `rollout.md` is new in this phase.
+    `expand-node.md`, `evaluate.md`, and `reflect.md` are byte-equal copies pinned by `src/test/phase-operators-identity.test.ts`. `rollout.md` is new in this phase.
 
     ## Demo `PROGRAM.md`
 

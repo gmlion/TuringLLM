@@ -2553,7 +2553,7 @@ Phase-4 group README, and adds the shell-feature re-homing test that
 R40 requires.
 
 **Files:**
-- Rename: `src/test/phase-1-dynamics-identity.test.ts` → `src/test/phase-dynamics-identity.test.ts`
+- Rename: `src/test/phase-1-dynamics-identity.test.ts` → `src/test/phase-operators-identity.test.ts`
 - Modify: the renamed file (extend to four-way)
 - Create: `interpreters/5-fixed-sop-teams/README.md`
 - Create: `src/test/phase-4-shell-features.test.ts`
@@ -2562,12 +2562,12 @@ R40 requires.
 
     ```bash
     git mv src/test/phase-1-dynamics-identity.test.ts \
-           src/test/phase-dynamics-identity.test.ts
+           src/test/phase-operators-identity.test.ts
     ```
 
 - [ ] **Step 2: Replace the renamed file's content with the four-way version**
 
-    Overwrite `src/test/phase-dynamics-identity.test.ts` with exact content:
+    Overwrite `src/test/phase-operators-identity.test.ts` with exact content:
 
     ```typescript
     import { test, describe } from "node:test";
@@ -2707,7 +2707,7 @@ R40 requires.
     Both leaves ship a byte-equal copy of `dynamics/evaluate.md`
     (from Phase 1b). The four-way identity across `b-evaluator-
     optimizer`, `c-reflexion`, `a-metagpt`, `b-chatdev` is pinned
-    by `src/test/phase-dynamics-identity.test.ts` (R29).
+    by `src/test/phase-operators-identity.test.ts` (R29).
 
     ## Run them side-by-side
 
@@ -2734,7 +2734,7 @@ R40 requires.
 - [ ] **Step 8: Commit**
 
     ```bash
-    git add src/test/phase-dynamics-identity.test.ts \
+    git add src/test/phase-operators-identity.test.ts \
             src/test/phase-4-shell-features.test.ts \
             interpreters/5-fixed-sop-teams/README.md
     git commit -m "test+doc(phase-4): 4-way evaluate identity + shell-feature rehoming + Phase-4 group README (satisfies: R29, R40, R48)"

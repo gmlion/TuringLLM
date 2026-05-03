@@ -33,8 +33,8 @@ describe("1c reflexion", () => {
     assert.ok(existsSync(resolve(INTERP, "INSTRUCTIONS.md")), "INSTRUCTIONS.md missing");
     assert.ok(existsSync(resolve(INTERP, "PROGRAM.md")), "PROGRAM.md missing");
     assert.ok(existsSync(resolve(INTERP, "test_palindrome.md")), "test_palindrome.md missing");
-    assert.ok(existsSync(resolve(INTERP, "dynamics/evaluate.md")), "dynamics/evaluate.md missing");
-    assert.ok(existsSync(resolve(INTERP, "dynamics/reflect.md")), "dynamics/reflect.md missing");
+    assert.ok(existsSync(resolve(INTERP, "operators/evaluate.md")), "operators/evaluate.md missing");
+    assert.ok(existsSync(resolve(INTERP, "operators/reflect.md")), "operators/reflect.md missing");
   });
 
   test("strategy declares every required state", () => {
@@ -79,7 +79,7 @@ describe("1c reflexion", () => {
   });
 
   test("evaluate dynamic uses {{attempt}} and {{criterion}} and writes ## Return (byte-equal with b)", () => {
-    const dyn = readFileSync(resolve(INTERP, "dynamics/evaluate.md"), "utf-8");
+    const dyn = readFileSync(resolve(INTERP, "operators/evaluate.md"), "utf-8");
     assert.match(dyn, /\{\{attempt\}\}/, "evaluate.md should use {{attempt}} placeholder");
     assert.match(dyn, /\{\{criterion\}\}/, "evaluate.md should use {{criterion}} placeholder");
     assert.match(dyn, /## Return/, "evaluate.md should use ## Return");
@@ -92,7 +92,7 @@ describe("1c reflexion", () => {
   });
 
   test("reflect dynamic uses {{attempt}}, {{verdict}}, {{feedback}} and writes ## Return with lesson key", () => {
-    const dyn = readFileSync(resolve(INTERP, "dynamics/reflect.md"), "utf-8");
+    const dyn = readFileSync(resolve(INTERP, "operators/reflect.md"), "utf-8");
     assert.match(dyn, /\{\{attempt\}\}/, "reflect.md should use {{attempt}} placeholder");
     assert.match(dyn, /\{\{verdict\}\}/, "reflect.md should use {{verdict}} placeholder");
     assert.match(dyn, /\{\{feedback\}\}/, "reflect.md should use {{feedback}} placeholder");
@@ -115,14 +115,14 @@ describe("1c reflexion", () => {
     test("push on attempted state -> dynamic gets attempt and criterion args substituted", () => {
       const { cs, rootMemPath } = setupRootFrame(
         tmp,
-        "## State\nattempted\n## Push\ndynamics/evaluate.md\n## Push-Args\nattempt: |\n  first attempt\n  line two\ncriterion: |\n  must do X\n  must do Y"
+        "## State\nattempted\n## Push\noperators/evaluate.md\n## Push-Args\nattempt: |\n  first attempt\n  line two\ncriterion: |\n  must do X\n  must do Y"
       );
 
       const rootMem = readFileSync(rootMemPath, "utf-8");
-      const evaluateContent = readFileSync(resolve(INTERP, "dynamics/evaluate.md"), "utf-8");
+      const evaluateContent = readFileSync(resolve(INTERP, "operators/evaluate.md"), "utf-8");
 
       const pushed = applyPush(cs, rootMem, (p) =>
-        p === "dynamics/evaluate.md" ? evaluateContent : null
+        p === "operators/evaluate.md" ? evaluateContent : null
       );
       assert.equal(pushed.ok, true, "push should succeed");
       if (!pushed.ok) return;
@@ -149,14 +149,14 @@ describe("1c reflexion", () => {
     test("child writes ## Return with verdict/feedback -> pop splices ## Verdict and ## Feedback into caller", () => {
       const { cs, rootMemPath } = setupRootFrame(
         tmp,
-        "## State\nattempted\n## Push\ndynamics/evaluate.md\n## Push-Args\nattempt: |\n  original attempt\ncriterion: |\n  must do X"
+        "## State\nattempted\n## Push\noperators/evaluate.md\n## Push-Args\nattempt: |\n  original attempt\ncriterion: |\n  must do X"
       );
 
-      const evaluateContent = readFileSync(resolve(INTERP, "dynamics/evaluate.md"), "utf-8");
+      const evaluateContent = readFileSync(resolve(INTERP, "operators/evaluate.md"), "utf-8");
       const rootMem = readFileSync(rootMemPath, "utf-8");
 
       const pushed = applyPush(cs, rootMem, (p) =>
-        p === "dynamics/evaluate.md" ? evaluateContent : null
+        p === "operators/evaluate.md" ? evaluateContent : null
       );
       assert.equal(pushed.ok, true);
       if (!pushed.ok) return;
@@ -209,14 +209,14 @@ describe("1c reflexion", () => {
       const { cs, rootMemPath } = setupRootFrame(
         tmp,
         memAtFailedAttempt +
-        "## Push\ndynamics/reflect.md\n## Push-Args\nattempt: |\n  my attempt text\nverdict: |\n  fail\nfeedback: |\n  missed edge case X"
+        "## Push\noperators/reflect.md\n## Push-Args\nattempt: |\n  my attempt text\nverdict: |\n  fail\nfeedback: |\n  missed edge case X"
       );
 
-      const reflectContent = readFileSync(resolve(INTERP, "dynamics/reflect.md"), "utf-8");
+      const reflectContent = readFileSync(resolve(INTERP, "operators/reflect.md"), "utf-8");
       const rootMem = readFileSync(rootMemPath, "utf-8");
 
       const pushed = applyPush(cs, rootMem, (p) =>
-        p === "dynamics/reflect.md" ? reflectContent : null
+        p === "operators/reflect.md" ? reflectContent : null
       );
       assert.equal(pushed.ok, true, "reflect push should succeed");
       if (!pushed.ok) return;
@@ -334,7 +334,7 @@ describe("1c reflexion", () => {
     });
 
     test("reflect push/pop two iterations: lesson spliced each time, state advances to attempting", () => {
-      const reflectContent = readFileSync(resolve(INTERP, "dynamics/reflect.md"), "utf-8");
+      const reflectContent = readFileSync(resolve(INTERP, "operators/reflect.md"), "utf-8");
       const lessonsPath = resolve(tmp, "frames/f000-strategy/scoped/lessons.md");
 
       // Ensure scoped directory and empty lessons.md exist before any iteration.
@@ -360,11 +360,11 @@ describe("1c reflexion", () => {
         const rootMemPath = resolve(tmp, "frames/f000-strategy/MEMORY.md");
         const memWithPush =
           memAtFailedAttempt +
-          `\n## Push\ndynamics/reflect.md\n## Push-Args\nattempt: |\n  ${attemptText}\nverdict: |\n  ${verdictText}\nfeedback: |\n  ${feedbackText}`;
+          `\n## Push\noperators/reflect.md\n## Push-Args\nattempt: |\n  ${attemptText}\nverdict: |\n  ${verdictText}\nfeedback: |\n  ${feedbackText}`;
         writeFileSync(rootMemPath, memWithPush, "utf-8");
 
         const pushed = applyPush(cs, memWithPush, (p) =>
-          p === "dynamics/reflect.md" ? reflectContent : null
+          p === "operators/reflect.md" ? reflectContent : null
         );
         assert.equal(pushed.ok, true, "reflect push should succeed");
         if (!pushed.ok) throw new Error("push failed");

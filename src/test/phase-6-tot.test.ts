@@ -19,11 +19,11 @@ describe("phase-6 a-tot: directory layout (R1)", () => {
   test("interpreter dir interpreters/3-search/a-tot/ exists (R1)", () => {
     assert.ok(existsSync(INTERP), "interpreter directory missing");
   });
-  test("interpreter has INSTRUCTIONS.md, PROGRAM.md, README.md, dynamics/ (R1)", () => {
+  test("interpreter has INSTRUCTIONS.md, PROGRAM.md, README.md, operators/ (R1)", () => {
     for (const f of ["INSTRUCTIONS.md", "PROGRAM.md", "README.md"]) {
       assert.ok(existsSync(resolve(INTERP, f)), `${f} missing`);
     }
-    assert.ok(existsSync(resolve(INTERP, "dynamics")), "dynamics/ missing");
+    assert.ok(existsSync(resolve(INTERP, "operators")), "operators/ missing");
   });
 });
 
@@ -46,17 +46,17 @@ describe("phase-6 a-tot: group README (R2)", () => {
 });
 
 describe("phase-6 a-tot: evaluate.md reuse (R45)", () => {
-  test("dynamics/evaluate.md exists in a-tot", () => {
+  test("operators/evaluate.md exists in a-tot", () => {
     assert.ok(
-      existsSync(resolve(INTERP, "dynamics/evaluate.md")),
-      "evaluate.md missing in a-tot/dynamics/",
+      existsSync(resolve(INTERP, "operators/evaluate.md")),
+      "evaluate.md missing in a-tot/operators/",
     );
   });
-  test("dynamics/evaluate.md is byte-equal to canonical 1b copy (R45)", () => {
+  test("operators/evaluate.md is byte-equal to canonical 1b copy (R45)", () => {
     const canon = readFileSync(
-      resolve(REPO, "interpreters/1-iterative-refinement/b-evaluator-optimizer/dynamics/evaluate.md"),
+      resolve(REPO, "interpreters/1-iterative-refinement/b-evaluator-optimizer/operators/evaluate.md"),
     );
-    const here = readFileSync(resolve(INTERP, "dynamics/evaluate.md"));
+    const here = readFileSync(resolve(INTERP, "operators/evaluate.md"));
     assert.ok(canon.equals(here), "evaluate.md diverged from canonical");
   });
 });
@@ -127,9 +127,9 @@ describe("phase-6 a-tot: tree ledger schema post-refactor (R24)", () => {
 });
 
 describe("phase-6 a-tot: expand-node.md dynamic (post-refactor R14, R30)", () => {
-  const path = resolve(INTERP, "dynamics/expand-node.md");
+  const path = resolve(INTERP, "operators/expand-node.md");
 
-  test("dynamics/expand-node.md exists", () => {
+  test("operators/expand-node.md exists", () => {
     assert.ok(existsSync(path), "expand-node.md missing");
   });
 
@@ -230,9 +230,9 @@ describe("phase-6 a-tot: Expand-absorb post-refactor (R21)", () => {
 });
 
 describe("phase-6 a-tot: score.md dynamic (post-refactor R15, R31)", () => {
-  const path = resolve(INTERP, "dynamics/score.md");
+  const path = resolve(INTERP, "operators/score.md");
 
-  test("dynamics/score.md exists", () => {
+  test("operators/score.md exists", () => {
     assert.ok(existsSync(path), "score.md missing");
   });
 
@@ -282,14 +282,14 @@ describe("phase-6 a-tot: Score-push post-refactor (R20)", () => {
 
 describe("phase-6 a-tot: refactored dynamics vocabulary check (R26)", () => {
   test("expand-node.md prose has no Game-of-24 vocabulary (R26)", () => {
-    const s = readFileSync(resolve(INTERP, "dynamics/expand-node.md"), "utf-8");
+    const s = readFileSync(resolve(INTERP, "operators/expand-node.md"), "utf-8");
     for (const banned of ["Game of 24", "arithmetic", "numbers_remaining", "parent_thought", "target"]) {
       assert.ok(!s.includes(banned), `expand-node.md contains: ${banned}`);
     }
   });
 
   test("score.md prose has no Game-of-24 vocabulary (R26)", () => {
-    const s = readFileSync(resolve(INTERP, "dynamics/score.md"), "utf-8");
+    const s = readFileSync(resolve(INTERP, "operators/score.md"), "utf-8");
     for (const banned of ["Game of 24", "arithmetic", "thought", "target"]) {
       assert.ok(!s.includes(banned), `score.md contains: ${banned}`);
     }
@@ -421,9 +421,9 @@ describe("phase-6 a-tot: Goal-absorb (R31–R34)", () => {
     assert.match(gp, /\blive\b/);
   });
 
-  test("Goal-push pushes dynamics/evaluate.md with attempt + criterion (R30)", () => {
+  test("Goal-push pushes operators/evaluate.md with attempt + criterion (R30)", () => {
     const gp = extractInstructionBody(s, "Goal-push");
-    assert.match(gp, /## Push\s*\ndynamics\/evaluate\.md/);
+    assert.match(gp, /## Push\s*\noperators\/evaluate\.md/);
     for (const a of ["attempt", "criterion"]) {
       assert.match(gp, new RegExp(`^\\s*${a}:`, "m"), `Goal-push missing arg ${a}`);
     }
@@ -545,8 +545,8 @@ describe("phase-6 a-tot: negative requirements (R52–R57)", () => {
     assert.doesNotMatch(sProg, /\bk\s*[=:]\s*\d|\bb\s*[=:]\s*\d/i);
   });
 
-  test("no Graph-of-Thoughts variant in dynamics/ (R54)", () => {
-    const dyns = readdirSync(resolve(INTERP, "dynamics"));
+  test("no Graph-of-Thoughts variant in operators/ (R54)", () => {
+    const dyns = readdirSync(resolve(INTERP, "operators"));
     for (const d of dyns) {
       assert.doesNotMatch(d, /aggregate|graph|merge/i, `unexpected GoT-style dynamic ${d}`);
     }
@@ -556,9 +556,9 @@ describe("phase-6 a-tot: negative requirements (R52–R57)", () => {
     assert.doesNotMatch(sInst, /\b(retry|attempts_left|budget|max_iterations|time_limit)\b/i);
   });
 
-  test("dynamics never reach into parent scoped/ (R56)", () => {
+  test("operators never reach into parent scoped/ (R56)", () => {
     for (const dyn of ["expand-node.md", "score.md", "evaluate.md"]) {
-      const s = readFileSync(resolve(INTERP, "dynamics", dyn), "utf-8");
+      const s = readFileSync(resolve(INTERP, "operators", dyn), "utf-8");
       assert.doesNotMatch(s, /\.\.\/scoped\//);
       assert.doesNotMatch(s, /frames\/f000-strategy\/scoped/);
     }
@@ -567,9 +567,9 @@ describe("phase-6 a-tot: negative requirements (R52–R57)", () => {
   test("no concurrency primitives in INSTRUCTIONS.md or dynamics (R57)", () => {
     const allFiles = [
       sInst,
-      readFileSync(resolve(INTERP, "dynamics/expand-node.md"), "utf-8"),
-      readFileSync(resolve(INTERP, "dynamics/score.md"), "utf-8"),
-      readFileSync(resolve(INTERP, "dynamics/evaluate.md"), "utf-8"),
+      readFileSync(resolve(INTERP, "operators/expand-node.md"), "utf-8"),
+      readFileSync(resolve(INTERP, "operators/score.md"), "utf-8"),
+      readFileSync(resolve(INTERP, "operators/evaluate.md"), "utf-8"),
     ];
     for (const f of allFiles) {
       assert.doesNotMatch(f, /xargs\s+-P\b/);
@@ -640,7 +640,7 @@ describe("phase-6 source-spec dynamics-table (R4)", () => {
   });
   test("source spec includes a rationale paragraph mentioning evaluate.md and graded ranking (R4)", () => {
     const s = readFileSync(SOURCE, "utf-8");
-    assert.match(s, /graded\s+ranking|grading.*pass\/fail|two\s+(?:single-purpose\s+)?dynamics/i);
+    assert.match(s, /graded\s+ranking|grading.*pass\/fail|two\s+(?:single-purpose\s+)?operators/i);
   });
 });
 

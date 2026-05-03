@@ -124,13 +124,13 @@ describe("stack integration", () => {
   });
 
   test("push then done pops back to caller with {state}_completed", () => {
-    const files = { "dynamics/consult.md": "# Dynamic" };
+    const files = { "operators/consult.md": "# Dynamic" };
     const { callStack, frameStore } = makeRoot("# Strategy");
 
     // Cycle 1: caller writes ## Push; block pushes it.
     const c1 = runStackBlock(
       callStack,
-      "## State\nneeds_opinion\n## Push\ndynamics/consult.md",
+      "## State\nneeds_opinion\n## Push\noperators/consult.md",
       frameStore,
       files,
     );
@@ -152,18 +152,18 @@ describe("stack integration", () => {
 
   test("nested push: outer -> inner -> pop -> pop -> halt", () => {
     const files = {
-      "dynamics/a.md": "# A",
-      "dynamics/b.md": "# B",
+      "operators/a.md": "# A",
+      "operators/b.md": "# B",
     };
     const { callStack, frameStore } = makeRoot("# Strategy");
 
     // Outer pushes A.
-    let r = runStackBlock(callStack, "## State\nouter\n## Push\ndynamics/a.md", frameStore, files);
+    let r = runStackBlock(callStack, "## State\nouter\n## Push\noperators/a.md", frameStore, files);
     assert.equal(r.callStack.stack.length, 2);
     assert.equal(r.instructions, "# A");
 
     // Inside A, push B.
-    const memInAwithPush = setState(r.memory, "inside_a") + "\n## Push\ndynamics/b.md";
+    const memInAwithPush = setState(r.memory, "inside_a") + "\n## Push\noperators/b.md";
     r = runStackBlock(r.callStack, memInAwithPush, frameStore, files);
     assert.equal(r.callStack.stack.length, 3);
     assert.equal(r.instructions, "# B");
@@ -193,7 +193,7 @@ describe("stack integration", () => {
     // is NOT forwarded to the caller — only ## Return entries are.
     // This test verifies that pop brings stack back to depth 1 and the child's
     // ## Push does NOT trigger a subsequent push from the caller's context.
-    const files = { "dynamics/other.md": "# Other" };
+    const files = { "operators/other.md": "# Other" };
     const { callStack, frameStore } = makeRoot("# Caller");
 
     // Set up: depth=1 (root + one dynamic frame with returnState "x").
@@ -206,11 +206,11 @@ describe("stack integration", () => {
     };
     // Caller's saved memory has NO ## Push (only child has ## Push).
     frameStore.set("frames/f000-strategy", { memory: "## State\nx", instructions: "# Caller" });
-    frameStore.set("frames/f001-other", { memory: "## State\ndone\n## Push\ndynamics/other.md", instructions: "# Dynamic" });
+    frameStore.set("frames/f001-other", { memory: "## State\ndone\n## Push\noperators/other.md", instructions: "# Dynamic" });
 
     const r = runStackBlock(
       cs2,
-      "## State\ndone\n## Push\ndynamics/other.md",
+      "## State\ndone\n## Push\noperators/other.md",
       frameStore,
       files,
     );
@@ -264,13 +264,13 @@ describe("stack integration", () => {
 describe("applyPop", () => {
   test("push then done pops back to caller with {state}_completed", () => {
     const files: Record<string, string> = {
-      "dynamics/consult.md": "# Dynamic",
+      "operators/consult.md": "# Dynamic",
     };
     const cs0: CallStack = {
       nextCounter: 1,
       stack: [{ returnState: "<root>", frameDir: "frames/f000-strategy" }],
     };
-    const callerMemory = "## State\nneeds_opinion\n## Push\ndynamics/consult.md";
+    const callerMemory = "## State\nneeds_opinion\n## Push\noperators/consult.md";
 
     // Push.
     const pushed = applyPush(cs0, callerMemory, (p) => files[p] ?? null);

@@ -43,7 +43,7 @@ describe("R40: shell features re-homed from game-team", () => {
     ];
     for (const s of strategies) {
       const body = readFileSync(resolve(REPO, s), "utf-8");
-      assert.match(body, /## Push\s*\n\s*dynamics\//, `${s} does not emit a strategy-level ## Push`);
+      assert.match(body, /## Push\s*\n\s*operators\//, `${s} does not emit a strategy-level ## Push`);
     }
   });
 });

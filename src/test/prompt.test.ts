@@ -15,8 +15,8 @@ describe("getSystemPrompt", () => {
   test("api provider: base prompt includes Dynamics section and API_TOOLS_SECTION", () => {
     delete process.env.TURING_STATEFUL;
     const p = getSystemPrompt("api");
-    assert.match(p, /# Dynamics \(Push\/Pop\)/);
-    assert.match(p, /## Push\n[\s\S]*dynamics\/consult\.md/);
+    assert.match(p, /# Operators \(Push\/Pop\)/);
+    assert.match(p, /## Push\n[\s\S]*operators\/consult\.md/);
     assert.match(p, /\*\*bash\*\*: Run a shell command/);
   });
 
@@ -40,7 +40,7 @@ describe("getSystemPrompt", () => {
     process.env.TURING_STATEFUL = "1";
     const p = getSystemPrompt("api");
     assert.match(p, /===SYSCALLS===/);
-    assert.match(p, /# Dynamics \(Push\/Pop\)/);
+    assert.match(p, /# Operators \(Push\/Pop\)/);
   });
 
   test("default provider (undefined) returns api-style prompt", () => {

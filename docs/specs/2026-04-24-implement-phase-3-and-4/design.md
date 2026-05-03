@@ -190,7 +190,7 @@ Deletions:  interpreters/game-team/  (all files, entire directory)
 Updates:    CLAUDE.md, README.md, docs/agent-workflows/requirements.md,
             src/test/phase-1-dynamics-identity.test.ts
             (rename-in-place → phase-1-4-dynamics-identity.test.ts?
-             No — rename to phase-dynamics-identity.test.ts for
+             No — rename to phase-operators-identity.test.ts for
              cross-phase semantics; see §Test strategy.)
 ```
 
@@ -779,7 +779,7 @@ existing `instances/` are untouched.
 | `src/test/phase-3-deep-research.test.ts`                          | Same shape; one `execute-step.md` branch re-pushes `plan.md` within its frame; assert `.call-stack.json` reaches `{stack.length: 3}` (strategy + execute-step + plan) at that point                                                                            | R19, R43, R42 |
 | `src/test/phase-4-metagpt.test.ts`                                | Script a MEMORY sequence through 4a: PM → Architect → Engineer → QA; QA pushes evaluate.md (depth 2); assert `.call-stack.json` reaches depth 2 and final MEMORY has all four typed hand-off sections                                                        | R33, R43, R42 |
 | `src/test/phase-4-chatdev.test.ts`                                | Script a sequence through 4b: design → coding → testing → documenting; coding/testing/doc pushes dialogue.md; reviewer-pair dialogues further push evaluate.md; assert final MEMORY has all four phase-outcome sections                                       | R33, R28, R42 |
-| `src/test/phase-dynamics-identity.test.ts` (rename of phase-1-*)  | Four-way byte-equality of `evaluate.md` across `b-evaluator-optimizer`, `c-reflexion`, `a-metagpt`, `b-chatdev`. Rename from `phase-1-dynamics-identity.test.ts` (Phase-2 notes already flagged this for the fourth consumer)                                  | R29      |
+| `src/test/phase-operators-identity.test.ts` (rename of phase-1-*)  | Four-way byte-equality of `evaluate.md` across `b-evaluator-optimizer`, `c-reflexion`, `a-metagpt`, `b-chatdev`. Rename from `phase-1-dynamics-identity.test.ts` (Phase-2 notes already flagged this for the fourth consumer)                                  | R29      |
 | `src/test/phase-4-shell-features.test.ts`                         | Synthesise a MEMORY sequence exercising R40(a) fuzzy NL conditions and R40(b) non-blocking `## Pending Questions` against either 4a or 4b; (c) strategy-level push is already exercised by all per-interpreter tests                                          | R40      |
 | `src/test/web-tools-search.test.ts`                               | Stub `globalThis.fetch`; assert happy path parses DuckDuckGo HTML into `{results}`; assert `results: []` shape on (i) empty-body, (ii) non-200, (iii) abort/timeout, (iv) unknown backend env var                                                            | R54, R57, R58, R60, R63 |
 | `src/test/web-tools-fetch.test.ts`                                | Stub `globalThis.fetch`; assert happy path extracts text via cheerio; assert diagnostic shape on (i) non-2xx, (ii) non-HTML content-type, (iii) timeout                                                                                                       | R55, R59, R60, R63 |
@@ -883,7 +883,7 @@ All requirements-level OQs committed to concrete choices here.
   share scaffolding. Committed.
 - **OQ5 (evaluate.md promotion)**: Keep four byte-equal copies; extend
   the Phase-1 identity test to a four-way assertion; rename the test
-  file to `phase-dynamics-identity.test.ts` to reflect cross-phase
+  file to `phase-operators-identity.test.ts` to reflect cross-phase
   semantics. Promotion to a shared location stays deferred to a
   dedicated future spec. Committed.
 - **OQ6 (web-tool library / endpoints / caps / timeouts / env vars)**:

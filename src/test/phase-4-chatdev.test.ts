@@ -15,8 +15,8 @@ describe("phase-4 b-chatdev: layout, dialogue, PROGRAM parity", () => {
       "INSTRUCTIONS.md",
       "PROGRAM.md",
       "README.md",
-      "dynamics/dialogue.md",
-      "dynamics/evaluate.md",
+      "operators/dialogue.md",
+      "operators/evaluate.md",
       "roles/ceo.md",
       "roles/cto.md",
       "roles/coder.md",
@@ -52,16 +52,16 @@ describe("phase-4 b-chatdev: layout, dialogue, PROGRAM parity", () => {
   });
 
   test("dialogue.md honours acceptance flag by pushing evaluate.md", () => {
-    const d = readFileSync(resolve(INTERP, "dynamics/dialogue.md"), "utf-8");
+    const d = readFileSync(resolve(INTERP, "operators/dialogue.md"), "utf-8");
     assert.match(d, /\{\{participants\}\}/);
     assert.match(d, /\{\{topic\}\}/);
     assert.match(d, /\{\{acceptance\}\}/);
-    assert.match(d, /dynamics\/evaluate\.md/);
+    assert.match(d, /operators\/evaluate\.md/);
   });
 
   test("evaluate.md byte-equal to Phase 1b copy", () => {
-    const a = readFileSync(resolve(INTERP, "dynamics/evaluate.md"));
-    const b = readFileSync(resolve(REPO, "interpreters/1-iterative-refinement/b-evaluator-optimizer/dynamics/evaluate.md"));
+    const a = readFileSync(resolve(INTERP, "operators/evaluate.md"));
+    const b = readFileSync(resolve(REPO, "interpreters/1-iterative-refinement/b-evaluator-optimizer/operators/evaluate.md"));
     assert.ok(a.equals(b), "evaluate.md in b-chatdev diverged from Phase 1b copy");
   });
 

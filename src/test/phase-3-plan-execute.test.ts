@@ -15,8 +15,8 @@ describe("phase-3 a-plan-execute: file layout and content", () => {
       "INSTRUCTIONS.md",
       "PROGRAM.md",
       "README.md",
-      "dynamics/plan.md",
-      "dynamics/tackle.md",
+      "operators/plan.md",
+      "operators/tackle.md",
     ]) {
       assert.ok(existsSync(resolve(INTERP, f)), `${f} missing`);
     }
@@ -41,12 +41,12 @@ describe("phase-3 a-plan-execute: file layout and content", () => {
 
   test("Initialize pushes tackle.md with the user goal", () => {
     const s = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
-    assert.match(s, /## Push[\s\S]*dynamics\/tackle\.md/);
+    assert.match(s, /## Push[\s\S]*operators\/tackle\.md/);
     assert.match(s, /goal:\s*\|/);
   });
 
   test("plan.md is one-shot decomposer: declares empty + done, returns 'plan', no replan logic", () => {
-    const p = readFileSync(resolve(INTERP, "dynamics/plan.md"), "utf-8");
+    const p = readFileSync(resolve(INTERP, "operators/plan.md"), "utf-8");
     assert.match(p, /state is "empty"/);
     assert.match(p, /^done$/m);
     assert.match(p, /\{\{goal\}\}/);
@@ -57,7 +57,7 @@ describe("phase-3 a-plan-execute: file layout and content", () => {
   });
 
   test("tackle.md declares the recursive 4-instruction state machine and returns 'result'", () => {
-    const t = readFileSync(resolve(INTERP, "dynamics/tackle.md"), "utf-8");
+    const t = readFileSync(resolve(INTERP, "operators/tackle.md"), "utf-8");
     assert.match(t, /\{\{goal\}\}/);
     for (const needle of [
       "## Instruction: Try",
@@ -71,7 +71,7 @@ describe("phase-3 a-plan-execute: file layout and content", () => {
   });
 
   test("tackle.md Try frames the atomic-vs-composite decision as role-based judgement", () => {
-    const t = readFileSync(resolve(INTERP, "dynamics/tackle.md"), "utf-8");
+    const t = readFileSync(resolve(INTERP, "operators/tackle.md"), "utf-8");
     // Role-anchored framing: the decision is "as {{role}}, do you produce this now or split?"
     assert.match(t, /\{\{role\}\}/);
     assert.match(t, /Decide as.*\{\{role\}\}.*would|professional judgement|as \{\{role\}\}/i);
@@ -81,11 +81,11 @@ describe("phase-3 a-plan-execute: file layout and content", () => {
   });
 
   test("tackle.md composite path pushes plan.md and recursive iterations push tackle.md", () => {
-    const t = readFileSync(resolve(INTERP, "dynamics/tackle.md"), "utf-8");
+    const t = readFileSync(resolve(INTERP, "operators/tackle.md"), "utf-8");
     // Composite path -> plan.md
-    assert.match(t, /## Push[\s\S]*dynamics\/plan\.md/);
+    assert.match(t, /## Push[\s\S]*operators\/plan\.md/);
     // Iterate / Continue -> recursive tackle.md
-    assert.match(t, /## Push[\s\S]*dynamics\/tackle\.md/);
+    assert.match(t, /## Push[\s\S]*operators\/tackle\.md/);
   });
 
   test("PROGRAM.md is the TypeScript project setup task (d1)", () => {

@@ -16,7 +16,7 @@ Phase 6b ships a Language Agent Tree Search (LATS) interpreter at `interpreters/
 | R6 | `expand-node.md` byte-equal w/ refactored Phase 6 | §Test strategy (identity test) |
 | R7 | `evaluate.md` byte-equal w/ canonical 1b | §Test strategy (identity test) |
 | R8 | `reflect.md` byte-equal w/ canonical 1c | §Test strategy (identity test) |
-| R9 | Identity test extension covering R6/R7/R8 | §Test strategy (`phase-dynamics-identity.test.ts`) |
+| R9 | Identity test extension covering R6/R7/R8 | §Test strategy (`phase-operators-identity.test.ts`) |
 | R10 | `rollout.md` push-arg declaration | §Interfaces (`rollout.md`) |
 | R11 | `rollout.md` single-cycle, returns `terminal_state` | §Interfaces (`rollout.md`) |
 | R12 | `rollout.md` no further pushes | §Interfaces (`rollout.md`), §Architecture (Stack discipline) |
@@ -892,13 +892,13 @@ Starting partial state:
 
 ### `evaluate.md` (R7, R67, R68)
 
-Byte-equal copy of `interpreters/1-iterative-refinement/b-evaluator-optimizer/dynamics/evaluate.md`. Push-args `{{attempt}}`, `{{criterion}}`. Returns `verdict` (`pass`/`fail`) and `feedback`. Identity is enforced by `phase-dynamics-identity.test.ts` extension (R9).
+Byte-equal copy of `interpreters/1-iterative-refinement/b-evaluator-optimizer/dynamics/evaluate.md`. Push-args `{{attempt}}`, `{{criterion}}`. Returns `verdict` (`pass`/`fail`) and `feedback`. Identity is enforced by `phase-operators-identity.test.ts` extension (R9).
 
 LATS invokes `evaluate.md` in **text-only mode** (R67): the criterion is `./scoped/task.md` content (= PROGRAM.md text), which has no `../../workspace/` paths, so the dynamic's mode-classification routes to text-only judgement. R68 is satisfied negatively: Phase 6b adds nothing to `evaluate.md`'s prose or contract.
 
 ### `reflect.md` (R8)
 
-Byte-equal copy of `interpreters/1-iterative-refinement/c-reflexion/dynamics/reflect.md`. Push-args `{{attempt}}`, `{{verdict}}`, `{{feedback}}`. Returns `lesson`. Identity enforced by `phase-dynamics-identity.test.ts` extension (R9).
+Byte-equal copy of `interpreters/1-iterative-refinement/c-reflexion/dynamics/reflect.md`. Push-args `{{attempt}}`, `{{verdict}}`, `{{feedback}}`. Returns `lesson`. Identity enforced by `phase-operators-identity.test.ts` extension (R9).
 
 ### Phase 6 Initialize delta (R17, R19)
 
@@ -1121,7 +1121,7 @@ Existing tests for the Phase 6 directory, group README, evaluate.md byte-equalit
 | Phase 6 README delta | NEW: assert the leaf README's "Notable behaviour" section starts with the "Refactored in Phase 6b" bullet, citing `docs/specs/2026-05-01-implement-phase-6b/`. | R27, R29 |
 | BFS semantics preservation | NEW: regression assertions that k=5, b=5, 3-sample-scoring, weight mapping (`sure → 20`, `likely → 1`, `impossible → 0.001`), Phase-router, R6/R34/R37/R44/R47 paths are all still present in INSTRUCTIONS.md. | R84 |
 
-### `src/test/phase-dynamics-identity.test.ts` — EXTENDED (R9)
+### `src/test/phase-operators-identity.test.ts` — EXTENDED (R9)
 
 The existing `EVALUATE_PATHS` constant adds `interpreters/3-search/b-lats/dynamics/evaluate.md`. Two new identity blocks are appended for the LATS-reused dynamics:
 

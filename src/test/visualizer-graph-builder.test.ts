@@ -90,7 +90,7 @@ describe("buildPerFrameGraph edges (R8)", () => {
   test("one push edge and one pop edge per push/pop pair", () => {
     const events: EventRecord[] = [
       { seq: 1, ts: "", cycle: 1, frame: "frames/f000-strategy", type: "cycle_start" },
-      { seq: 2, ts: "", cycle: 1, frame: "frames/f000-strategy", type: "push", target: "dynamics/dialogue.md", frameDir: "frames/f001-dialogue", depth: 1 },
+      { seq: 2, ts: "", cycle: 1, frame: "frames/f000-strategy", type: "push", target: "operators/dialogue.md", frameDir: "frames/f001-dialogue", depth: 1 },
       { seq: 3, ts: "", cycle: 2, frame: "frames/f001-dialogue", type: "cycle_start" },
       { seq: 4, ts: "", cycle: 2, frame: "frames/f001-dialogue", type: "pop", frameDir: "frames/f001-dialogue", returnState: "active_completed", depth: 0 },
       { seq: 5, ts: "", cycle: 3, frame: "frames/f000-strategy", type: "cycle_start" },
@@ -109,10 +109,10 @@ describe("buildPerFrameGraph edges (R8)", () => {
     // resumed caller frame at the same cycle (see src/main.ts:511-535).
     const events: EventRecord[] = [
       { seq: 1, ts: "", cycle: 1, frame: "frames/f000-strategy", type: "cycle_start" },
-      { seq: 2, ts: "", cycle: 1, frame: "frames/f000-strategy", type: "push", target: "dynamics/dialogue.md", frameDir: "frames/f001-dialogue", depth: 1 },
+      { seq: 2, ts: "", cycle: 1, frame: "frames/f000-strategy", type: "push", target: "operators/dialogue.md", frameDir: "frames/f001-dialogue", depth: 1 },
       { seq: 3, ts: "", cycle: 2, frame: "frames/f001-dialogue", type: "pop", frameDir: "frames/f001-dialogue", returnState: "x", depth: 0 },
       { seq: 4, ts: "", cycle: 2, frame: "frames/f000-strategy", type: "cycle_start" },
-      { seq: 5, ts: "", cycle: 3, frame: "frames/f000-strategy", type: "push", target: "dynamics/dialogue.md", frameDir: "frames/f002-dialogue", depth: 1 },
+      { seq: 5, ts: "", cycle: 3, frame: "frames/f000-strategy", type: "push", target: "operators/dialogue.md", frameDir: "frames/f002-dialogue", depth: 1 },
       { seq: 6, ts: "", cycle: 4, frame: "frames/f002-dialogue", type: "pop", frameDir: "frames/f002-dialogue", returnState: "y", depth: 0 },
       { seq: 7, ts: "", cycle: 4, frame: "frames/f000-strategy", type: "cycle_start" },
     ];
@@ -167,7 +167,7 @@ describe("buildPerCycleGraph edges (R9)", () => {
     // Strategy@1 and Strategy@3 are not adjacent — push+pop edges already bridge them.
     const events: EventRecord[] = [
       { seq: 1, ts: "", cycle: 1, frame: "frames/f000-strategy", type: "cycle_start" },
-      { seq: 2, ts: "", cycle: 1, frame: "frames/f000-strategy", type: "push", target: "dynamics/plan.md", frameDir: "frames/f001-plan", depth: 1 },
+      { seq: 2, ts: "", cycle: 1, frame: "frames/f000-strategy", type: "push", target: "operators/plan.md", frameDir: "frames/f001-plan", depth: 1 },
       { seq: 3, ts: "", cycle: 2, frame: "frames/f001-plan", type: "cycle_start" },
       { seq: 4, ts: "", cycle: 2, frame: "frames/f001-plan", type: "pop", frameDir: "frames/f001-plan", returnState: "x", depth: 0 },
       { seq: 5, ts: "", cycle: 3, frame: "frames/f000-strategy", type: "cycle_start" },
@@ -189,7 +189,7 @@ describe("buildPerCycleGraph edges (R9)", () => {
     const events: EventRecord[] = [
       { seq: 1, ts: "", cycle: 1, frame: "frames/f000-strategy", type: "cycle_start" },
       { seq: 2, ts: "", cycle: 2, frame: "frames/f000-strategy", type: "cycle_start" },
-      { seq: 3, ts: "", cycle: 2, frame: "frames/f000-strategy", type: "push", target: "dynamics/dialogue.md", frameDir: "frames/f001-dialogue", depth: 1 },
+      { seq: 3, ts: "", cycle: 2, frame: "frames/f000-strategy", type: "push", target: "operators/dialogue.md", frameDir: "frames/f001-dialogue", depth: 1 },
       { seq: 4, ts: "", cycle: 3, frame: "frames/f001-dialogue", type: "cycle_start" },
       { seq: 5, ts: "", cycle: 4, frame: "frames/f001-dialogue", type: "cycle_start" },
       { seq: 6, ts: "", cycle: 5, frame: "frames/f001-dialogue", type: "pop", frameDir: "frames/f001-dialogue", returnState: "x", depth: 0 },

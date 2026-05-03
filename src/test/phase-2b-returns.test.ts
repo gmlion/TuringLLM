@@ -23,13 +23,13 @@ describe("phase-2b end-to-end push/pop/splice", () => {
 
   test("push creates child frame, pop splices ## Return into caller on disk", () => {
     const { cs, rootMemPath } = setupRoot(
-      "## State\ndrafted\n## Draft\nclaim X\n## Push\ndynamics/verify.md\n## Push-Args\ndraft: |\n  claim X"
+      "## State\ndrafted\n## Draft\nclaim X\n## Push\noperators/verify.md\n## Push-Args\ndraft: |\n  claim X"
     );
     const rootMem = readFileSync(rootMemPath, "utf-8");
 
     // Push.
     const pushed = applyPush(cs, rootMem, (p) =>
-      p === "dynamics/verify.md" ? "# Dynamic: Verify\nDraft: {{draft}}" : null,
+      p === "operators/verify.md" ? "# Dynamic: Verify\nDraft: {{draft}}" : null,
     );
     assert.equal(pushed.ok, true);
     if (!pushed.ok) return;
@@ -74,13 +74,13 @@ describe("phase-2b end-to-end push/pop/splice", () => {
     // The motivating test — verify.md-style scenario: strategy pushes verify,
     // verify pushes answer-indep (depth 2), pop, pop.
     const { cs, rootMemPath } = setupRoot(
-      "## State\ndrafted\n## Draft\nmulti-claim draft\n## Push\ndynamics/verify.md\n## Push-Args\ndraft: |\n  multi-claim draft"
+      "## State\ndrafted\n## Draft\nmulti-claim draft\n## Push\noperators/verify.md\n## Push-Args\ndraft: |\n  multi-claim draft"
     );
     const rootMem0 = readFileSync(rootMemPath, "utf-8");
 
     // Push verify.
     const push1 = applyPush(cs, rootMem0, (p) =>
-      p === "dynamics/verify.md" ? "# verify\n{{draft}}" : null,
+      p === "operators/verify.md" ? "# verify\n{{draft}}" : null,
     );
     assert.equal(push1.ok, true);
     if (!push1.ok) return;
@@ -97,14 +97,14 @@ describe("phase-2b end-to-end push/pop/splice", () => {
     // verify now has state=asking, pushes answer-indep.
     writeFileSync(
       resolve(tmp, push1.frameDir, "MEMORY.md"),
-      "## State\nasking\n## Push\ndynamics/answer-independently.md\n## Push-Args\nquestion: |\n  q1",
+      "## State\nasking\n## Push\noperators/answer-independently.md\n## Push-Args\nquestion: |\n  q1",
       "utf-8",
     );
     const verifyMem = readFileSync(resolve(tmp, push1.frameDir, "MEMORY.md"), "utf-8");
 
     // Push answer-indep.
     const push2 = applyPush(push1.callStack, verifyMem, (p) =>
-      p === "dynamics/answer-independently.md" ? "# ans\n{{question}}" : null,
+      p === "operators/answer-independently.md" ? "# ans\n{{question}}" : null,
     );
     assert.equal(push2.ok, true);
     if (!push2.ok) return;

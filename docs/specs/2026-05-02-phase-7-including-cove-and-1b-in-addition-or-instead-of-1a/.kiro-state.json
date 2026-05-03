@@ -1,0 +1,10 @@
+{
+  "slug": "2026-05-02-phase-7-including-cove-and-1b-in-addition-or-instead-of-1a",
+  "feature": "phase-7-including-cove-and-1b-in-addition-or-instead-of-1a",
+  "phase": "execute",
+  "awaiting_approval": false,
+  "phases_complete": ["requirements", "design", "tasks"],
+  "created_at": "2026-05-02T20:07:05Z",
+  "updated_at": "2026-05-03T08:34:12Z",
+  "execute_mode": "subagent"
+}
