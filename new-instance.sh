@@ -24,34 +24,32 @@ if [ -d "$DIR" ]; then
   exit 1
 fi
 
-mkdir -p "$DIR/frames/f000-strategy/scoped"
+mkdir -p "$DIR"
 
-# INSTRUCTIONS.md and strategy-scoped support files
 if [ -n "$INTERPRETER" ]; then
-  INTERP_DIR="$SCRIPT_DIR/$INTERPRETER"
+  # Support both absolute paths (for tests/custom) and paths relative to repo root.
+  # Handles Unix absolute (/path), Windows absolute (C:/path), and relative paths.
+  case "$INTERPRETER" in
+    /*|[A-Za-z]:*) INTERP_DIR="$INTERPRETER" ;;
+    *)             INTERP_DIR="$SCRIPT_DIR/$INTERPRETER" ;;
+  esac
   if [ ! -f "$INTERP_DIR/INSTRUCTIONS.md" ]; then
     echo "Error: interpreter at '$INTERP_DIR' has no INSTRUCTIONS.md"
     exit 1
   fi
-  cp "$INTERP_DIR/INSTRUCTIONS.md" "$DIR/frames/f000-strategy/INSTRUCTIONS.md"
 
-  # Support files (role descriptions, test harnesses, etc.) — strategy-scoped.
-  # Excludes INSTRUCTIONS.md (above) and PROGRAM.md (instance root, handled below).
-  for f in "$INTERP_DIR"/*.md; do
-    [ -e "$f" ] || continue
-    base="$(basename "$f")"
-    if [ "$base" != "INSTRUCTIONS.md" ] && [ "$base" != "PROGRAM.md" ]; then
-      cp "$f" "$DIR/frames/f000-strategy/$base"
-    fi
-  done
+  # Write .root-operator — the marker file containing the path to the root
+  # operator (e.g. "operators/strategy.md"). The shell reads this at startup
+  # to bootstrap the first frame instead of expecting frames/ to be pre-created.
+  cp "$INTERP_DIR/INSTRUCTIONS.md" "$DIR/.root-operator"
 
-  # Dynamics — shared across all frames, at instance root.
-  if [ -d "$INTERP_DIR/dynamics" ]; then
-    cp -r "$INTERP_DIR/dynamics" "$DIR/dynamics"
+  # Operators — shared across all frames, at instance root.
+  if [ -d "$INTERP_DIR/operators" ]; then
+    cp -r "$INTERP_DIR/operators" "$DIR/operators"
   fi
 
-  # Roles (or other interpreter-shared subdirectories the dynamics reference) —
-  # copied to the instance root so dynamics can `cat ../../roles/<name>.md` from
+  # Roles (or other interpreter-shared subdirectories the operators reference) —
+  # copied to the instance root so operators can `cat ../../roles/<name>.md` from
   # any frame. Used by b-chatdev for its CEO/CTO/coder/reviewer/tester/writer
   # personas; harmless when absent.
   if [ -d "$INTERP_DIR/roles" ]; then
@@ -81,7 +79,14 @@ if [ -n "$INTERPRETER" ]; then
 EOF
   fi
 else
-  cat > "$DIR/frames/f000-strategy/INSTRUCTIONS.md" << 'INSTEOF'
+  # Default interpreter: write a built-in .root-operator pointing at
+  # operators/strategy.md, then write that operator file.
+  cat > "$DIR/.root-operator" << 'EOF'
+operators/strategy.md
+EOF
+
+  mkdir -p "$DIR/operators"
+  cat > "$DIR/operators/strategy.md" << 'STRATEOF'
 # Strategy
 
 IMPORTANT: Everything between "# Strategy" and "# Sub-instructions" is the strategy. It must be copied VERBATIM into every update_instructions call. Never modify, summarize, or omit any strategy instruction. Only the "# Sub-instructions" section below changes.
@@ -107,7 +112,8 @@ If all steps in PROGRAM.md are done, set MEMORY state to "done" instead. Set MEM
 # Sub-instructions
 
 (none yet — the "Load next program step" instruction will populate these)
-INSTEOF
+STRATEOF
+
   cat > "$DIR/PROGRAM.md" << 'EOF'
 # Goal
 (describe the goal here)
@@ -120,17 +126,8 @@ INSTEOF
 EOF
 fi
 
-# Strategy's MEMORY: canonical fresh-state shape.
-cat > "$DIR/frames/f000-strategy/MEMORY.md" << 'EOF'
-## State
-empty
-EOF
-
 # SYSCALLS.md — empty, used by stateful mode (instance root, unchanged).
 touch "$DIR/SYSCALLS.md"
-
-# Call stack: root frame pre-populated per Phase 2b R17.
-echo '{"nextCounter":1,"stack":[{"returnState":"<root>","frameDir":"frames/f000-strategy"}]}' > "$DIR/.call-stack.json"
 
 # .gitignore for instance
 cat > "$DIR/.gitignore" << 'EOF'

@@ -660,8 +660,8 @@ describe("phase-6b: backwards compatibility (R28, R85, R86)", () => {
     assert.match(s, /LATS \(Phase 6b\)/);
   });
 
-  test("new-instance.sh copies dynamics at creation (R86 supports backward compat)", () => {
+  test("new-instance.sh copies operators at creation (R86 supports backward compat)", () => {
     const sh = readFileSync(resolve(REPO, "new-instance.sh"), "utf-8");
-    assert.match(sh, /cp\s+-r\s+"\$INTERP_DIR\/dynamics"\s+"\$DIR\/dynamics"/);
+    assert.match(sh, /cp\s+-r\s+"\$INTERP_DIR\/operators"\s+"\$DIR\/operators"/);
   });
 });

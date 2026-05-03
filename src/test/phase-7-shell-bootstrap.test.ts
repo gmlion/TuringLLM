@@ -4,6 +4,7 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync, mkdtempSync, rmSync
 import { join, resolve, dirname } from "path";
 import { fileURLToPath, pathToFileURL } from "url";
 import { tmpdir } from "os";
+import { execSync } from "child_process";
 
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
@@ -150,6 +151,43 @@ describe("R13/R18/R19: OUTPUT.md emission on halt", () => {
       assert.match(out, /## Verdict\npass/);
     } finally {
       rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("R8/R15/R51: new-instance.sh creates .root-operator and copies operators/+workspace/", () => {
+  test("invoking new-instance.sh on a synthetic interpreter creates expected layout", () => {
+    const tmpInterpDir = mkdtempSync(join(tmpdir(), "turing-interp-"));
+    // Synthetic interpreter with marker INSTRUCTIONS.md, operators/, workspace/
+    writeFileSync(join(tmpInterpDir, "INSTRUCTIONS.md"), "operators/test-canonical.md\n");
+    writeFileSync(join(tmpInterpDir, "PROGRAM.md"), "demo program");
+    mkdirSync(join(tmpInterpDir, "operators"));
+    writeFileSync(join(tmpInterpDir, "operators", "test-canonical.md"), "# Test op\n");
+    writeFileSync(join(tmpInterpDir, "operators", "helper.md"), "# helper\n");
+    mkdirSync(join(tmpInterpDir, "workspace"));
+    writeFileSync(join(tmpInterpDir, "workspace", "fixture.txt"), "data");
+
+    const instanceName = `_phase7_test_${Date.now()}`;
+    try {
+      execSync(`bash new-instance.sh ${instanceName} ${tmpInterpDir.replace(/\\/g, "/")}`, { cwd: REPO, encoding: "utf-8" });
+      const dir = resolve(REPO, "instances", instanceName);
+      // .root-operator exists with marker content
+      assert.ok(existsSync(join(dir, ".root-operator")), ".root-operator missing");
+      assert.equal(readFileSync(join(dir, ".root-operator"), "utf-8").trim(), "operators/test-canonical.md");
+      // operators/ copied
+      assert.ok(existsSync(join(dir, "operators", "test-canonical.md")));
+      assert.ok(existsSync(join(dir, "operators", "helper.md")));
+      // PROGRAM.md copied
+      assert.ok(existsSync(join(dir, "PROGRAM.md")));
+      // workspace/ copied
+      assert.ok(existsSync(join(dir, "workspace", "fixture.txt")));
+      // No frames/f000-strategy/ pre-created
+      assert.ok(!existsSync(join(dir, "frames", "f000-strategy")), "frames/f000-strategy should NOT be pre-created");
+      // No .call-stack.json pre-created
+      assert.ok(!existsSync(join(dir, ".call-stack.json")), ".call-stack.json should NOT be pre-created");
+    } finally {
+      execSync(`rm -rf instances/${instanceName}`, { cwd: REPO });
+      rmSync(tmpInterpDir, { recursive: true, force: true });
     }
   });
 });
