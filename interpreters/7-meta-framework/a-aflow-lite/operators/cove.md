@@ -58,31 +58,7 @@ Prior answer (mode 2 — substituted at push-time, may be empty):
 
 ## Instruction: Finalize
 **Condition:** MEMORY state is "drafted_completed" and `## Revised` is present in MEMORY
-**Action:** Set state to "done".
-
-## Instruction: Finish
-**Condition:** MEMORY state is "done"
-**Action:** Read `## Revised` from MEMORY. Write `./MEMORY.md` with this EXACT single-heredoc shape (the `## Return` block MUST be in the same heredoc as the state change — without it the caller receives no return value):
-
-```
-cat > ./MEMORY.md << FINEOF
-## State
-done
-## Matched Instruction
-Finish
-## Last Action
-Finalized Chain-of-Verification revised answer.
-## Result
-Chain-of-Verification complete.
-## Revised
-$(grep -A 9999 '^## Revised' ./MEMORY.md | tail -n +2 | sed '/^## /,$d')
-## Return
-answer: |
-$(grep -A 9999 '^## Revised' ./MEMORY.md | tail -n +2 | sed '/^## /,$d' | sed 's/^/  /')
-FINEOF
-```
-
-Note: the above reads the existing `## Revised` section from MEMORY before overwriting it. A simpler pattern is to capture the revised text into a variable first:
+**Action:** Read `## Revised` from MEMORY. Write `./MEMORY.md` with the FULL done state in a SINGLE heredoc (the `## Return` block MUST be in the same heredoc as the state change — at depth>=2 the shell pops on state is "done" BEFORE any subsequent instruction runs, so a separate Finish instruction would be unreachable):
 
 ```
 REVISED=$(grep -A 9999 '^## Revised' ./MEMORY.md | tail -n +2 | sed '/^## /,$d')
@@ -90,7 +66,7 @@ cat > ./MEMORY.md << FINEOF
 ## State
 done
 ## Matched Instruction
-Finish
+Finalize
 ## Last Action
 Finalized Chain-of-Verification revised answer.
 ## Result
