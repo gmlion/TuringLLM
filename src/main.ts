@@ -7,7 +7,7 @@
  */
 import { mkdirSync, copyFileSync, cpSync, readFileSync, writeFileSync, readdirSync, existsSync, rmSync } from "fs";
 import { execSync } from "child_process";
-import { resolve, dirname } from "path";
+import { resolve, dirname, join } from "path";
 import { fileURLToPath } from "url";
 import { createInterface } from "readline";
 import { initLog, log } from "./logger.js";
@@ -33,6 +33,7 @@ import {
 import {
   loadCallStack, saveCallStack,
   applyPop, applyPush, type CallStack,
+  substitutePlaceholders, slugFromTarget, formatFrameDir,
 } from "./call-stack.js";
 
 // --- Utilities ---
@@ -482,6 +483,60 @@ function runStackBlock(callStack: CallStack): boolean {
   return false;
 }
 
+// --- Phase-7 bootstrap ---
+
+export interface BootstrapResult {
+  callStack: CallStack;
+  memoryPath: string;
+  instructionsPath: string;
+}
+
+/**
+ * Read `.root-operator` from baseDir, derive the root frame slug, substitute
+ * `{{program}}` from PROGRAM.md, and create `frames/f000-<slug>/` with
+ * INSTRUCTIONS.md, MEMORY.md, scoped/, and an initialized .call-stack.json.
+ *
+ * Satisfies: R11 (reads .root-operator), R12 (slug from operator filename),
+ * R17 (frame dir f000-<slug>).
+ *
+ * Throws if .root-operator is absent or empty (R14 — caller handles the error
+ * message; T9 will provide the canonical user-facing message).
+ */
+export function startupBootstrap(baseDir: string): BootstrapResult {
+  const rootOpFile = join(baseDir, ".root-operator");
+  const rootOpPath = existsSync(rootOpFile) ? readFileSync(rootOpFile, "utf-8").trim() : "";
+  if (!rootOpPath) {
+    throw new Error(
+      "no .root-operator configured for this instance — pre-Phase-7 instances " +
+      "are read-only artefacts; create a new instance via new-instance.sh",
+    );
+  }
+
+  const slug = slugFromTarget(rootOpPath);
+  const frameDirRelative = formatFrameDir(0, slug);
+
+  const operatorContent = readFileSync(join(baseDir, rootOpPath), "utf-8");
+  const programPath = join(baseDir, "PROGRAM.md");
+  const programContent = existsSync(programPath) ? readFileSync(programPath, "utf-8") : "";
+  const { result: substituted } = substitutePlaceholders(operatorContent, { program: programContent });
+
+  mkdirSync(join(baseDir, frameDirRelative, "scoped"), { recursive: true });
+  writeFileSync(join(baseDir, frameDirRelative, "INSTRUCTIONS.md"), substituted, "utf-8");
+  writeFileSync(join(baseDir, frameDirRelative, "MEMORY.md"), "## State\nempty\n", "utf-8");
+
+  const callStack: CallStack = {
+    nextCounter: 1,
+    stack: [{ returnState: "<root>", frameDir: frameDirRelative }],
+  };
+  writeFileSync(join(baseDir, ".call-stack.json"), JSON.stringify(callStack, null, 2), "utf-8");
+
+  return {
+    callStack,
+    memoryPath: join(baseDir, frameDirRelative, "MEMORY.md"),
+    instructionsPath: join(baseDir, frameDirRelative, "INSTRUCTIONS.md"),
+  };
+}
+
 // --- Main loop ---
 
 async function main() {
@@ -497,6 +552,19 @@ async function main() {
   mkdirSync(HISTORY_DIR, { recursive: true });
   ensureMachineRepo(BASE_DIR);
   ensureProjectRepo(BASE_DIR);
+
+  // Phase-7 bootstrap: if no call stack exists yet, read .root-operator and
+  // create the root frame before the cycle loop begins.
+  if (!existsSync(CALL_STACK_PATH)) {
+    try {
+      startupBootstrap(BASE_DIR);
+      log("  Bootstrapped root frame from .root-operator");
+    } catch (err) {
+      log(`  [bootstrap] ${err instanceof Error ? err.message : err}`);
+      // Fall through: loadCallStack will return freshCallStack() with the legacy
+      // frames/f000-strategy dir, which works for pre-Phase-7 instances.
+    }
+  }
 
   const callStack = loadCallStack(CALL_STACK_PATH);
 
