@@ -346,3 +346,64 @@ describe("R33: aflow-lite Simulate phase pushes operators per-item with {{task}}
     assert.match(content, /current_item|item_index|sim\/scores/);
   });
 });
+
+describe("R37/R38: aflow-lite Evaluate-absorb computes reward and back-props", () => {
+  const OP = "interpreters/7-meta-framework/a-aflow-lite/operators/aflow-lite.md";
+  test("Evaluate-absorb instruction matches state evaluating", () => {
+    const content = readFileSync(resolve(REPO, OP), "utf-8");
+    assert.match(content, /## Instruction: Evaluate-absorb|## Instruction: Evaluate absorb/);
+    assert.match(content, /MEMORY state is "evaluating"/);
+  });
+  test("R37: reward = mean fraction passing (0-1, three discrete tiers)", () => {
+    const content = readFileSync(resolve(REPO, OP), "utf-8");
+    // Some indication of computing mean of scores.md
+    assert.match(content, /scores\.md/);
+    // Some arithmetic for mean
+    assert.match(content, /bc -l|awk.*\/3|awk.*sum/);
+  });
+  test("R38: termination on reward == 1.0", () => {
+    const content = readFileSync(resolve(REPO, OP), "utf-8");
+    assert.match(content, /## Solution/);
+    // Termination on perfect score
+    assert.match(content, /1\.0|\$REWARD" = "1|REWARD == 1|reward.*1\.0/i);
+  });
+  test("R38: termination on iter_count >= max_iterations", () => {
+    const content = readFileSync(resolve(REPO, OP), "utf-8");
+    assert.match(content, /max_iterations\.md/);
+    assert.match(content, /## No Solution Found/);
+  });
+  test("R38: terminal cycle emits ## Return\\nanswer:", () => {
+    const content = readFileSync(resolve(REPO, OP), "utf-8");
+    // Both terminal paths should write ## Return answer:
+    const matches = content.match(/## Return\s*\n\s*answer:/g) || [];
+    assert.ok(matches.length >= 1, `expected at least one ## Return answer: block, found ${matches.length}`);
+  });
+});
+
+describe("R39/R65: no meta-reflexion in aflow-lite", () => {
+  const OP = "interpreters/7-meta-framework/a-aflow-lite/operators/aflow-lite.md";
+  test("aflow-lite.md does NOT push reflect.md", () => {
+    const content = readFileSync(resolve(REPO, OP), "utf-8");
+    assert.doesNotMatch(content, /## Push\s*\n\s*operators\/reflect\.md/);
+    assert.doesNotMatch(content, /## Push\s+operators\/reflect\.md/);
+  });
+});
+
+describe("R40/R66: no nested shell instances", () => {
+  const OP = "interpreters/7-meta-framework/a-aflow-lite/operators/aflow-lite.md";
+  test("aflow-lite.md does not spawn child node processes", () => {
+    const content = readFileSync(resolve(REPO, OP), "utf-8");
+    // Check for shell invocations of node (e.g. "node script.js" or "node src/") — not the English word "node"
+    assert.doesNotMatch(content, /\bnode\s+[./]/);
+    assert.doesNotMatch(content, /spawn\(|execFile\(/);
+    assert.doesNotMatch(content, /child_process/);
+  });
+});
+
+describe("R72: no '## Aflow Answer' tag — uses canonical ## Return answer:", () => {
+  const OP = "interpreters/7-meta-framework/a-aflow-lite/operators/aflow-lite.md";
+  test("no ## Aflow Answer tag", () => {
+    const content = readFileSync(resolve(REPO, OP), "utf-8");
+    assert.doesNotMatch(content, /## Aflow Answer/i);
+  });
+});
