@@ -57,3 +57,31 @@ describe("R10: no 'dynamics/' substring outside frozen spec dirs", () => {
     assert.equal(out, "", `unexpected 'dynamics/' references: ${out}`);
   });
 });
+
+describe("R26/R34: 12 operators copied byte-equal into aflow-lite", () => {
+  const COPIES = [
+    ["refine.md",                "interpreters/1-iterative-refinement/b-evaluator-optimizer/operators/refine.md"],
+    ["reflexion.md",             "interpreters/1-iterative-refinement/c-reflexion/operators/reflexion.md"],
+    ["cove.md",                  "interpreters/1-iterative-refinement/d-cove/operators/cove.md"],
+    ["plan-execute.md",          "interpreters/2-planning-decomposition/a-plan-execute/operators/plan-execute.md"],
+    ["debate.md",                "interpreters/4-peer-collaboration/a-debate/operators/debate.md"],
+    ["evaluate.md",              "interpreters/1-iterative-refinement/b-evaluator-optimizer/operators/evaluate.md"],
+    ["reflect.md",               "interpreters/1-iterative-refinement/c-reflexion/operators/reflect.md"],
+    ["verify.md",                "interpreters/1-iterative-refinement/d-cove/operators/verify.md"],
+    ["answer-independently.md",  "interpreters/1-iterative-refinement/d-cove/operators/answer-independently.md"],
+    ["tackle.md",                "interpreters/2-planning-decomposition/a-plan-execute/operators/tackle.md"],
+    ["plan.md",                  "interpreters/2-planning-decomposition/a-plan-execute/operators/plan.md"],
+    ["opine.md",                 "interpreters/4-peer-collaboration/a-debate/operators/opine.md"],
+  ];
+  const AFLOW_DIR = "interpreters/7-meta-framework/a-aflow-lite/operators";
+  for (const [name, source] of COPIES) {
+    test(`${name} exists in aflow-lite operators/`, () => {
+      assert.ok(existsSync(resolve(REPO, AFLOW_DIR, name)), `missing: ${name}`);
+    });
+    test(`${name} is byte-equal to canonical ${source}`, () => {
+      const a = readFileSync(resolve(REPO, AFLOW_DIR, name), "utf-8");
+      const b = readFileSync(resolve(REPO, source), "utf-8");
+      assert.equal(a, b, `${name} not byte-equal to canonical`);
+    });
+  }
+});
