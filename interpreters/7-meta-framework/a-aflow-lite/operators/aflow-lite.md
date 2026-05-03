@@ -267,4 +267,113 @@ Then wholesale-rewrite MEMORY:
     Cursor set; ready to expand.
     SEL_EOF
 
-(Future tasks T31-T34 add: Expand-push, Expand-absorb, Simulate-push, Simulate-absorb, Evaluate-absorb, termination, etc.)
+## Instruction: Expand-push
+**Condition:** MEMORY state is "expanding"
+**Action:** Stage push-args via the Compose-partial-state primitive; emit `## Push operators/expand-workflow.md`.
+
+    ID=$(cat ./scoped/cursor.md)
+    mkdir -p ./scoped/staged
+    compose_partial_state > ./scoped/staged/partial_state.md
+    cp ./scoped/task.md ./scoped/staged/task.md
+
+Then emit MEMORY:
+
+    PS=$(sed 's/^/  /' ./scoped/staged/partial_state.md)
+    TK=$(sed 's/^/  /' ./scoped/staged/task.md)
+
+    cat > ./MEMORY.md << EXP_EOF
+    ## State
+    expanding
+    ## Matched Instruction
+    Expand-push
+    ## Last Action
+    Pushed expand-workflow.md for $ID.
+    ## Result
+    Push queued.
+    ## Push
+    operators/expand-workflow.md
+    ## Push-Args
+    partial_state: |
+    $PS
+    task: |
+    $TK
+    EXP_EOF
+
+The state value `expanding` is the returnState; on pop the shell sets state to `expanding_completed`, which `Expand-absorb` matches.
+
+## Instruction: Expand-absorb
+**Condition:** MEMORY state is "expanding_completed" and `## Children` is present in MEMORY
+**Action:** Parse the spliced `## Children` block as 5 single-line workflow recipes (comma-separated operator names). For each recipe, allocate the next monotonic id, append a node block to `./scoped/tree.md` with `parent_id = cursor`, `depth = cursor_depth + 1`, `q: 0, n: 0, status: live`, and write the recipe verbatim to `./scoped/state-<new_id>.md`. Record the first (leftmost) newly created child id to `./scoped/chosen_child.md`. Drop `## Children`. Transition to `simulating`.
+
+    CURSOR=$(cat ./scoped/cursor.md)
+    CURSOR_DEPTH=$(awk -v X="$CURSOR" '/^---$/{ib=0;next} /^id:/{ib=($2==X)} ib && /^depth:/{print $2; exit}' ./scoped/tree.md)
+    NEXT_DEPTH=$((CURSOR_DEPTH + 1))
+
+    # Extract body of ## Children — each line is a workflow recipe (comma-separated operator names)
+    awk '/^## Children$/{f=1; next} /^## [A-Z]/ && f {exit} f' ./MEMORY.md \
+      | grep -v '^[[:space:]]*$' \
+      | head -n 5 > ./scoped/staged/children.md
+
+    WELL_FORMED=$(wc -l < ./scoped/staged/children.md | tr -d ' ')
+    FIRST_NEW=""
+
+    while IFS= read -r RECIPE; do
+      NEW_ID="n$(grep -c '^id: n' ./scoped/tree.md)"
+      cat >> ./scoped/tree.md << CHILD_EOF
+    ---
+    id: $NEW_ID
+    parent_id: $CURSOR
+    depth: $NEXT_DEPTH
+    q: 0
+    n: 0
+    status: live
+    CHILD_EOF
+      printf '%s\n' "$RECIPE" > "./scoped/state-$NEW_ID.md"
+      [ -z "$FIRST_NEW" ] && FIRST_NEW="$NEW_ID"
+    done < ./scoped/staged/children.md
+
+    if [ "$WELL_FORMED" -eq 0 ]; then
+      # Zero children: mark cursor terminal_fail and re-enter selecting.
+      awk -v X="$CURSOR" '
+        /^---$/ { in_block = 0; print; next }
+        /^id:/  { in_block = ($2 == X); print; next }
+        in_block && /^status:/ { print "status: terminal_fail"; next }
+        { print }
+      ' ./scoped/tree.md > ./scoped/tree.md.tmp && mv ./scoped/tree.md.tmp ./scoped/tree.md
+
+      cat > ./MEMORY.md << ABSORB_FAIL_EOF
+    ## State
+    selecting
+    ## Matched Instruction
+    Expand-absorb
+    ## Last Action
+    Absorbed 0 children for $CURSOR; marked terminal_fail and routing to selecting.
+    ## Result
+    Children appended to scoped/tree.md.
+
+    ## Pending Questions
+    - expand-workflow.md returned zero workflow children for cursor $CURSOR; check expand-workflow.md output format.
+    ABSORB_FAIL_EOF
+    else
+      echo "$FIRST_NEW" > ./scoped/chosen_child.md
+
+      MISSING=$((5 - WELL_FORMED))
+      if [ "$MISSING" -gt 0 ]; then
+        PQ=$(printf '\n## Pending Questions\n- expand-workflow.md returned %d workflow children (expected 5) for cursor %s.' "$WELL_FORMED" "$CURSOR")
+      else
+        PQ=""
+      fi
+
+      cat > ./MEMORY.md << ABSORB_OK_EOF
+    ## State
+    simulating
+    ## Matched Instruction
+    Expand-absorb
+    ## Last Action
+    Absorbed $WELL_FORMED workflow children for $CURSOR; chose $FIRST_NEW; routing to simulating.
+    ## Result
+    Children appended to scoped/tree.md.$PQ
+    ABSORB_OK_EOF
+    fi
+
+(Future tasks T32-T34 add: expand-workflow.md operator, Simulate-push, Simulate-absorb, Evaluate-absorb, termination, etc.)

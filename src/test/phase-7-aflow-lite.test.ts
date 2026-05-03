@@ -248,3 +248,34 @@ describe("R29: aflow-lite Select instruction (UCT descent)", () => {
     assert.match(content, /leftmost|first|tiebreak/i);
   });
 });
+
+describe("R32: aflow-lite Expand-push + Expand-absorb", () => {
+  const OP = "interpreters/7-meta-framework/a-aflow-lite/operators/aflow-lite.md";
+  test("Expand-push instruction matches state expanding and pushes operators/expand-workflow.md", () => {
+    const content = readFileSync(resolve(REPO, OP), "utf-8");
+    assert.match(content, /## Instruction: Expand-push|## Instruction: Expand push/);
+    assert.match(content, /MEMORY state is "expanding"/);
+    assert.match(content, /## Push\s*\n\s*operators\/expand-workflow\.md/);
+  });
+  test("Expand-push declares both push-args partial_state and task", () => {
+    const content = readFileSync(resolve(REPO, OP), "utf-8");
+    assert.match(content, /## Push-Args/);
+    assert.match(content, /partial_state:\s*\|/);
+    assert.match(content, /task:\s*\|/);
+  });
+  test("Expand-absorb instruction matches expanding_completed and parses ## Children", () => {
+    const content = readFileSync(resolve(REPO, OP), "utf-8");
+    assert.match(content, /## Instruction: Expand-absorb|## Instruction: Expand absorb/);
+    assert.match(content, /expanding_completed/);
+    assert.match(content, /## Children|Children/);
+  });
+  test("Expand-absorb writes state-<id>.md per child, sets chosen_child", () => {
+    const content = readFileSync(resolve(REPO, OP), "utf-8");
+    assert.match(content, /state-\$\{?ID\}?\.md|state-\$\w+\.md/);
+    assert.match(content, /chosen_child\.md/);
+  });
+  test("Expand-absorb transitions to simulating", () => {
+    const content = readFileSync(resolve(REPO, OP), "utf-8");
+    assert.match(content, /simulating/);
+  });
+});
