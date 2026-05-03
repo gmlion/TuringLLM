@@ -53,42 +53,18 @@ Prior answer (mode 2 — substituted at push-time, may be empty):
 
 ## Instruction: Evaluate refinement
 **Condition:** MEMORY state is "drafted_completed" and both `## Critique` and `## Refined` are present in MEMORY
-**Action:** Decide whether `## Refined` adequately addresses the task. If it is accepted, set state to "done". If not accepted, overwrite `./scoped/draft.md` wholesale with the content of `## Refined` (`cat > ./scoped/draft.md << 'DRAFTEOF' ... DRAFTEOF`). When rewriting MEMORY, omit the `## Critique` and `## Refined` sections (they were already consumed) and set state to "drafted" (which re-enters "Request critique" on the next cycle).
+**Action:** Decide whether `## Refined` adequately addresses the task.
 
-## Instruction: Finish
-**Condition:** MEMORY state is "done"
-**Action:** Read `./scoped/draft.md`. Write `./MEMORY.md` with this EXACT single-heredoc shape (the `## Return` block MUST be in the same heredoc as the state change — without it the caller receives no return value):
-
-```
-DRAFT=$(cat ./scoped/draft.md)
-DRAFT_INDENTED=$(cat ./scoped/draft.md | sed 's/^/  /')
-cat > ./MEMORY.md << 'FINEOF'
-## State
-done
-## Matched Instruction
-Finish
-## Last Action
-Finalized refined draft.
-## Result
-Self-refine accepted.
-## Refined
-${DRAFT}
-## Return
-answer: |
-${DRAFT_INDENTED}
-FINEOF
-```
-
-Note: in a non-interpolating heredoc (`<< 'FINEOF'`), `${DRAFT}` and `${DRAFT_INDENTED}` are written verbatim. Use a regular heredoc (`<< FINEOF`) or inline the content directly so the draft text is substituted. The canonical form is to capture the draft first, then write it inline:
+**If accepted:** Write `./MEMORY.md` with state `done`, `## Refined`, and `## Return\nanswer:` in a SINGLE heredoc. (Note: the `## Return` block MUST be in the same heredoc as the state change — at depth>=2 the shell pops on state is "done" BEFORE any subsequent instruction runs, so a separate Finish instruction would be unreachable.)
 
 ```
 cat > ./MEMORY.md << FINEOF
 ## State
 done
 ## Matched Instruction
-Finish
+Evaluate refinement
 ## Last Action
-Finalized refined draft.
+Accepted refined draft.
 ## Result
 Self-refine accepted.
 ## Refined
@@ -98,3 +74,5 @@ answer: |
 $(cat ./scoped/draft.md | sed 's/^/  /')
 FINEOF
 ```
+
+**If not accepted:** Overwrite `./scoped/draft.md` wholesale with the content of `## Refined` (`cat > ./scoped/draft.md << 'DRAFTEOF' ... DRAFTEOF`). When rewriting MEMORY, omit the `## Critique` and `## Refined` sections (they were already consumed) and set state to "drafted" (which re-enters "Request critique" on the next cycle).
