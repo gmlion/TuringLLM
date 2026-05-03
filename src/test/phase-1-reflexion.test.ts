@@ -79,14 +79,23 @@ describe("1c reflexion", () => {
     const strategy = readFileSync(resolve(INTERP, "operators/reflexion.md"), "utf-8");
     // ## Attempt and ## Criterion must never appear as MEMORY sections in the strategy
     // (they live exclusively in ./scoped/ files during execution).
-    // Note: ## Lessons IS written by the Finish instruction as terminal output — that is intentional.
+    // Note: ## Lessons IS written as terminal output — that is intentional.
+    // After the F4 fix the Finish instruction was folded into "Route on verdict" (pass branch),
+    // so ## Lessons now appears in the single-heredoc that also writes ## State done.
     assert.doesNotMatch(strategy, /^## Attempt\b/m, "strategy should not use ## Attempt in MEMORY");
     assert.doesNotMatch(strategy, /^## Criterion\b/m, "strategy should not use ## Criterion in MEMORY");
-    // Verify ## Lessons only appears in the Finish instruction (terminal output), not in intermediate states.
-    // Split off everything before the Finish instruction and check no ## Lessons there.
-    const beforeFinish = strategy.split(/^## Instruction: Finish/m)[0] ?? "";
-    assert.doesNotMatch(beforeFinish, /^## Lessons\b/m,
-      "strategy should not use ## Lessons as an intermediate MEMORY section (only terminal output in Finish)");
+    // Verify ## Lessons only appears inside an instruction body that also writes ## State done
+    // (i.e. it is terminal output, not an intermediate MEMORY section).
+    // Approach: for every instruction block that contains ^## Lessons, confirm the same block also
+    // writes "## State\ndone" (the canonical terminal write).
+    const blocks = strategy.split(/^## Instruction:/m);
+    for (let i = 1; i < blocks.length; i++) {
+      const block = blocks[i];
+      if (/^## Lessons\b/m.test(block)) {
+        assert.match(block, /## State\s*\ndone\b/,
+          "strategy should not use ## Lessons as an intermediate MEMORY section (only in terminal output that writes ## State done)");
+      }
+    }
   });
 
   test("evaluate dynamic uses {{attempt}} and {{criterion}} and writes ## Return (byte-equal with b)", () => {

@@ -64,7 +64,29 @@ Prior answer (mode 2 — substituted at push-time, may be empty):
 
 ## Instruction: Route on verdict
 **Condition:** MEMORY state is "attempted_completed" and `## Verdict` is present
-**Action:** Read `## Verdict` from MEMORY. If `## Verdict` is literally "pass", set state to "done". Otherwise (literal "fail" or any malformed value), set state to "failed_attempt". When rewriting MEMORY, retain `## Verdict` and `## Feedback` so the Reflect step can read them. If `## Verdict` was neither literally "pass" nor literally "fail", additionally append a non-blocking `## Pending Questions` item flagging the malformed verdict before transitioning — do NOT set state to "waiting_for_user" (the loop must continue so the machine makes progress).
+**Action:** Read `## Verdict` from MEMORY. If `## Verdict` is literally "pass", write `./MEMORY.md` with the FULL done state in a SINGLE heredoc (the `## Return` block MUST be in the same heredoc as the state change — at depth>=2 the shell pops on state is "done" BEFORE any subsequent instruction runs, so a separate Finish instruction would be unreachable):
+
+```
+cat > ./MEMORY.md << FINEOF
+## State
+done
+## Matched Instruction
+Route on verdict
+## Last Action
+Accepted attempt.
+## Result
+Reflexion accepted.
+## Refined
+$(cat ./scoped/attempt.md)
+## Lessons
+$(cat ./scoped/lessons.md)
+## Return
+answer: |
+$(cat ./scoped/attempt.md | sed 's/^/  /')
+FINEOF
+```
+
+Otherwise (literal "fail" or any malformed value), set state to "failed_attempt". When rewriting MEMORY, retain `## Verdict` and `## Feedback` so the Reflect step can read them. If `## Verdict` was neither literally "pass" nor literally "fail", additionally append a non-blocking `## Pending Questions` item flagging the malformed verdict before transitioning — do NOT set state to "waiting_for_user" (the loop must continue so the machine makes progress).
 
 ## Instruction: Reflect
 **Condition:** MEMORY state is "failed_attempt" and `## Verdict` is present
@@ -83,27 +105,3 @@ Prior answer (mode 2 — substituted at push-time, may be empty):
 ## Instruction: Accumulate lesson
 **Condition:** MEMORY state is "failed_attempt_completed" and `## Lesson` is present
 **Action:** Read `./scoped/lessons.md` to determine the next sequential lesson index (count existing `- L<N>:` lines; next index = count + 1). Append the lesson SURGICALLY using: `echo "- L<N>: <lesson text>" >> ./scoped/lessons.md` where `<N>` is the next sequential index. Do NOT use `cat > ./scoped/lessons.md` or any wholesale rewrite — only surgical appends are permitted. When rewriting MEMORY, omit the `## Verdict`, `## Feedback`, and `## Lesson` sections (they were already consumed). Set MEMORY state to "attempting".
-
-## Instruction: Finish
-**Condition:** MEMORY state is "done"
-**Action:** Read `./scoped/attempt.md` and `./scoped/lessons.md`. Write `./MEMORY.md` with this EXACT single-heredoc shape (the `## Return` block MUST be in the same heredoc as the state change — without it the caller receives no return value):
-
-```
-cat > ./MEMORY.md << FINEOF
-## State
-done
-## Matched Instruction
-Finish
-## Last Action
-Finalized accepted attempt.
-## Result
-Reflexion accepted.
-## Refined
-$(cat ./scoped/attempt.md)
-## Lessons
-$(cat ./scoped/lessons.md)
-## Return
-answer: |
-$(cat ./scoped/attempt.md | sed 's/^/  /')
-FINEOF
-```
