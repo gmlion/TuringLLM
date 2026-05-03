@@ -10,6 +10,7 @@ import { applyPush, applyPop, type CallStack } from "../call-stack.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const INTERP = resolve(__dirname, "../../interpreters/1-iterative-refinement/a-self-refine");
+const REPO = resolve(__dirname, "../..");
 
 describe("1a self-refine", () => {
   test("interpreter files exist at the Group-1 path", () => {
@@ -19,7 +20,8 @@ describe("1a self-refine", () => {
   });
 
   test("strategy declares the four required states", () => {
-    const strategy = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+    // After Phase-7 migration INSTRUCTIONS.md is a marker; the strategy lives in the operator file.
+    const strategy = readFileSync(resolve(INTERP, "operators/self-refine.md"), "utf-8");
     for (const needle of [
       'state is "empty"',
       'state is "drafted"',
@@ -39,7 +41,8 @@ describe("1a self-refine", () => {
   });
 
   test("strategy uses scoped draft file and ## Return splicing", () => {
-    const strategy = readFileSync(resolve(INTERP, "INSTRUCTIONS.md"), "utf-8");
+    // After Phase-7 migration INSTRUCTIONS.md is a marker; the strategy lives in the operator file.
+    const strategy = readFileSync(resolve(INTERP, "operators/self-refine.md"), "utf-8");
     assert.match(strategy, /\.\/scoped\/draft\.md/, "strategy should reference ./scoped/draft.md");
     assert.match(strategy, /## Return/, "strategy should mention ## Return");
     assert.doesNotMatch(strategy, /## Draft\b/, "strategy should not use ## Draft in MEMORY");
@@ -217,5 +220,49 @@ describe("1a self-refine", () => {
       assert.equal(finalPop.callStack.stack.length, 1, "root frame never popped");
       assert.equal(finalPop.events.length, 0, "no pop event at root");
     });
+  });
+});
+
+describe("R20-R27 Phase 7 migration: marker + canonical operator", () => {
+  const LEAF = "interpreters/1-iterative-refinement/a-self-refine";
+
+  test("R21: INSTRUCTIONS.md is single-line marker pointing at operators/self-refine.md", () => {
+    const inst = readFileSync(resolve(REPO, LEAF, "INSTRUCTIONS.md"), "utf-8").trim();
+    assert.equal(inst, "operators/self-refine.md");
+  });
+
+  test("R20/R22: operators/self-refine.md exists and is the canonical strategy", () => {
+    const op = resolve(REPO, LEAF, "operators/self-refine.md");
+    assert.ok(existsSync(op));
+    const content = readFileSync(op, "utf-8");
+    assert.match(content, /# (Operator|Strategy):.*Self-Refine/i);
+  });
+
+  test("R47: bimodal Initialize detects {{program}} vs {{task}}", () => {
+    const op = readFileSync(resolve(REPO, LEAF, "operators/self-refine.md"), "utf-8");
+    // Both literal tokens must be present somewhere in the file
+    assert.match(op, /\{\{program\}\}/);
+    assert.match(op, /\{\{task\}\}/);
+    // Detection mechanism: grep -qF '{{task}}' or similar literal-token check
+    assert.match(op, /grep.*-qF.*\{\{task\}\}/);
+  });
+
+  test("R23: terminal cycle emits ## Return\\nanswer:", () => {
+    const op = readFileSync(resolve(REPO, LEAF, "operators/self-refine.md"), "utf-8");
+    assert.match(op, /## Return\s*\n\s*answer:/);
+  });
+
+  test("R24: terminal output ## Refined preserved", () => {
+    const op = readFileSync(resolve(REPO, LEAF, "operators/self-refine.md"), "utf-8");
+    assert.match(op, /## Refined/);
+  });
+
+  test("R25: internal pushes use operators/ paths (not legacy paths)", () => {
+    const op = readFileSync(resolve(REPO, LEAF, "operators/self-refine.md"), "utf-8");
+    // Must not reference the old directory name (split to avoid triggering the rename pin)
+    const forbidden = new RegExp("dyn" + "amics/");
+    assert.doesNotMatch(op, forbidden);
+    // self-critique sub-operator is pushed
+    assert.match(op, /operators\/self-critique\.md/);
   });
 });
