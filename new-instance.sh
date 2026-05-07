@@ -48,6 +48,14 @@ if [ -n "$INTERPRETER" ]; then
     cp -r "$INTERP_DIR/operators" "$DIR/operators"
   fi
 
+  # Library scripts — shared bookkeeping for operators that need deterministic
+  # state management (e.g. aflow-lite's MCTS loop). At instance root so frames
+  # can invoke them as `bash ../../lib/<name>.sh`.
+  if [ -d "$INTERP_DIR/lib" ]; then
+    cp -r "$INTERP_DIR/lib" "$DIR/lib"
+    chmod +x "$DIR/lib/"*.sh 2>/dev/null || true
+  fi
+
   # Roles (or other interpreter-shared subdirectories the operators reference) —
   # copied to the instance root so operators can `cat ../../roles/<name>.md` from
   # any frame. Used by b-chatdev for its CEO/CTO/coder/reviewer/tester/writer
