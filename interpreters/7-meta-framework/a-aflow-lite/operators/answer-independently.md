@@ -6,11 +6,9 @@ Return: state done → caller sees {caller_state}_completed, and ## Return entry
 
 ## Instruction: Answer in isolation
 **Condition:** MEMORY state is "empty"
-**Action:** Answer the question below using only:
-  (a) the premises in PROGRAM.md (you may read `../../PROGRAM.md`), and
-  (b) general world knowledge applicable to the question.
+**Action:** Answer the question below from a fresh perspective. You have no access to the draft being verified, the verification queue, or any reasoning the caller produced — that is the point: the verifier needs an independent answer, untainted by the artefact under review. Beyond that, use whatever you need: PROGRAM.md and any files it references (e.g. `../../PROGRAM.md`, `../../workspace/*`), the web (`web_search`, `web_fetch`), and your own world knowledge. The independence constraint is "don't consult the draft," not "don't consult any source."
 
-You have no draft, no prior reasoning, and no access to any other context from the caller. Write `./MEMORY.md` with this EXACT single-heredoc shape (the `## Return` block MUST be in the same heredoc as the state change — without it the shell pops with no return value, breaking the caller):
+Write `./MEMORY.md` with this EXACT single-heredoc shape (the `## Return` block MUST be in the same heredoc as the state change — without it the shell pops with no return value, breaking the caller):
 
 ```
 cat > ./MEMORY.md << 'MEMEOF'
