@@ -21,6 +21,23 @@ export function isQuotaError(text: string): boolean {
 }
 
 /**
+ * Detect a Ctrl+C / SIGINT termination of the claude subprocess across
+ * platforms. POSIX kernels deliver SIGINT (status 130 or signal === "SIGINT"),
+ * while the Windows console kills the child with STATUS_CONTROL_C_EXIT
+ * (0xC000013A = 3221225786 unsigned, -1073741510 as int32). Without the
+ * Windows codes the catch block falls through, the cycle-completeness check
+ * sees memory unchanged, and the retry loop relaunches claude — making
+ * Ctrl+C effectively impossible to honour from git-bash on Windows.
+ */
+export function isCtrlCExit(e: { status?: number | null; signal?: string | null }): boolean {
+  if (e.signal === "SIGINT") return true;
+  if (e.status === 130) return true;
+  if (e.status === 3221225786) return true;
+  if (e.status === -1073741510) return true;
+  return false;
+}
+
+/**
  * Decide whether a claude-code subprocess result represents a real quota error
  * worth retrying. Only signals true when the API or the subprocess itself
  * actually failed — never on a successful response that happens to contain
@@ -69,6 +86,15 @@ export async function runCycle(
   writeFileSync(systemPromptFile, systemPrompt, "utf-8");
 
   let retryContext = "";
+  // Count clean-exit empty responses. When the claude subprocess hits a weekly
+  // quota / rate-limit block, observed behaviour is exit 0 + empty stdout in
+  // ~14ms — none of the existing detectors fire (no api_error_status, no
+  // non-zero exit, no quota-shaped prose), so the cycle-completeness retry
+  // loop spins MAX_RETRIES times in milliseconds and main.ts then advances
+  // to the next cycle, repeating forever. Tally empties; if every retry was
+  // empty, escalate to QuotaExceededError so withBackoff/main can exit
+  // cleanly instead of writing 57 GB of "no text output" to events.jsonl.
+  let cleanExitEmptyResponses = 0;
 
   try {
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
@@ -104,7 +130,7 @@ export async function runCycle(
       } catch (err: unknown) {
         if (err instanceof QuotaExceededError) throw err;
         const e = err as { stdout?: string; stderr?: string; status?: number; signal?: string; code?: string };
-        if (e.signal === "SIGINT" || e.status === 130) {
+        if (isCtrlCExit(e)) {
           process.exit(0);
         }
         // ENAMETOOLONG / E2BIG would mean we still exceeded the OS limit even
@@ -156,6 +182,7 @@ export async function runCycle(
         log(`  [claude-code] exited with code ${exitCode}${stderr ? ": " + stderr : ""}`);
       } else {
         log(`  [claude-code] (no text output)`);
+        cleanExitEmptyResponses += 1;
       }
 
       const completeness = checkCycleCompleteness(memoryPath, instructionsPath, filesBefore);
@@ -178,6 +205,17 @@ export async function runCycle(
     }
 
     log(`  [warn] cycle incomplete after ${MAX_RETRIES} retries`);
+    if (cleanExitEmptyResponses === MAX_RETRIES) {
+      // Every retry was a clean-exit empty response. The CLI is refusing to
+      // do work — almost always a weekly token / 5h block. Escalate to
+      // QuotaExceededError so withBackoff applies its exponential backoff
+      // (60s → 600s, 10 retries) and ultimately main.ts exits cleanly. The
+      // alternative — returning {halt:false} — keeps main.ts spinning new
+      // cycles at ~3/sec writing only "no text output" log entries.
+      throw new QuotaExceededError(
+        `claude returned empty output for all ${MAX_RETRIES} retries — likely quota or rate-limit block`,
+      );
+    }
     return { halt: false, events };
   } finally {
     rmSync(promptDir, { recursive: true, force: true });

@@ -1,6 +1,6 @@
 import { test, describe } from "node:test";
 import { strict as assert } from "node:assert";
-import { isQuotaError, shouldThrowQuotaForResponse } from "../providers/claude-code.js";
+import { isQuotaError, shouldThrowQuotaForResponse, isCtrlCExit } from "../providers/claude-code.js";
 
 describe("claude-code quota detection", () => {
   test("matches HTTP 529 with word boundary", () => {
@@ -92,5 +92,39 @@ describe("shouldThrowQuotaForResponse — caller-side gating", () => {
 
   test("empty stdout with successful exit is benign (no JSON, no error indicator)", () => {
     assert.equal(shouldThrowQuotaForResponse(null, 0, "", ""), false);
+  });
+});
+
+describe("isCtrlCExit — cross-platform Ctrl+C detection", () => {
+  test("POSIX kernel signal SIGINT (signal field set, status null)", () => {
+    assert.equal(isCtrlCExit({ status: null, signal: "SIGINT" }), true);
+  });
+
+  test("POSIX shell convention status 130 (128 + SIGINT)", () => {
+    assert.equal(isCtrlCExit({ status: 130, signal: null }), true);
+  });
+
+  test("Windows STATUS_CONTROL_C_EXIT as unsigned 32-bit (0xC000013A = 3221225786)", () => {
+    // Without this branch, Ctrl+C in git-bash on Windows fell through to the
+    // retry loop and silently relaunched claude on every cycle — making the
+    // instance impossible to stop short of killing the terminal.
+    assert.equal(isCtrlCExit({ status: 3221225786, signal: null }), true);
+  });
+
+  test("Windows STATUS_CONTROL_C_EXIT as int32-cast (-1073741510)", () => {
+    // Some Node builds report the same code as a signed 32-bit value depending
+    // on how they marshal exit codes from the Win32 API.
+    assert.equal(isCtrlCExit({ status: -1073741510, signal: null }), true);
+  });
+
+  test("ordinary non-zero exit codes are NOT Ctrl+C", () => {
+    assert.equal(isCtrlCExit({ status: 1, signal: null }), false);
+    assert.equal(isCtrlCExit({ status: 2, signal: null }), false);
+    assert.equal(isCtrlCExit({ status: 127, signal: null }), false);
+  });
+
+  test("other POSIX signals are NOT Ctrl+C (only SIGINT counts)", () => {
+    assert.equal(isCtrlCExit({ status: null, signal: "SIGTERM" }), false);
+    assert.equal(isCtrlCExit({ status: null, signal: "SIGKILL" }), false);
   });
 });
