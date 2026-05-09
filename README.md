@@ -292,24 +292,26 @@ The machine git ignores `workspace/.git/` so nested repos don't conflict.
 ```
 instances/foo/
 ├── PROGRAM.md         # User's program (read-only to machine)
-├── INSTRUCTIONS.md    # Strategy + generated sub-instructions (swapped when an operator is active)
-├── MEMORY.md          # Current state; may carry ## Push to delegate
-├── .call-stack.json   # Saved call stack (empty at depth 0)
+├── .root-operator     # Marker pointing at canonical operator (e.g. "operators/refine.md")
+├── .call-stack.json   # Saved call stack; stack[0] is always the root frame
 ├── .env               # Provider/model config (gitignored)
-├── workspace/         # Project artifacts (own git repo)
-├── operators/          # Reusable instruction files (optional, provided by the interpreter)
+├── workspace/         # Project artifacts (has its own git repo)
+├── operators/         # Reusable instruction files copied from the interpreter
+├── frames/
+│   ├── f000-<operator-slug>/  # Root frame (always present; slug = operator basename)
+│   │   ├── INSTRUCTIONS.md    # Operator content with {{program}} substituted
+│   │   ├── MEMORY.md          # Current state; may contain ## Push / ## Return
+│   │   └── scoped/            # Per-frame heap files (draft.md, etc.)
+│   └── f001-<slug>/           # Pushed frames appear here while active
+│       ├── INSTRUCTIONS.md
+│       ├── MEMORY.md
+│       └── scoped/
+├── OUTPUT.md          # Written on halt; one section per ## Return key from root frame
 ├── run.sh             # Launch script
-├── *.md               # Interpreter support files (role descriptions, templates)
 ├── .api_key           # Cached API key (gitignored)
-├── .gitignore
-├── history/           # Snapshots per cycle (each includes a copy of .call-stack.json)
-│   ├── 0001-a3f1b2c/
-│   │   ├── MEMORY.md
-│   │   ├── INSTRUCTIONS.md
-│   │   └── .call-stack.json
-│   └── ...
-└── logs/              # Full untruncated run logs
-    └── run-2026-04-06T*.log
+├── .gitignore         # Ignores .api_key, .env, logs/, history/, workspace/.git/
+├── history/           # Snapshot per cycle (0001-a3f1b2c/ — includes .call-stack.json)
+└── logs/              # Full run logs (run-<timestamp>.log)
 ```
 
 ## Source Layout

@@ -47,7 +47,7 @@ Each is a byte-equal copy of its canonical source under another interpreter's `o
 
 `PROGRAM.md` describes the demo: solve GSM8K math word problems (`workspace/gsm8k.jsonl`, 20 hand-curated items). The 3 items used per run are sampled deterministically (1st, middle, last in the file). Per-item scoring extracts the last integer from the operator chain's final `## Answer` and compares to the expected integer answer.
 
-GSM8K is from Cobbe et al. 2021 (*Training Verifiers to Solve Math Word Problems*, arXiv:2110.14168).
+GSM8K is from Cobbe et al. 2021 (*Training Verifiers to Solve Math Word Problems*, arXiv:2110.14168), released by OpenAI under the MIT License at [github.com/openai/grade-school-math](https://github.com/openai/grade-school-math). The 20 items in `workspace/gsm8k.jsonl` are a sample drawn from that dataset.
 
 ## Run it
 
