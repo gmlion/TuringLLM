@@ -424,7 +424,22 @@ function runStackBlock(callStack: CallStack): boolean {
 
     // rmSync each popped frame's directory and log events.
     for (const ev of popped.events) {
-      rmSync(resolve(BASE_DIR, ev.frameDir), { recursive: true, force: true });
+      // Retries handle brief Windows file locks held by the visualizer's
+      // HTTP fetches against the active frame's MEMORY/INSTRUCTIONS/scoped/.
+      // Without them, an in-flight visualizer poll during a pop bubbled up an
+      // EBUSY/EPERM through main().catch() and killed the instance.
+      // If rmSync still fails after retries we log and continue: the orphan
+      // frame dir is no longer referenced by the call stack and is harmless.
+      try {
+        rmSync(resolve(BASE_DIR, ev.frameDir), {
+          recursive: true,
+          force: true,
+          maxRetries: 5,
+          retryDelay: 100,
+        });
+      } catch (rmErr) {
+        log(`  [pop] WARN: failed to remove ${ev.frameDir} after retries: ${rmErr instanceof Error ? rmErr.message : rmErr}`);
+      }
       log(`  [pop] \u2192 ${ev.returnState}_completed (depth ${ev.depthAfter})`);
       if (ev.splicedKeys && ev.splicedKeys.length > 0) {
         emitSplice(popped.callerFrameDir, ev.splicedKeys);
