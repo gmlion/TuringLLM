@@ -8,12 +8,12 @@ A meta-framework operator (such as `aflow-lite.md`) at the canonical position is
 
 ## Members
 
-- **`a-aflow-lite`** — AFlow-lite (Zhang et al. 2024, *AFlow: Automating Agentic Workflow Generation*, arXiv:2410.10762). A lightweight v1 of the AFlow meta-framework: MCTS over candidate workflows from a five-operator library (`refine`, `reflexion`, `cove`, `plan-execute`, `debate`), evaluated on a small benchmark sample. The MCTS controller is reused verbatim from Phase 6b LATS (`interpreters/mas-papers/3-search/b-lats/`); the new piece is `expand-workflow.md` (k=5 LLM-driven workflow expansion) and the per-workflow simulator that pushes operators sequentially with `{{task}}`/`{{prior_answer}}` push-args.
+- **`a-aflow-lite`** — AFlow-lite (Zhang et al. 2024, *AFlow: Automating Agentic Workflow Generation*, arXiv:2410.10762). A lightweight v1 of the AFlow meta-framework: MCTS over candidate workflows from a five-operator library (`refine`, `reflexion`, `cove`, `plan-execute`, `debate`), evaluated on a small benchmark sample. The MCTS controller is reused verbatim from LATS (`interpreters/mas-papers/3-search/b-lats/`); the new piece is `expand-workflow.md` (k=5 LLM-driven workflow expansion) and the per-workflow simulator that pushes operators sequentially with `{{task}}`/`{{prior_answer}}` push-args.
 
 ## Notable group properties
 
 - Stack-depth invariant: aflow-lite reaches stack depth 4 in the deepest case (root `aflow-lite` + library operator at depth 2 + sub-push of library operator at depth 3 + sub-push's own sub-push at depth 4 — e.g., CoVe → verify → answer-independently). Most cycles run at depth 1–2.
-- Operators in the library are byte-equal copies of their canonical sources elsewhere in the catalogue. The Phase 7 spec moved these to canonical operator files (`operators/<name>.md`) accessible through any leaf's `INSTRUCTIONS.md` marker.
+- Operators in the library are byte-equal copies of their canonical sources elsewhere in the catalogue, accessible through any leaf's `INSTRUCTIONS.md` marker (`operators/<name>.md`).
 - No nested shell instances. All workflow execution happens through push/pop within one shell instance.
 
 ## Future scope

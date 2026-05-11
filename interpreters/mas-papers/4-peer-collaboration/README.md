@@ -83,15 +83,13 @@ push-arg/return contract.
 
 ## Future directions in this group
 
-**Mixture of Agents** (Phase 5b, deferred) — a layered architecture
-where N **proposer** LLMs independently answer, an **aggregator** LLM
-synthesises them, and layers can be stacked. Agents within a layer
-do **not** see each other (unlike Debate) — ensembling rather than
-argumentation. Pending per-prompt model selection in the harness.
+**Mixture of Agents** — a layered architecture where N **proposer**
+LLMs independently answer, an **aggregator** LLM synthesises them,
+and layers can be stacked. Agents within a layer do **not** see
+each other (unlike Debate) — ensembling rather than argumentation.
+Pending per-prompt model selection in the shell.
 
 ## References
 
 - Du, Yilun et al. *Improving Factuality and Reasoning in Language Models through Multiagent Debate*. arXiv:2305.14325. 2023.
 - `docs/agent-workflows/patterns.md` § Group 4 — Peer Collaboration.
-- `docs/agent-workflows/requirements.md` § Phase 5.
-- `docs/specs/2026-04-28-agent-workflows-phase-5/` — full spec (requirements, design, tasks).

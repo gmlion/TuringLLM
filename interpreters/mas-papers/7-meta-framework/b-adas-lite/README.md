@@ -1,8 +1,6 @@
 # ADAS-lite (measurement edition)
 
-A sequential-iteration meta-framework that searches over **operator code**, after Hu et al. 2024 (*Automated Design of Agentic Systems*, arXiv:2408.08435). Phase 8.1 ports the ADAS paper's evaluation protocol — train/test split, halt-on-budget (not halt-on-luck), held-out reporting, multi-run aggregation — onto the Phase-7 push/pop substrate.
-
-> **Breaking change from Phase 8.** Phase 8 was a 3-item demo; Phase 8.1 replaces the fixture with a 60-item GSM8K slice and adds a held-out evaluation phase. **Pre-Phase-8.1 instances cannot resume**; create a fresh instance with `new-instance.sh`.
+A sequential-iteration meta-framework that searches over **operator code**, after Hu et al. 2024 (*Automated Design of Agentic Systems*, arXiv:2408.08435). Ports the ADAS paper's evaluation protocol — train/test split, halt-on-budget (not halt-on-luck), held-out reporting, multi-run aggregation — onto the AFlow-lite push/pop substrate.
 
 ## What it does
 
@@ -14,14 +12,14 @@ After `max_iterations` proposer iterations (default 10) the search ends. The sin
 
 The discriminating idea borrowed from the ADAS paper: the proposer sees scores from a search set, but the reported number is from a held-out set. This is what tells you whether the discovered agent generalises or just memorised the specific items it was scored on.
 
-| | Phase 8 (demo) | Phase 8.1 (measurement) |
-|---|---|---|
-| Fixture | 20 hand-curated items | 60 deterministic items from GSM8K test set |
-| Search set | 3 items | 30 items |
-| Held-out set | (none — same 3 items) | 30 items, disjoint from search |
-| Halt | first reward 1.0 OR max-iter | max-iter only (no early halt) |
-| Reporting | search-set score | held-out score (headline) + search score |
-| Statistical resolution | {0, 0.33, 0.67, 1.0} | {0, 1/30, ..., 1.0} |
+| Setting | This interpreter |
+|---|---|
+| Fixture | 60 deterministic items from GSM8K test set |
+| Search set | 30 items |
+| Held-out set | 30 items, disjoint from search |
+| Halt | max-iter only (no early halt) |
+| Reporting | held-out score (headline) + search score |
+| Statistical resolution | {0, 1/30, ..., 1.0} |
 
 ## Fixture
 
@@ -33,7 +31,7 @@ To regenerate:
 bash scripts/fetch-gsm8k.sh    # downloads upstream, normalises, writes 60 items
 ```
 
-The script verifies the upstream SHA-256 against `scripts/fetch-gsm8k.sha256` (committed) so re-runs produce a byte-equal fixture as long as upstream is unchanged. The Phase-8 curated 20-item set is preserved at `workspace/gsm8k-curated-20.jsonl` for reference.
+The script verifies the upstream SHA-256 against `scripts/fetch-gsm8k.sha256` (committed) so re-runs produce a byte-equal fixture as long as upstream is unchanged. An earlier curated 20-item set is preserved at `workspace/gsm8k-curated-20.jsonl` for reference.
 
 ## State machine
 
@@ -137,10 +135,10 @@ If you want to dial cost down for plumbing verification (not measurement), edit 
 
 - **File-based hand-off for the proposer.** The proposer writes the new operator file directly to `proposed/proposed-NN.md` (path agreed via the `output_path` push-arg) and returns only `status: written` via `## Return`. Round-tripping operator content through MEMORY's section grammar would clash with `## Instruction:` and `## Return` markdown headers inside the operator body.
 - **Items source is parametric.** `./scoped/sim/items_source.md` and `./scoped/sim/items_total.md` decouple the test loop from a hardcoded fixture path. Search-phase test loops point at `benchmark_items.md`; the holdout phase points at `holdout_items.md`. One body of test-loop logic, two phases.
-- **Halt-on-1.0 is gone.** Phase 8 halted on first reward 1.0; Phase 8.1 runs strictly to budget. The proposer is expected to produce a diverse archive; halting early on a lucky seed defeats the point.
+- **Runs strictly to budget.** No "halt-on-first-reward-1.0" early exit; the proposer is expected to produce a diverse archive, and halting early on a lucky seed would defeat the point.
 - **Holdout splice into winner archive entry.** `lib/holdout_absorb.sh` calls `splice_holdout_fields` (in `common.sh`) which awk-inserts `holdout_score` and `holdout_per_item` lines into the winner's existing archive entry's front-matter (before the closing `---`). Single source of truth for downstream tooling.
-- **Soft per-item cycle budget.** R20 ("force-pop on cycle exhaustion") was downgraded to "warn in MEMORY when exceeded" because force-pop requires a shell-level primitive that doesn't exist today. If a candidate genuinely hangs, the user must intervene.
-- **Same scorer-write pattern as Phase 8.** Each ADAS-lite instance is self-contained; the LLM writes a per-program scorer at `init_scorer_pending`.
+- **Soft per-item cycle budget.** Force-pop on cycle exhaustion is not implemented (it would require a shell-level primitive that doesn't exist today). Instead, the test loop warns in MEMORY when the cycle budget is exceeded. If a candidate genuinely hangs, the user must intervene.
+- **Per-instance scorer.** Each ADAS-lite instance is self-contained; the LLM writes a per-program scorer at `init_scorer_pending`.
 
 ## Out of scope (v1)
 
@@ -177,7 +175,7 @@ If you want to dial cost down for plumbing verification (not measurement), edit 
 | `lib/finalize_run.sh` | pick best entry; build OUTPUT with held-out + search headline + per-entry summary |
 | `lib/common.sh` | shared bash helpers (indent2, archive_write, splice_holdout_fields, etc.) |
 | `workspace/gsm8k.jsonl` | 60-item GSM8K test-set slice (regenerable via `scripts/fetch-gsm8k.sh`) |
-| `workspace/gsm8k-curated-20.jsonl` | Phase-8 curated demo fixture (archival only) |
+| `workspace/gsm8k-curated-20.jsonl` | Earlier curated 20-item demo fixture (archival only) |
 | `../../scripts/fetch-gsm8k.sh` | one-time fetch + normalise + 60-item slice (repo root) |
 | `../../scripts/adas-sweep.sh` | sequential N-run sweep (repo root) |
 | `../../scripts/adas-aggregate.sh` | parse N OUTPUT.md files; emit mean ± stdev report (repo root) |

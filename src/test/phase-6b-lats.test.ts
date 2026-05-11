@@ -44,8 +44,10 @@ describe("phase-6b b-lats: directory layout (R1, R4, R5)", () => {
 describe("phase-6b b-lats: group README delta (R2)", () => {
   const groupReadme = readFileSync(resolve(GROUP, "README.md"), "utf-8");
   test("group README lists b-lats as Shipped (R2)", () => {
+    // Post-rename: public README dropped the "(Phase 6b)" parenthetical
+    // alongside the spec link; the row keeps just the Shipped status.
     assert.match(groupReadme, /b-lats/);
-    assert.match(groupReadme, /Shipped\s*\(Phase\s*6b\)/);
+    assert.match(groupReadme, /b-lats.*\|\s*Shipped\s*\|/);
   });
   test("group README cites Zhou et al. arXiv:2310.04406 (R2)", () => {
     assert.match(groupReadme, /Zhou\s+et\s+al/i);

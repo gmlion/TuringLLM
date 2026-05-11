@@ -1,14 +1,20 @@
-# Turing
+# TuringLLM
 
 An LLM-powered universal Turing machine. A cycle loop invokes an LLM
 once per cycle. The LLM reads its state (`MEMORY.md`) and program
 (`INSTRUCTIONS.md`), matches the first instruction whose condition
 fits, acts, and is destroyed. The cycle repeats until halt.
 
-The shell is generic. **Interpreters** plug in to define how an
-arbitrary user goal in `PROGRAM.md` is executed. They live under
-`interpreters/<group>/<variant>/` and are copied into each new
-instance.
+TuringLLM is, before anything else, **the shell**: a thin universal
+executor that turns a sequence of one-shot LLM calls into a stateful,
+resumable, observable machine. Everything in `src/` and the
+top-level scripts is part of the shell.
+
+Anything that decides *what the LLM is supposed to do on each cycle*
+lives outside the shell, in user-authored markdown. Examples ship in
+[`interpreters/`](interpreters/) — they're useful starting points,
+but the shell itself doesn't know about them, and you can run
+TuringLLM perfectly well without them.
 
 ## Architecture
 
@@ -17,21 +23,21 @@ instance.
 │                        INSTANCE                             │
 │                                                             │
 │  PROGRAM.md          INSTRUCTIONS.md         MEMORY.md      │
-│  ┌─────────────┐    ┌──────────────────┐    ┌───────────┐  │
-│  │ # Goal      │    │ # Strategy       │    │ ## State   │  │
-│  │             │    │ (interpreter)    │    │ current    │  │
-│  │ (user-      │◄───│                  │    │            │  │
-│  │  authored)  │    │ # Sub-instruct.  │───►│ ## Result  │  │
-│  │             │    │ (generated)      │    │ ...        │  │
-│  └─────────────┘    └──────────────────┘    └───────────┘  │
+│  ┌─────────────┐    ┌──────────────────┐    ┌───────────┐   │
+│  │ # Goal      │    │ # Strategy       │    │ ## State  │   │
+│  │             │    │ (active frame's) │    │ current   │   │
+│  │ (user-      │◄───│                  │    │           │   │
+│  │  authored)  │    │ # Sub-instruct.  │───►│ ## Result │   │
+│  │             │    │ (generated)      │    │ ...       │   │
+│  └─────────────┘    └──────────────────┘    └───────────┘   │
 │                                                             │
-│  workspace/          history/                logs/           │
-│  ┌─────────────┐    ┌──────────────────┐    ┌───────────┐  │
-│  │ (project    │    │ 0001-a3f1b2c/    │    │ run-*.log │  │
-│  │  artifacts, │    │ 0002-b4e2c3d/    │    │ (full     │  │
-│  │  own git    │    │ ...              │    │  output)  │  │
-│  │  repo)      │    │                  │    │           │  │
-│  └─────────────┘    └──────────────────┘    └───────────┘  │
+│  workspace/          history/                logs/          │
+│  ┌─────────────┐    ┌──────────────────┐    ┌───────────┐   │
+│  │ (project    │    │ 0001-a3f1b2c/    │    │ run-*.log │   │
+│  │  artifacts, │    │ 0002-b4e2c3d/    │    │ (full     │   │
+│  │  own git    │    │ ...              │    │  output)  │   │
+│  │  repo)      │    │                  │    │           │   │
+│  └─────────────┘    └──────────────────┘    └───────────┘   │
 └─────────────────────────────────────────────────────────────┘
                               │
               ┌───────────────┼───────────────┐
@@ -53,10 +59,10 @@ instance.
 ┌──────────────────────────────────────────────────┐
 │  PROGRAM.md (user layer)                         │
 │                                                  │
-│  High-level goals. Written by user.              │
+│  High-level goals. Written by the user.          │
 │  Never modified by the machine.                  │
 ├──────────────────────────────────────────────────┤
-│  INSTRUCTIONS.md (interpreter layer)             │
+│  INSTRUCTIONS.md (per-frame program)             │
 │                                                  │
 │  # Strategy section: immutable meta-program      │
 │  that interprets PROGRAM.md. Survives rewrites.  │
@@ -66,11 +72,188 @@ instance.
 ├──────────────────────────────────────────────────┤
 │  Shell (universal executor)                      │
 │                                                  │
-│  Single cycle loop. Invokes LLM, retries on      │
+│  Single cycle loop. Invokes the LLM, retries on  │
 │  incomplete cycles, auto-commits, snapshots.     │
-│  No hardcoded phases — the interpreter decides.  │
+│  No hardcoded phases — INSTRUCTIONS.md decides.  │
 └──────────────────────────────────────────────────┘
 ```
+
+PROGRAM.md and INSTRUCTIONS.md are both authored outside the shell.
+The shell's job is to (a) feed the right files to the LLM at the
+right time, and (b) interpret a small set of well-known MEMORY
+sections after the call. Everything else is user code.
+
+## Shell primitives
+
+The shell offers a small, fixed set of primitives. Anything built on
+top of them — including the examples in `interpreters/` — is user
+code.
+
+### One cycle
+
+Each cycle the shell:
+1. Identifies the active frame (top of the call stack) and `cd`s
+   into it.
+2. Reads that frame's `MEMORY.md` and `INSTRUCTIONS.md`, builds a
+   prompt, invokes the LLM.
+3. The LLM finds the first `## Instruction` whose **Condition**
+   matches MEMORY's `## State` and runs that instruction's
+   **Action**, which typically rewrites `MEMORY.md`.
+4. The shell reads the new MEMORY, processes any well-known sections
+   it intercepts (see below), commits to git, snapshots history,
+   and loops.
+
+No conversational continuity is implied across cycles — the LLM
+sees exactly what the previous cycle wrote to `MEMORY.md` (and any
+`./scoped/` files the user code chose to leave behind).
+
+### Call stack (push / pop)
+
+The shell maintains a per-instance call stack of frames. The
+top-of-stack frame is "active": its `INSTRUCTIONS.md` and
+`MEMORY.md` drive the next cycle. The LLM signals push/pop intent
+through MEMORY. The minimal push is a single section naming the
+file to load:
+
+```
+## Push
+path/to/some-file.md
+```
+
+Push targets can also receive named arguments via `## Push-Args`.
+Values are key/value pairs or YAML-style block scalars, and any
+`{{key}}` placeholder in the pushed file's text is replaced before
+the new frame starts:
+
+```
+## Push
+path/to/some-file.md
+## Push-Args
+<key>: <inline value>
+<key>: |
+  <multi-line block scalar — newlines preserved>
+```
+
+**Push.** When the shell sees `## Push` in MEMORY, before the next
+cycle it saves the current frame on the stack and creates a new
+active frame loaded from the named file:
+
+```
+caller's memory before push          pushed frame after push
+───────────────────────────          ───────────────────────
+## State                             ## State
+drafted                              empty
+## Push                              (INSTRUCTIONS.md ← <path>,
+<path>                                with every {{key}} replaced
+## Push-Args                          by the corresponding value)
+key: value                           (./scoped/ starts empty)
+```
+
+The caller is paused while the pushed frame runs through its own
+state machine.
+
+**Pop.** When the pushed frame's state reaches `done`, the shell
+destroys it and resumes the caller. Any `## Return` block on the
+popped frame is spliced into the caller's MEMORY as top-level
+sections (key `foo` becomes `## Foo`), and the caller's state is
+renamed to `<caller_state>_completed`:
+
+```
+pushed frame's memory before pop     caller's memory after pop
+────────────────────────────────     ─────────────────────────
+## State                             ## State
+done                                 drafted_completed
+## Return                            ## Key
+key: value                           value
+```
+
+The `_completed` suffix on the state is what lets the caller
+distinguish "I just pushed and got a result back" from the original
+state where it issued the push — it would otherwise immediately
+re-fire the same instruction and push again.
+
+Push frames can nest arbitrarily. The stack is persisted to
+`.call-stack.json` and snapshotted into every `history/` entry.
+
+The convention used by the examples — calling pushable files
+"operators" and putting them in `operators/` — is purely a user
+convention. The shell doesn't care what the file is called or where
+it lives; it just opens whatever path the LLM wrote into `## Push`.
+
+Implementation: `src/call-stack.ts` (pure `applyPush` / `applyPop`
+transforms), driven from the cycle loop in `src/main.ts`. Unit-tested
+under `src/test/`.
+
+### Well-known MEMORY sections
+
+The shell intercepts these MEMORY sections before each LLM
+invocation:
+
+- **`## State`** — the current state. Drives instruction matching.
+- **`## Push`** / **`## Push-Args`** — push a new frame (above).
+- **`## Return`** — written by a popping frame; spliced into the
+  caller's MEMORY as top-level sections (e.g. `verdict: pass`
+  becomes `## Verdict\npass`).
+- **`## Pending Questions`** — non-blocking user questions; only
+  asked when state reaches `waiting_for_user`.
+
+And these MEMORY states:
+
+- **`done`** — halts if the stack is at depth 1; otherwise pops one
+  frame and sets the caller's state to `{caller_state}_completed`.
+- **`waiting_for_user`** — reads `## Pending Questions`, prompts
+  the user one at a time (via stdin or Telegram), writes answers to
+  `## Answers`, sets state to `user_responded`.
+- **unmatched state** — if no instruction's condition matches, the
+  shell transitions to `waiting_for_user` and asks for guidance.
+
+### Frames on disk
+
+Each frame lives in its own directory under
+`instances/<name>/frames/f<NNN>-<slug>/`, containing the frame's
+`INSTRUCTIONS.md`, `MEMORY.md`, and a private `./scoped/` directory
+for heap state. From any frame, the shared filesystem is reachable
+via stable paths:
+
+| Path | What it is |
+|---|---|
+| `./MEMORY.md` | This frame's memory |
+| `./INSTRUCTIONS.md` | This frame's instructions |
+| `./scoped/` | This frame's private heap files |
+| `../../PROGRAM.md` | The user's program (read-only) |
+| `../../workspace/` | The project workspace (shared, has its own git repo) |
+
+When the root frame reaches `done`, the shell writes any `## Return`
+keys to `instances/<name>/OUTPUT.md` and halts.
+
+## Examples — the `interpreters/` directory
+
+`interpreters/` is a catalogue of pre-built strategies you can drop
+on top of the shell. They're examples — useful starting points and
+reference implementations — not part of the shell itself. Read
+[`interpreters/README.md`](interpreters/README.md) for the full
+guide.
+
+Two families ship today:
+
+- [`interpreters/mas-papers/`](interpreters/mas-papers/) —
+  implementations of agent-design patterns from the multi-agent
+  systems literature: iterative refinement, planning &
+  decomposition, search (ToT, LATS), peer collaboration (debate),
+  fixed-SOP teams (MetaGPT, ChatDev), meta-frameworks
+  (AFlow-lite, ADAS-lite).
+- [`interpreters/coding-harnesses/`](interpreters/coding-harnesses/)
+  — coding-oriented harnesses. Currently ships
+  `recursive-reviewer`: a per-file code-review walk with
+  verification and a fix loop.
+
+Each leaf has its own `README.md` describing what it models and how
+to run it.
+
+Picking an example interpreter is the canonical way to run
+TuringLLM, but **not required** — you can also point `new-instance.sh`
+at any directory you've authored yourself, or omit it entirely to
+get a minimal scaffold.
 
 ## Usage
 
@@ -78,12 +261,13 @@ instance.
 # Build
 npm run build
 
-# Create an instance with the default interpreter
-./new-instance.sh my-project
-
-# Or with a specific interpreter
+# Create an instance using an example interpreter
 ./new-instance.sh interpreters/mas-papers/1-iterative-refinement/a-self-refine my-a
-./new-instance.sh interpreters/mas-papers/2-planning-decomposition/a-plan-execute foo
+./new-instance.sh interpreters/coding-harnesses/recursive-reviewer my-rev
+
+# Or with no interpreter (minimal scaffold; you provide
+# INSTRUCTIONS / operators yourself)
+./new-instance.sh my-project
 
 # Edit the program
 vim instances/my-project/PROGRAM.md
@@ -101,71 +285,31 @@ instances/my-project/run.sh
 Instances are resumable. Stop anytime (Ctrl+C or quota exceeded) and
 restart with `run.sh` — the cycle counter picks up where it left off.
 
-## Interpreters
+### Authoring your own interpreter
 
-Interpreters live under `interpreters/<group-number>-<group-slug>/`,
-mirroring the taxonomy in
-[`docs/agent-workflows/patterns.md`](docs/agent-workflows/patterns.md).
-Within a group, variants are prefixed with `a-`, `b-`, `c-`, …
-indicating a recommended exploration order, not strict prerequisites.
+An interpreter is just a directory with at least an
+`INSTRUCTIONS.md` (a single-line marker pointing at a canonical
+operator file) and one or more pushable files. The
+`new-instance.sh` script copies the whole directory into the
+instance.
 
-### Currently available
-
-- **default** (no argument to `new-instance.sh`) — Step-by-step
-  executor. Reads steps from `PROGRAM.md`, decomposes each into
-  sub-instructions with verification, hands back to the strategy after
-  each step.
-- **`interpreters/mas-papers/1-iterative-refinement/`** — `generate → critique →
-  revise` family ([patterns.md Group 1](docs/agent-workflows/patterns.md)).
-  - `a-self-refine` — single role drafts, self-critiques, iterates.
-  - `b-evaluator-optimizer` — generator + separate evaluator with
-    explicit `## Criterion`.
-  - `c-reflexion` — `b` plus distilled lessons accumulated in
-    `## Lessons` across retries.
-- **`interpreters/mas-papers/2-planning-decomposition/`** — Plan-and-Execute family
-  ([patterns.md Group 2](docs/agent-workflows/patterns.md)). Three
-  leaves with byte-equal `INSTRUCTIONS.md` and `operators/` differing
-  only in their demo `PROGRAM.md`:
-  - `a-plan-execute` — d1: TypeScript project setup.
-  - `b-orchestrator-workers` — d2: summarise N technical notes.
-  - `c-deep-research` — d3: open research prompt; exercises stack
-    depth 2 via recursive `plan.md` push.
-- **`interpreters/mas-papers/5-fixed-sop-teams/`** — Fixed-SOP teams
-  ([patterns.md Group 5](docs/agent-workflows/patterns.md)).
-  - `a-metagpt` — document hand-off SOP (PM → Architect → Engineer →
-    QA).
-  - `b-chatdev` — phase-dialogue SOP (design → coding → testing →
-    documenting). Shares its demo `PROGRAM.md` with `a-metagpt` so
-    outputs are directly comparable.
-
-The agent-workflows roadmap
-([`docs/agent-workflows/requirements.md`](docs/agent-workflows/requirements.md))
-plans further phases — planning & decomposition, fixed-SOP teams, peer
-collaboration, search, meta-frameworks — each pulling from a different
-group of `patterns.md`.
-
-### Creating a new interpreter
-
-Create a directory `interpreters/<group-number>-<group-slug>/<letter>-<slug>/`
-with at least `INSTRUCTIONS.md`. Add optional `*.md` files for role
-descriptions, templates, etc. — they're copied into instances.
-Optional `operators/` directory holds reusable instruction files (see
-below).
-
-`INSTRUCTIONS.md` structure:
+The `INSTRUCTIONS.md` of the root operator looks like:
 
 ```markdown
 # Strategy: <Name>
 
-IMPORTANT: Everything between "# Strategy" and "# Sub-instructions" is the strategy.
-It must be copied VERBATIM into every update_instructions call. Never modify, summarize,
-or omit any strategy instruction. Only the "# Sub-instructions" section below changes.
+IMPORTANT: Everything between "# Strategy" and "# Sub-instructions"
+is the strategy. It must be copied VERBATIM into every
+update_instructions call. Never modify, summarize, or omit any
+strategy instruction. Only the "# Sub-instructions" section below
+changes.
 
 <one-paragraph description of what this interpreter does>
 
 ## Instruction: Initialize
 **Condition:** MEMORY state is "empty"
-**Action:** Read PROGRAM.md. Bootstrap state. Set state to "<first_state>".
+**Action:** Read PROGRAM.md. Bootstrap state. Set state to
+"<first_state>".
 
 ## Instruction: <your state machine instructions here>
 **Condition:** MEMORY state is "<state>"
@@ -175,7 +319,7 @@ or omit any strategy instruction. Only the "# Sub-instructions" section below ch
 
 ## Instruction: Finish
 **Condition:** MEMORY state is "done"
-**Action:** Call halt with a summary.
+**Action:** Emit `## Return` block and let the shell halt.
 
 # Sub-instructions
 
@@ -184,80 +328,37 @@ or omit any strategy instruction. Only the "# Sub-instructions" section below ch
 
 Key patterns:
 
-1. **Strategy preservation** — the `IMPORTANT` block tells the LLM to
-   copy the strategy section verbatim on every rewrite.
-2. **State machine** — instructions match on MEMORY state strings via
-   natural-language conditions. Every state must have a matching
-   instruction. Unmatched states automatically transition to
-   `waiting_for_user` so the user can intervene.
-3. **Handback** — after a unit of work, state must loop back to a
-   "pick next" instruction that reads PROGRAM.md. Without handback,
-   the machine completes one thing and stalls.
-4. **Decompose → execute → verify** — when work needs to happen, write
-   sub-instructions in `# Sub-instructions`. Each action followed by
-   verification. The last sub-instruction returns to the strategy.
-5. **Project artifacts** go in `workspace/` (which has its own git
-   repo). MEMORY.md and INSTRUCTIONS.md stay in the instance root.
-
-## Operators (Call Stack)
-
-An **operator** is a reusable instruction file invoked like a
-subroutine. The running instruction set delegates by writing
-`## Push` in MEMORY:
-
-```
-## Push
-operators/self-critique.md
-```
-
-The shell saves the current `{state, instructions}` onto a call stack,
-loads the operator as the new `INSTRUCTIONS.md`, and sets state to
-`empty`. When the operator sets state to `done`, the shell pops the
-stack, restores the caller's instructions, and sets state to
-`{caller_state}_completed` — preventing the caller's original
-instruction from immediately re-firing.
-
-```
-    ┌─── caller ───┐
-    │ state: drafted                       ┌─ operator ─┐
-    │ ## Push: operators/self-critique.md ─►│ state: empty
-    └──────────────┘                       │ ...
-                                           │ state: done ───┐
-    ┌─── caller ───┐                       └────────────────┘
-    │ state: drafted_completed ◄───────────────── pop
-    └──────────────┘
-```
-
-- Operators can nest (an operator can push another).
-- The stack is persisted to `.call-stack.json` and snapshotted into
-  every `history/` entry.
-- Missing push targets are logged and ignored — no frame is pushed.
-
-Implementation: `src/call-stack.ts` (pure `applyPush` / `applyPop`
-transforms), called from the cycle loop in `src/main.ts`. Unit-tested
-under `src/test/`.
-
-## Well-Known States
-
-The shell intercepts these MEMORY states before each LLM invocation:
-
-- **`done`** — if the call stack is empty, the machine halts. If an
-  operator is active, the shell pops one frame and sets state to
-  `{caller_state}_completed`. Cascade-pops while state remains `done`.
-- **`waiting_for_user`** — the shell reads `## Pending Questions` from
-  MEMORY, prompts the user one at a time (via stdin or Telegram if
-  configured), writes answers to `## Answers`, and sets state to
-  `user_responded`. Only triggered when all remaining work is blocked
-  on unanswered questions.
-- **unmatched state** — if no instruction's condition matches, the
-  shell automatically enters `waiting_for_user` and asks for guidance.
+1. **Strategy preservation** — the `IMPORTANT` block tells the LLM
+   to copy the strategy section verbatim on every rewrite.
+2. **State machine** — every state must have a matching instruction.
+   Unmatched states automatically transition to `waiting_for_user`.
+3. **Handback** — states don't auto-advance. Each instruction
+   explicitly sets the next state in MEMORY, and the loop only
+   continues if that next state is one some other instruction will
+   match. So after finishing a unit of work (one sub-task, one
+   iteration, one phase) the last instruction must transition back
+   to whatever state the orchestrator uses to pick *what to do
+   next* — typically a "select next sub-task" or "evaluate" state
+   that reads PROGRAM.md and decides where to go. Think of it as
+   the explicit `return` from a function call: if the worker
+   instruction forgets to hand control back, the next state has no
+   matching instruction, and the shell falls into `waiting_for_user`
+   (see the well-known states above) — the machine pauses and asks
+   you to intervene rather than spinning silently.
+4. **Decompose → execute → verify** — when work needs to happen,
+   write sub-instructions. Each action followed by verification. The
+   last sub-instruction is the handback (per point 3) — it sets
+   state back to the orchestrator's "pick next" state.
+5. **Project artefacts** go in `workspace/` (which has its own git
+   repo). MEMORY.md and INSTRUCTIONS.md stay in the active frame.
 
 ## Providers
 
-All providers except `claude-code` use the same custom tools (`bash`,
-`write_file`, `git`, `update_instructions`) with the shell managing
-the tool call loop. Configured via `TURING_PROVIDER` (set in `.env`
-or shell env). All providers cap retries at 20 for incomplete cycles.
+All providers except `claude-code` use the same custom tools
+(`bash`, `write_file`, `git`, `update_instructions`) with the shell
+managing the tool call loop. Configured via `TURING_PROVIDER` (set
+in `.env` or shell env). All providers cap retries at 20 for
+incomplete cycles.
 
 | Provider | Description | Required env |
 |---|---|---|
@@ -296,12 +397,12 @@ instances/foo/
 ├── .call-stack.json   # Saved call stack; stack[0] is always the root frame
 ├── .env               # Provider/model config (gitignored)
 ├── workspace/         # Project artifacts (has its own git repo)
-├── operators/         # Reusable instruction files copied from the interpreter
+├── operators/         # Pushable instruction files (copied from the chosen interpreter, if any)
 ├── frames/
 │   ├── f000-<operator-slug>/  # Root frame (always present; slug = operator basename)
 │   │   ├── INSTRUCTIONS.md    # Operator content with {{program}} substituted
 │   │   ├── MEMORY.md          # Current state; may contain ## Push / ## Return
-│   │   └── scoped/            # Per-frame heap files (draft.md, etc.)
+│   │   └── scoped/            # Per-frame heap files
 │   └── f001-<slug>/           # Pushed frames appear here while active
 │       ├── INSTRUCTIONS.md
 │       ├── MEMORY.md
@@ -330,16 +431,10 @@ instances/foo/
 
 ## Further reading
 
-- [`docs/agent-workflows/patterns.md`](docs/agent-workflows/patterns.md)
-  — taxonomy of agentic patterns, with citations. Source of truth for
-  group numbering.
-- [`docs/agent-workflows/requirements.md`](docs/agent-workflows/requirements.md)
-  — phased rollout plan: which patterns become interpreters in which
-  order, and which operators they share.
-- [`docs/agent-workflows/phase-1-notes.md`](docs/agent-workflows/phase-1-notes.md)
-  — implementation notes from Phase 1 (iterative refinement).
-- [`CLAUDE.md`](CLAUDE.md) — project-specific guidance for Claude Code
-  agents working on this repo.
+- [`interpreters/README.md`](interpreters/README.md) — guided tour of
+  the shipped example interpreters and the patterns they model.
+- [`CLAUDE.md`](CLAUDE.md) — project-specific guidance for Claude
+  Code agents working on this repo.
 
 ## License
 

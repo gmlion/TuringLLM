@@ -854,9 +854,10 @@ describe("phase-6 a-tot: Expand-absorb executable parser (R21, R47)", () => {
 describe("phase-6 a-tot: README post-refactor delta (R27, R29)", () => {
   const readme = readFileSync(resolve(INTERP, "README.md"), "utf-8");
 
-  test("README has 'Refactored in Phase 6b' bullet (R29)", () => {
-    assert.match(readme, /Refactored in Phase 6b/);
-    assert.match(readme, /docs\/specs\/2026-05-01-implement-phase-6b/);
+  test("README documents the post-refactor delta (R29)", () => {
+    // Post-rename: public README dropped the spec link and the
+    // "Phase 6b" label in favour of "Refactored alongside LATS".
+    assert.match(readme, /Refactored alongside LATS/);
   });
 
   test("README dynamics table uses post-refactor push-arg names (R27)", () => {

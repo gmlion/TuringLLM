@@ -1,7 +1,7 @@
 {
   "name": "turing",
   "version": "0.1.0",
-  "description": "An LLM-powered universal Turing machine. A cycle loop invokes an LLM once per cycle; the LLM reads its state (MEMORY.md) and program (INSTRUCTIONS.md), matches the first instruction whose condition fits, acts, and is destroyed.",
+  "description": "TuringLLM — an LLM-powered universal Turing machine. A cycle loop invokes an LLM once per cycle; the LLM reads its state (MEMORY.md) and program (INSTRUCTIONS.md), matches the first instruction whose condition fits, acts, and is destroyed.",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",

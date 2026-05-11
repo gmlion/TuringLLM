@@ -4,12 +4,12 @@ Pattern family: explicit exploration over alternative partial solutions, distinc
 
 ## Variants
 
-| Variant                      | Status              | Pattern                       | Source                                                  |
-| ---------------------------- | ------------------- | ----------------------------- | ------------------------------------------------------- |
-| `a-tot/`  | Shipped (Phase 6)   | Tree of Thoughts            | Yao et al., NeurIPS 2023, arXiv:2305.10601 |
-| `b-lats/` | Shipped (Phase 6b)  | Language Agent Tree Search  | Zhou et al., 2023, arXiv:2310.04406        |
-| `b-got/`  | Deferred            | Graph of Thoughts           | Besta et al., 2023, arXiv:2308.09687       |
+| Variant   | Status   | Pattern                    | Source                                     |
+| --------- | -------- | -------------------------- | ------------------------------------------ |
+| `a-tot/`  | Shipped  | Tree of Thoughts           | Yao et al., NeurIPS 2023, arXiv:2305.10601 |
+| `b-lats/` | Shipped  | Language Agent Tree Search | Zhou et al., 2023, arXiv:2310.04406        |
+| `b-got/`  | Deferred | Graph of Thoughts          | Besta et al., 2023, arXiv:2308.09687       |
 
 ## Shared dynamics
 
-`expand-node.md` and `score.md` (introduced by `a-tot/`) are normative for the Search group going forward. LATS (Phase 6b) is expected to import both unmodified.
+`expand-node.md` and `score.md` (introduced by `a-tot/`) are normative for the Search group going forward. LATS imports both unmodified.

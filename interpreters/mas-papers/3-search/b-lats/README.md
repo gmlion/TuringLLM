@@ -4,7 +4,7 @@
 
 ## What's modeled
 
-Paper-faithful Monte Carlo Tree Search over LLM-generated thoughts. The strategy frame runs an MCTS loop (selection → expansion → simulation → evaluation → back-prop → reflection) bounded by `max_iterations` (default 30). The four dynamics are domain-agnostic: domain knowledge lives exclusively in `PROGRAM.md`. The bundled demo is a byte-equal copy of Phase 6's Game of 24 puzzle, so a LATS run is directly comparable to a ToT run on identical input.
+Paper-faithful Monte Carlo Tree Search over LLM-generated thoughts. The strategy frame runs an MCTS loop (selection → expansion → simulation → evaluation → back-prop → reflection) bounded by `max_iterations` (default 30). The four dynamics are domain-agnostic: domain knowledge lives exclusively in `PROGRAM.md`. The bundled demo is a byte-equal copy of ToT's Game of 24 puzzle, so a LATS run is directly comparable to a ToT run on identical input.
 
 ## State machine
 
@@ -57,7 +57,7 @@ After completion, inspect:
 - `instances/my-lats/frames/f000-strategy/scoped/state-*.md` for per-node partial states.
 - `instances/my-lats/frames/f000-strategy/scoped/lessons-*.md` (if any) for harvested per-node reflections.
 
-For A/B comparison against Phase 6 ToT on the same puzzle:
+For A/B comparison against ToT on the same puzzle:
 
 ```bash
 ./new-instance.sh interpreters/mas-papers/3-search/a-tot my-tot
@@ -68,13 +68,13 @@ Contrast the resulting trees: ToT grows breadth-first to fixed `max_depth = N �
 
 ## Notable behaviour
 
-- **Cycle cost (~10–13 cycles per MCTS iteration, ~30 iterations max)**. Per iteration: selection (1 strategy cycle, no LLM) + expand push/absorb (3 cycles, 1 LLM) + rollout push/absorb (3 cycles, 1 LLM) + evaluate push/absorb (3 cycles, 1 LLM) + on failure reflect push/absorb (3 cycles, 1 LLM). Worst case at `max_iterations=30`: ~390 cycles, ~120 LLM calls. Single-shot LLM-policy rollout (the new `rollout.md`) keeps the per-iteration cost roughly comparable to one Phase 6 score sample.
-- **Deliberate omission of `score.md`.** UCT-driven exploration of rollout-derived statistics replaces graded-rank value sampling. The Phase 6 ToT artefact is intentionally not shipped in `b-lats/operators/`. A future LATS variant that wants score-as-UCT-prior can re-introduce it without contract change.
-- **Deliberate omission of pruning.** UCT handles exploration/exploitation implicitly via the second term of the UCT formula. No explicit prune phase exists; the `pruned` status value from Phase 6's enum is absent from the LATS ledger.
+- **Cycle cost (~10–13 cycles per MCTS iteration, ~30 iterations max)**. Per iteration: selection (1 strategy cycle, no LLM) + expand push/absorb (3 cycles, 1 LLM) + rollout push/absorb (3 cycles, 1 LLM) + evaluate push/absorb (3 cycles, 1 LLM) + on failure reflect push/absorb (3 cycles, 1 LLM). Worst case at `max_iterations=30`: ~390 cycles, ~120 LLM calls. Single-shot LLM-policy rollout (the new `rollout.md`) keeps the per-iteration cost roughly comparable to one ToT score sample.
+- **Deliberate omission of `score.md`.** UCT-driven exploration of rollout-derived statistics replaces graded-rank value sampling. The ToT score artefact is intentionally not shipped in `b-lats/operators/`. A future LATS variant that wants score-as-UCT-prior can re-introduce it without contract change.
+- **Deliberate omission of pruning.** UCT handles exploration/exploitation implicitly via the second term of the UCT formula. No explicit prune phase exists; the `pruned` status value from the ToT ledger enum is absent from the LATS ledger.
 - **Per-node ancestor-walk lesson scope.** A failed rollout from chosen_child C produces a `## Lesson` that is appended to `./scoped/lessons-<C>.md`. Future expansions of any descendant of C see the lesson concatenated into `partial_state` via the Compose-partial-state primitive (root-to-cursor order). Siblings of C don't inherit; this is paper-faithful per-subtree reflexion.
 - **Record-A: failed rollouts do NOT materialise into the tree.** The tree only grows by deliberate UCT expansions (k=5 children per iteration). Winning rollouts are recorded only in MEMORY's `## Solution` section (and in `history/` snapshots). This matches the LATS paper's distinction between deliberate tree growth and throwaway rollouts.
-- **Malformed dynamic outputs are non-blocking.** Bad `expand-node` children (R50), missing `rollout` terminal state (R53), unexpected `evaluate` verdicts (R54), missing `reflect` lessons (R60) all append `## Pending Questions` and progress (treated as fail / fall-through). The strategy never transitions to `waiting_for_user`.
-- **Phase 6 dynamics generalisation landed alongside this interpreter.** As of `docs/specs/2026-05-01-implement-phase-6b/`, `expand-node.md` and `score.md` (Phase 6) are domain-agnostic — same `partial_state` / `task` push-arg shape that LATS uses. The LATS leaf adopts the canonical (post-refactor) `expand-node.md` byte-equal.
+- **Malformed dynamic outputs are non-blocking.** Bad `expand-node` children, missing `rollout` terminal state, unexpected `evaluate` verdicts, missing `reflect` lessons all append `## Pending Questions` and progress (treated as fail / fall-through). The strategy never transitions to `waiting_for_user`.
+- **ToT dynamics generalisation landed alongside this interpreter.** `expand-node.md` and `score.md` are domain-agnostic — same `partial_state` / `task` push-arg shape that LATS uses. The LATS leaf adopts the canonical (post-refactor) `expand-node.md` byte-equal.
 
 ## Layout note
 
