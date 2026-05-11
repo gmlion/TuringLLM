@@ -10,9 +10,9 @@ The bundled demo PROGRAM.md is a byte-equal copy of Phase 6's Game of 24 puzzle,
 
 ## User stories
 
-- **US1**: As a developer studying agent patterns, I want a working LATS interpreter at `interpreters/3-search/b-lats/`, so that I can run paper-faithful MCTS-over-thoughts against the Game of 24 demo and inspect the resulting search tree alongside Phase 6's BFS tree on the same input.
+- **US1**: As a developer studying agent patterns, I want a working LATS interpreter at `interpreters/mas-papers/3-search/b-lats/`, so that I can run paper-faithful MCTS-over-thoughts against the Game of 24 demo and inspect the resulting search tree alongside Phase 6's BFS tree on the same input.
 - **US2**: As an author of future Phase 7 (AFlow) work, I want Phase 6b's MCTS controller (selection / expansion / simulation / back-prop / reflect, all in strategy bash) to land as a documented and tested pattern, so that AFlow can adopt the same control flow against a workflow space instead of a thought space without reinventing the algorithm.
-- **US3**: As a maintainer, I want the dynamics shipped under `interpreters/3-search/` (both Phase 6 ToT's and Phase 6b LATS's) to be **fully domain-agnostic** — receiving partial state and task description as push-args and inferring extension/scoring/rollout semantics from the task — so that the dynamics are genuinely reusable across demos and the "interpreter swaps demo via PROGRAM.md alone" property holds.
+- **US3**: As a maintainer, I want the dynamics shipped under `interpreters/mas-papers/3-search/` (both Phase 6 ToT's and Phase 6b LATS's) to be **fully domain-agnostic** — receiving partial state and task description as push-args and inferring extension/scoring/rollout semantics from the task — so that the dynamics are genuinely reusable across demos and the "interpreter swaps demo via PROGRAM.md alone" property holds.
 - **US4**: As a reader of the source-spec parent doc, I want `docs/agent-workflows/requirements.md` updated to reflect (a) the new `rollout.md` dynamic, (b) the refactored push-arg shapes for `expand-node.md` and `score.md`, and (c) the corrected "Reuse" claim in the Phase 6b section, so that the table and text remain normative rather than aspirational.
 - **US5**: As a researcher, I want LATS's reward signal to come from a real evaluator (`evaluate.md` text-only mode against the task as criterion) and reflexion lessons to be harvested per-node and concatenated along the ancestor chain into future expansions of that subtree, so that the implementation faithfully mirrors Zhou et al.'s reflexion-aware MCTS rather than degrading into a "MCTS over LLM-generated thoughts with decorative reflection".
 
@@ -20,35 +20,35 @@ The bundled demo PROGRAM.md is a byte-equal copy of Phase 6's Game of 24 puzzle,
 
 ### Directory layout and READMEs
 
-- **R1**: THE INTERPRETER SHALL ship at `interpreters/3-search/b-lats/` containing at minimum `INSTRUCTIONS.md`, `PROGRAM.md`, `README.md`, and a `dynamics/` subdirectory.
-- **R2**: THE GROUP-LEVEL `interpreters/3-search/README.md` SHALL be updated to list LATS as the second shipped variant under Group 3 (alongside ToT), with a one-line summary, a citation to Zhou et al. arXiv:2310.04406, and a note that GoT remains deferred.
+- **R1**: THE INTERPRETER SHALL ship at `interpreters/mas-papers/3-search/b-lats/` containing at minimum `INSTRUCTIONS.md`, `PROGRAM.md`, `README.md`, and a `dynamics/` subdirectory.
+- **R2**: THE GROUP-LEVEL `interpreters/mas-papers/3-search/README.md` SHALL be updated to list LATS as the second shipped variant under Group 3 (alongside ToT), with a one-line summary, a citation to Zhou et al. arXiv:2310.04406, and a note that GoT remains deferred.
 - **R3**: THE INTERPRETER LEAF README SHALL include: a citation to Zhou et al. arXiv:2310.04406, a state-machine summary, the dynamics-and-contracts table, run instructions, the demo description, and a "Notable behaviour" section noting (a) the per-iteration cycle cost (~10–13 cycles, ~3–4 LLM calls per iteration), (b) the deliberate omission of `score.md` from LATS (UCT replaces graded-rank value), (c) the deliberate omission of a pruning phase (UCT handles exploration/exploitation implicitly), and (d) reflexion's per-node ancestor-walk lesson scope.
 
 ### Dynamics shipped (Phase 6b)
 
-- **R4**: THE INTERPRETER SHALL ship `interpreters/3-search/b-lats/dynamics/` containing exactly four files: `expand-node.md`, `rollout.md`, `evaluate.md`, `reflect.md`.
+- **R4**: THE INTERPRETER SHALL ship `interpreters/mas-papers/3-search/b-lats/dynamics/` containing exactly four files: `expand-node.md`, `rollout.md`, `evaluate.md`, `reflect.md`.
 - **R5**: THE INTERPRETER SHALL NOT ship `score.md` in `dynamics/` (deliberate omission — LATS uses UCT-driven exploration of rollout-derived statistics, not graded-rank value sampling).
-- **R6**: THE FILE `interpreters/3-search/b-lats/dynamics/expand-node.md` SHALL be byte-equal to the refactored `interpreters/3-search/a-tot/dynamics/expand-node.md` (see R30–R33 below).
-- **R7**: THE FILE `interpreters/3-search/b-lats/dynamics/evaluate.md` SHALL be byte-equal to the canonical `interpreters/1-iterative-refinement/b-evaluator-optimizer/dynamics/evaluate.md`.
-- **R8**: THE FILE `interpreters/3-search/b-lats/dynamics/reflect.md` SHALL be byte-equal to the canonical `interpreters/1-iterative-refinement/c-reflexion/dynamics/reflect.md`.
+- **R6**: THE FILE `interpreters/mas-papers/3-search/b-lats/dynamics/expand-node.md` SHALL be byte-equal to the refactored `interpreters/mas-papers/3-search/a-tot/dynamics/expand-node.md` (see R30–R33 below).
+- **R7**: THE FILE `interpreters/mas-papers/3-search/b-lats/dynamics/evaluate.md` SHALL be byte-equal to the canonical `interpreters/mas-papers/1-iterative-refinement/b-evaluator-optimizer/dynamics/evaluate.md`.
+- **R8**: THE FILE `interpreters/mas-papers/3-search/b-lats/dynamics/reflect.md` SHALL be byte-equal to the canonical `interpreters/mas-papers/1-iterative-refinement/c-reflexion/dynamics/reflect.md`.
 - **R9**: `src/test/phase-operators-identity.test.ts` SHALL be extended to assert byte equality of all three reused dynamics (R6, R7, R8) between Phase 6b's `dynamics/` and their canonical sources.
 
 ### `rollout.md` dynamic contract (NEW)
 
-- **R10**: THE FILE `interpreters/3-search/b-lats/dynamics/rollout.md` SHALL declare push-args `partial_state` and `task`, and SHALL fail the push with `unresolved-placeholder` if either is missing at push time.
+- **R10**: THE FILE `interpreters/mas-papers/3-search/b-lats/dynamics/rollout.md` SHALL declare push-args `partial_state` and `task`, and SHALL fail the push with `unresolved-placeholder` if either is missing at push time.
 - **R11**: WHEN invoked, `rollout.md` SHALL complete in a single cycle (state `empty` → `done`) and SHALL emit a `## Return` block with exactly one key, `terminal_state`, whose value is a literal block scalar containing the LLM's chosen terminal state — i.e. the result of playing forward from `partial_state` via repeated single-step extensions until the task's terminal predicate fires (per the task definition in `task`).
 - **R12**: THE `rollout.md` DYNAMIC SHALL NOT push any further dynamic; the strategy's stack depth via rollout SHALL remain at 1 at all times.
 - **R13**: THE PROSE OF `rollout.md` SHALL be domain-agnostic: it SHALL NOT mention "Game of 24", "numbers", "arithmetic operators", "maze", "code", or any other domain-specific vocabulary. The dynamic SHALL refer only to "partial state", "task", "extension", and "terminal state" as abstract concepts the LLM resolves by reading `task`.
 
 ### Phase 6 dynamics generalisation (cross-cutting refactor)
 
-- **R14**: THE FILE `interpreters/3-search/a-tot/dynamics/expand-node.md` SHALL be rewritten so that (a) push-args are `partial_state` and `task` (replacing `parent_thought`, `target`, `numbers_remaining`); (b) prose is domain-agnostic per R13's vocabulary rule; (c) the `## Return` block contains a single `children` key whose value is a literal block scalar of exactly k=5 entries, each entry a `state:` line whose value is a block scalar containing the post-extension partial state.
-- **R15**: THE FILE `interpreters/3-search/a-tot/dynamics/score.md` SHALL be rewritten so that (a) push-args are `partial_state` and `task` (replacing `thought`, `target`); (b) prose is domain-agnostic per R13's vocabulary rule; (c) the `## Return` block contains a single `value` key whose value is one of the literal strings `sure`, `likely`, `impossible` (enum unchanged from Phase 6).
+- **R14**: THE FILE `interpreters/mas-papers/3-search/a-tot/dynamics/expand-node.md` SHALL be rewritten so that (a) push-args are `partial_state` and `task` (replacing `parent_thought`, `target`, `numbers_remaining`); (b) prose is domain-agnostic per R13's vocabulary rule; (c) the `## Return` block contains a single `children` key whose value is a literal block scalar of exactly k=5 entries, each entry a `state:` line whose value is a block scalar containing the post-extension partial state.
+- **R15**: THE FILE `interpreters/mas-papers/3-search/a-tot/dynamics/score.md` SHALL be rewritten so that (a) push-args are `partial_state` and `task` (replacing `thought`, `target`); (b) prose is domain-agnostic per R13's vocabulary rule; (c) the `## Return` block contains a single `value` key whose value is one of the literal strings `sure`, `likely`, `impossible` (enum unchanged from Phase 6).
 - **R16**: THE REFACTORED `expand-node.md` AND `score.md` SHALL preserve their stack-depth invariant (no further pushes; depth 1 from caller).
 
 ### Phase 6 strategy and ledger refactor (cross-cutting)
 
-- **R17**: THE FILE `interpreters/3-search/a-tot/INSTRUCTIONS.md` SHALL be updated so that at Initialize the strategy copies `../../PROGRAM.md` to `./scoped/task.md` and uses that copy as the `task` push-arg source for every push of `expand-node.md` and `score.md`.
+- **R17**: THE FILE `interpreters/mas-papers/3-search/a-tot/INSTRUCTIONS.md` SHALL be updated so that at Initialize the strategy copies `../../PROGRAM.md` to `./scoped/task.md` and uses that copy as the `task` push-arg source for every push of `expand-node.md` and `score.md`.
 - **R18**: THE PHASE 6 LEDGER (`./scoped/tree.md`) NODE BLOCK SCHEMA SHALL drop the `op` and `left` fields. After the refactor every node block SHALL contain exactly the keys `id`, `parent_id`, `depth`, `value`, `samples`, `status`.
 - **R19**: WHEN a node is created (root at Initialize, or a child during Expand-absorb), THE PHASE 6 STRATEGY SHALL also write the node's partial state to `./scoped/state-<id>.md` as a sibling per-node file. The root node's state SHALL be the empty file (semantically: "starting state, no extensions applied yet").
 - **R20**: WHEN PUSHING `expand-node.md` OR `score.md` for node X, THE PHASE 6 STRATEGY SHALL pass `partial_state` as the contents of `./scoped/state-<X>.md` and `task` as the contents of `./scoped/task.md`.
@@ -64,15 +64,15 @@ The bundled demo PROGRAM.md is a byte-equal copy of Phase 6's Game of 24 puzzle,
 
 ### Phase 6 documentation (cross-cutting)
 
-- **R27**: THE PHASE 6 LEAF README (`interpreters/3-search/a-tot/README.md`) SHALL be updated to reflect the refactored ledger schema (R18), the new `./scoped/state-<id>.md` per-node file convention (R19), and the new general-form push-args (R20).
+- **R27**: THE PHASE 6 LEAF README (`interpreters/mas-papers/3-search/a-tot/README.md`) SHALL be updated to reflect the refactored ledger schema (R18), the new `./scoped/state-<id>.md` per-node file convention (R19), and the new general-form push-args (R20).
 - **R28**: THE PHASE 6 SPEC ARTEFACTS UNDER `docs/specs/2026-04-30-agent-workflows-phase-6/` SHALL NOT be edited as part of Phase 6b. They are treated as the v1 historical record. Phase 6b's spec (this document) supersedes the Phase 6 requirements affected by the refactor (Phase 6's R11, R17, R29, R35, R38–R44 are partially superseded by Phase 6b's R14–R23).
 - **R29**: THE PHASE 6 LEAF README SHALL include a "Refactored in Phase 6b" note at the top of the "Notable behaviour" section, citing the present spec by date and slug.
 
 ### Refactored `expand-node.md` and `score.md` (Phase 6 path = canonical path)
 
-- **R30**: AFTER REFACTOR, the file `interpreters/3-search/a-tot/dynamics/expand-node.md` SHALL satisfy: receives push-args `partial_state` and `task`; produces `## State done` + `## Return` block with key `children`; the `children` value is a literal block scalar of exactly k=5 entries; each entry is a `state:` line followed by a block-scalar value containing the post-extension partial state.
-- **R31**: AFTER REFACTOR, the file `interpreters/3-search/a-tot/dynamics/score.md` SHALL satisfy: receives push-args `partial_state` and `task`; produces `## State done` + `## Return` block with key `value`; the `value` is one of the literal strings `sure`, `likely`, `impossible`.
-- **R32**: AFTER REFACTOR, the prose of both `expand-node.md` and `score.md` at `interpreters/3-search/a-tot/dynamics/` SHALL pass the domain-agnostic vocabulary check from R13 (no "Game of 24", "numbers", "arithmetic", "+/−/×/÷", "left set", "moves remaining", etc.).
+- **R30**: AFTER REFACTOR, the file `interpreters/mas-papers/3-search/a-tot/dynamics/expand-node.md` SHALL satisfy: receives push-args `partial_state` and `task`; produces `## State done` + `## Return` block with key `children`; the `children` value is a literal block scalar of exactly k=5 entries; each entry is a `state:` line followed by a block-scalar value containing the post-extension partial state.
+- **R31**: AFTER REFACTOR, the file `interpreters/mas-papers/3-search/a-tot/dynamics/score.md` SHALL satisfy: receives push-args `partial_state` and `task`; produces `## State done` + `## Return` block with key `value`; the `value` is one of the literal strings `sure`, `likely`, `impossible`.
+- **R32**: AFTER REFACTOR, the prose of both `expand-node.md` and `score.md` at `interpreters/mas-papers/3-search/a-tot/dynamics/` SHALL pass the domain-agnostic vocabulary check from R13 (no "Game of 24", "numbers", "arithmetic", "+/−/×/÷", "left set", "moves remaining", etc.).
 - **R33**: THE REFACTORED FILES SHALL preserve the existing single-cycle invariant (state `empty` → `done`, no further pushes, stack depth 1).
 
 ### LATS strategy — initialization
@@ -142,7 +142,7 @@ The bundled demo PROGRAM.md is a byte-equal copy of Phase 6's Game of 24 puzzle,
 
 ### Demo PROGRAM.md
 
-- **R69**: THE INTERPRETER SHALL ship `interpreters/3-search/b-lats/PROGRAM.md` as a byte-equal copy of `interpreters/3-search/a-tot/PROGRAM.md` (Game of 24, "use 4, 5, 6, 10 → 24"), so that LATS and ToT are directly comparable on identical input.
+- **R69**: THE INTERPRETER SHALL ship `interpreters/mas-papers/3-search/b-lats/PROGRAM.md` as a byte-equal copy of `interpreters/mas-papers/3-search/a-tot/PROGRAM.md` (Game of 24, "use 4, 5, 6, 10 → 24"), so that LATS and ToT are directly comparable on identical input.
 - **R70**: WHEN run against the demo `PROGRAM.md` to completion, THE SYSTEM SHALL produce exactly one of: (a) a `## Solution` section containing a terminal state that `evaluate.md` verdicted `pass`, OR (b) a `## No Solution Found` section noting the iteration count reached `max_iterations` (= 30) without finding a passing rollout. Subject to LLM stochasticity, the bundled demo is a puzzle for which a solution exists, so a successful demo run SHALL produce `## Solution`.
 - **R71**: WHEN run against the demo `PROGRAM.md` to completion, the run SHALL exhibit at least one back-propagation that updates `q` and `n` along a path of length ≥ 2 (proving non-trivial tree growth and back-prop arithmetic).
 
@@ -194,7 +194,7 @@ The bundled demo PROGRAM.md is a byte-equal copy of Phase 6's Game of 24 puzzle,
 - A `score.md`-as-UCT-prior variant (deliberately omitted per R77; flagged as a future variant).
 - Refactoring Phase 6's strategy beyond the minimum needed to consume the generalised dynamics (R84).
 - Adding any Game-of-24 logic to the strategy (R83).
-- A full Graph-of-Thoughts (GoT) variant under `interpreters/3-search/c-got/` — remains deferred per Phase 6's out-of-scope list.
+- A full Graph-of-Thoughts (GoT) variant under `interpreters/mas-papers/3-search/c-got/` — remains deferred per Phase 6's out-of-scope list.
 
 ## Open questions
 

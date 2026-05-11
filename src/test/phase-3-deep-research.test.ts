@@ -7,7 +7,7 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const REPO = resolve(__dirname, "../..");
-const INTERP = resolve(REPO, "interpreters/2-planning-decomposition/c-deep-research");
+const INTERP = resolve(REPO, "interpreters/mas-papers/2-planning-decomposition/c-deep-research");
 
 describe("phase-3 c-deep-research: layout, PROGRAM, recursion support", () => {
   test("required files exist", () => {

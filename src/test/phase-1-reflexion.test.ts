@@ -10,7 +10,7 @@ import { applyPop, applyPush, type CallStack } from "../call-stack.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const REPO = resolve(__dirname, "../..");
-const INTERP = resolve(__dirname, "../../interpreters/1-iterative-refinement/c-reflexion");
+const INTERP = resolve(__dirname, "../../interpreters/mas-papers/1-iterative-refinement/c-reflexion");
 
 // Module-level helper: creates the root frame directory structure and returns a
 // pre-populated call stack pointing at frames/f000-strategy. `tmp` is passed
@@ -484,7 +484,7 @@ describe("1c reflexion", () => {
 });
 
 describe("R20-R27 Phase 7 migration: marker + canonical operator", () => {
-  const LEAF = "interpreters/1-iterative-refinement/c-reflexion";
+  const LEAF = "interpreters/mas-papers/1-iterative-refinement/c-reflexion";
 
   test("R21: INSTRUCTIONS.md is single-line marker pointing at operators/reflexion.md", () => {
     const inst = readFileSync(resolve(REPO, LEAF, "INSTRUCTIONS.md"), "utf-8").trim();

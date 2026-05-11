@@ -9,7 +9,7 @@ import { applyPush, applyPop, type CallStack } from "../call-stack.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const REPO = resolve(__dirname, "../..");
-const INTERP = resolve(__dirname, "../../interpreters/1-iterative-refinement/b-evaluator-optimizer");
+const INTERP = resolve(__dirname, "../../interpreters/mas-papers/1-iterative-refinement/b-evaluator-optimizer");
 
 describe("1b evaluator-optimizer", () => {
   test("interpreter files exist at the Group-1 path", () => {
@@ -231,7 +231,7 @@ describe("1b evaluator-optimizer", () => {
 });
 
 describe("R20-R27 Phase 7 migration: marker + canonical operator", () => {
-  const LEAF = "interpreters/1-iterative-refinement/b-evaluator-optimizer";
+  const LEAF = "interpreters/mas-papers/1-iterative-refinement/b-evaluator-optimizer";
 
   test("R21: INSTRUCTIONS.md is single-line marker pointing at operators/refine.md", () => {
     const inst = readFileSync(resolve(REPO, LEAF, "INSTRUCTIONS.md"), "utf-8").trim();

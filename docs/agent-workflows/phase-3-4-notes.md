@@ -203,7 +203,7 @@ already documents push-args as `## CapitalizedKey` (cf. `verify.md` /
 The shell's `spliceReturns` (in `src/memory.ts`) uppercases only the
 first character of a return key — so `prd: ...` from a child becomes
 `## Prd` in the caller, *not* `## PRD`. The MetaGPT strategy
-(`interpreters/5-fixed-sop-teams/a-metagpt/INSTRUCTIONS.md`) is
+(`interpreters/mas-papers/5-fixed-sop-teams/a-metagpt/INSTRUCTIONS.md`) is
 written using the human spelling `## PRD`, both in the typed-hand-
 off contract block and in the dispatch instructions (e.g. `## PRD is
 present`).

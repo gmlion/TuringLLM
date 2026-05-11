@@ -62,11 +62,11 @@
 ## Task 1: git mv `dynamics/` → `operators/` in all 12 leaves   (satisfies: R4)
 
 **Files:**
-- Rename: `interpreters/1-iterative-refinement/{a-self-refine,b-evaluator-optimizer,c-reflexion,d-cove}/dynamics/` → `operators/`
-- Rename: `interpreters/2-planning-decomposition/{a-plan-execute,b-orchestrator-workers,c-deep-research}/dynamics/` → `operators/`
-- Rename: `interpreters/3-search/{a-tot,b-lats}/dynamics/` → `operators/`
-- Rename: `interpreters/4-peer-collaboration/a-debate/dynamics/` → `operators/`
-- Rename: `interpreters/5-fixed-sop-teams/{a-metagpt,b-chatdev}/dynamics/` → `operators/`
+- Rename: `interpreters/mas-papers/1-iterative-refinement/{a-self-refine,b-evaluator-optimizer,c-reflexion,d-cove}/dynamics/` → `operators/`
+- Rename: `interpreters/mas-papers/2-planning-decomposition/{a-plan-execute,b-orchestrator-workers,c-deep-research}/dynamics/` → `operators/`
+- Rename: `interpreters/mas-papers/3-search/{a-tot,b-lats}/dynamics/` → `operators/`
+- Rename: `interpreters/mas-papers/4-peer-collaboration/a-debate/dynamics/` → `operators/`
+- Rename: `interpreters/mas-papers/5-fixed-sop-teams/{a-metagpt,b-chatdev}/dynamics/` → `operators/`
 - Modify: `src/test/phase-7-aflow-lite.test.ts` (created in T22; for now this task just creates a tiny scratch test in `src/test/_phase-7-rename.test.ts` that's deleted later)
 
 - [ ] **Step 1: Write the failing test**
@@ -84,18 +84,18 @@
 
     describe("R4: dynamics/ → operators/ rename across all leaves", () => {
       const leaves = [
-        "interpreters/1-iterative-refinement/a-self-refine",
-        "interpreters/1-iterative-refinement/b-evaluator-optimizer",
-        "interpreters/1-iterative-refinement/c-reflexion",
-        "interpreters/1-iterative-refinement/d-cove",
-        "interpreters/2-planning-decomposition/a-plan-execute",
-        "interpreters/2-planning-decomposition/b-orchestrator-workers",
-        "interpreters/2-planning-decomposition/c-deep-research",
-        "interpreters/3-search/a-tot",
-        "interpreters/3-search/b-lats",
-        "interpreters/4-peer-collaboration/a-debate",
-        "interpreters/5-fixed-sop-teams/a-metagpt",
-        "interpreters/5-fixed-sop-teams/b-chatdev",
+        "interpreters/mas-papers/1-iterative-refinement/a-self-refine",
+        "interpreters/mas-papers/1-iterative-refinement/b-evaluator-optimizer",
+        "interpreters/mas-papers/1-iterative-refinement/c-reflexion",
+        "interpreters/mas-papers/1-iterative-refinement/d-cove",
+        "interpreters/mas-papers/2-planning-decomposition/a-plan-execute",
+        "interpreters/mas-papers/2-planning-decomposition/b-orchestrator-workers",
+        "interpreters/mas-papers/2-planning-decomposition/c-deep-research",
+        "interpreters/mas-papers/3-search/a-tot",
+        "interpreters/mas-papers/3-search/b-lats",
+        "interpreters/mas-papers/4-peer-collaboration/a-debate",
+        "interpreters/mas-papers/5-fixed-sop-teams/a-metagpt",
+        "interpreters/mas-papers/5-fixed-sop-teams/b-chatdev",
       ];
       for (const leaf of leaves) {
         test(`${leaf}/operators/ exists`, () => {
@@ -119,18 +119,18 @@
 
     ```bash
     for leaf in \
-      interpreters/1-iterative-refinement/a-self-refine \
-      interpreters/1-iterative-refinement/b-evaluator-optimizer \
-      interpreters/1-iterative-refinement/c-reflexion \
-      interpreters/1-iterative-refinement/d-cove \
-      interpreters/2-planning-decomposition/a-plan-execute \
-      interpreters/2-planning-decomposition/b-orchestrator-workers \
-      interpreters/2-planning-decomposition/c-deep-research \
-      interpreters/3-search/a-tot \
-      interpreters/3-search/b-lats \
-      interpreters/4-peer-collaboration/a-debate \
-      interpreters/5-fixed-sop-teams/a-metagpt \
-      interpreters/5-fixed-sop-teams/b-chatdev; do
+      interpreters/mas-papers/1-iterative-refinement/a-self-refine \
+      interpreters/mas-papers/1-iterative-refinement/b-evaluator-optimizer \
+      interpreters/mas-papers/1-iterative-refinement/c-reflexion \
+      interpreters/mas-papers/1-iterative-refinement/d-cove \
+      interpreters/mas-papers/2-planning-decomposition/a-plan-execute \
+      interpreters/mas-papers/2-planning-decomposition/b-orchestrator-workers \
+      interpreters/mas-papers/2-planning-decomposition/c-deep-research \
+      interpreters/mas-papers/3-search/a-tot \
+      interpreters/mas-papers/3-search/b-lats \
+      interpreters/mas-papers/4-peer-collaboration/a-debate \
+      interpreters/mas-papers/5-fixed-sop-teams/a-metagpt \
+      interpreters/mas-papers/5-fixed-sop-teams/b-chatdev; do
       git mv "$leaf/dynamics" "$leaf/operators"
     done
     ```
@@ -748,7 +748,7 @@
         const instanceName = `_phase7_test_${Date.now()}`;
         try {
           execSync(
-            `bash new-instance.sh ${instanceName} interpreters/1-iterative-refinement/b-evaluator-optimizer`,
+            `bash new-instance.sh ${instanceName} interpreters/mas-papers/1-iterative-refinement/b-evaluator-optimizer`,
             { cwd: REPO, encoding: "utf-8" }
           );
           const dir = resolve(REPO, "instances", instanceName);
@@ -904,33 +904,33 @@ The per-leaf tasks (T12 through T23 below) are deliberately terse; each invokes 
 
 ## Task 12: Migrate 1a self-refine   (satisfies: R20, R21, R22, R23, R24, R25, R27, R45, R46, R47)
 
-Apply the per-interpreter migration template (see Phase C header above) on `interpreters/1-iterative-refinement/a-self-refine/`. Canonical operator: `operators/self-refine.md`. Existing terminal output preserved: `## Refined`. Test file: `src/test/phase-1-self-refine.test.ts`.
+Apply the per-interpreter migration template (see Phase C header above) on `interpreters/mas-papers/1-iterative-refinement/a-self-refine/`. Canonical operator: `operators/self-refine.md`. Existing terminal output preserved: `## Refined`. Test file: `src/test/phase-1-self-refine.test.ts`.
 
 Commit: `refactor(phase-7): migrate 1a self-refine to canonical operator + marker INSTRUCTIONS.md (satisfies: R20, R21, R22, R23, R24, R25, R27, R45, R46, R47)`
 
 ## Task 13: Migrate 1b evaluator-optimizer   (satisfies: same R#s)
 
-Per-interpreter migration template on `interpreters/1-iterative-refinement/b-evaluator-optimizer/`. Canonical: `operators/refine.md`. Terminal output preserved: `## Refined`, `## Verdict`, `## Feedback`. Test: `src/test/phase-1-evaluator-optimizer.test.ts`.
+Per-interpreter migration template on `interpreters/mas-papers/1-iterative-refinement/b-evaluator-optimizer/`. Canonical: `operators/refine.md`. Terminal output preserved: `## Refined`, `## Verdict`, `## Feedback`. Test: `src/test/phase-1-evaluator-optimizer.test.ts`.
 
 ## Task 14: Migrate 1c reflexion   (satisfies: same R#s)
 
-Template on `interpreters/1-iterative-refinement/c-reflexion/`. Canonical: `operators/reflexion.md`. Terminal output preserved: `## Refined`, `## Verdict`, `## Feedback`, `## Lessons`. Test: `src/test/phase-1-reflexion.test.ts`.
+Template on `interpreters/mas-papers/1-iterative-refinement/c-reflexion/`. Canonical: `operators/reflexion.md`. Terminal output preserved: `## Refined`, `## Verdict`, `## Feedback`, `## Lessons`. Test: `src/test/phase-1-reflexion.test.ts`.
 
 ## Task 15: Migrate 1d cove   (satisfies: same R#s)
 
-Template on `interpreters/1-iterative-refinement/d-cove/`. Canonical: `operators/cove.md`. Terminal output preserved: `## Revised`. Test: `src/test/phase-2-cove.test.ts`.
+Template on `interpreters/mas-papers/1-iterative-refinement/d-cove/`. Canonical: `operators/cove.md`. Terminal output preserved: `## Revised`. Test: `src/test/phase-2-cove.test.ts`.
 
 ## Task 16: Migrate 2a plan-execute (+ sync 2b/2c byte-equal copies)   (satisfies: R20, R21, R22, R23, R24, R25, R26, R27, R45, R46, R47)
 
-Template on `interpreters/2-planning-decomposition/a-plan-execute/`. Canonical: `operators/plan-execute.md`. Terminal output preserved: `## Result` (and side-effect outputs in `workspace/`). Test: `src/test/phase-3-plan-execute.test.ts`.
+Template on `interpreters/mas-papers/2-planning-decomposition/a-plan-execute/`. Canonical: `operators/plan-execute.md`. Terminal output preserved: `## Result` (and side-effect outputs in `workspace/`). Test: `src/test/phase-3-plan-execute.test.ts`.
 
 **Additional step:** after migrating 2a, propagate the canonical to 2b and 2c byte-equal:
 
 ```bash
-cp interpreters/2-planning-decomposition/a-plan-execute/operators/plan-execute.md \
-   interpreters/2-planning-decomposition/b-orchestrator-workers/operators/plan-execute.md
-cp interpreters/2-planning-decomposition/a-plan-execute/operators/plan-execute.md \
-   interpreters/2-planning-decomposition/c-deep-research/operators/plan-execute.md
+cp interpreters/mas-papers/2-planning-decomposition/a-plan-execute/operators/plan-execute.md \
+   interpreters/mas-papers/2-planning-decomposition/b-orchestrator-workers/operators/plan-execute.md
+cp interpreters/mas-papers/2-planning-decomposition/a-plan-execute/operators/plan-execute.md \
+   interpreters/mas-papers/2-planning-decomposition/c-deep-research/operators/plan-execute.md
 ```
 
 (2b's `tackle.md` and `plan.md` already are byte-equal copies; the new canonical operator is `plan-execute.md` which becomes the strategy. Update `INSTRUCTIONS.md` in 2b and 2c to be marker files pointing at `operators/plan-execute.md`.)
@@ -941,23 +941,23 @@ Identity test (renamed `phase-operators-identity.test.ts`) extended to enforce b
 
 ## Task 17: Migrate 3a tot   (satisfies: same R#s as T12)
 
-Template on `interpreters/3-search/a-tot/`. Canonical: `operators/tot.md`. Terminal output preserved: `## Solution`, `## No Solution Found`. Test: `src/test/phase-6-tot.test.ts`.
+Template on `interpreters/mas-papers/3-search/a-tot/`. Canonical: `operators/tot.md`. Terminal output preserved: `## Solution`, `## No Solution Found`. Test: `src/test/phase-6-tot.test.ts`.
 
 ## Task 18: Migrate 3b lats   (satisfies: same R#s)
 
-Template on `interpreters/3-search/b-lats/`. Canonical: `operators/lats.md`. Terminal output preserved: `## Solution`, `## No Solution Found`. Test: `src/test/phase-6b-lats.test.ts`.
+Template on `interpreters/mas-papers/3-search/b-lats/`. Canonical: `operators/lats.md`. Terminal output preserved: `## Solution`, `## No Solution Found`. Test: `src/test/phase-6b-lats.test.ts`.
 
 ## Task 19: Migrate 4a debate   (satisfies: same R#s)
 
-Template on `interpreters/4-peer-collaboration/a-debate/`. Canonical: `operators/debate.md`. Terminal output preserved: per debate's existing strategy (`## Final` or `## Transcript`). Test: `src/test/phase-5-debate.test.ts`.
+Template on `interpreters/mas-papers/4-peer-collaboration/a-debate/`. Canonical: `operators/debate.md`. Terminal output preserved: per debate's existing strategy (`## Final` or `## Transcript`). Test: `src/test/phase-5-debate.test.ts`.
 
 ## Task 20: Migrate 5a metagpt   (satisfies: same R#s)
 
-Template on `interpreters/5-fixed-sop-teams/a-metagpt/`. Canonical: `operators/metagpt.md`. Terminal output preserved: `## PRD`, `## Design`, `## Tasks`, `## Code Review`, plus side effects under `workspace/.chatdev/`. Test: `src/test/phase-4-metagpt.test.ts`.
+Template on `interpreters/mas-papers/5-fixed-sop-teams/a-metagpt/`. Canonical: `operators/metagpt.md`. Terminal output preserved: `## PRD`, `## Design`, `## Tasks`, `## Code Review`, plus side effects under `workspace/.chatdev/`. Test: `src/test/phase-4-metagpt.test.ts`.
 
 ## Task 21: Migrate 5b chatdev   (satisfies: same R#s)
 
-Template on `interpreters/5-fixed-sop-teams/b-chatdev/`. Canonical: `operators/chatdev.md`. Terminal output preserved: existing chatdev outputs + `workspace/` artefacts. Test: `src/test/phase-4-chatdev.test.ts`.
+Template on `interpreters/mas-papers/5-fixed-sop-teams/b-chatdev/`. Canonical: `operators/chatdev.md`. Terminal output preserved: existing chatdev outputs + `workspace/` artefacts. Test: `src/test/phase-4-chatdev.test.ts`.
 
 ## Task 22 (placeholder — slot reserved; combined with T23 below)
 
@@ -966,11 +966,11 @@ Slot reserved for any per-leaf migration follow-up that surfaces during executio
 ## Task 23: AFlow-lite scaffolding (group + leaf dirs, README skeleton, test-file skeleton)   (satisfies: R1, R2, R3, R34)
 
 **Files:**
-- Create: `interpreters/7-meta-framework/README.md` (group-level)
-- Create: `interpreters/7-meta-framework/a-aflow-lite/INSTRUCTIONS.md` (single-line marker)
-- Create: `interpreters/7-meta-framework/a-aflow-lite/PROGRAM.md` (skeleton; full content in T26)
-- Create: `interpreters/7-meta-framework/a-aflow-lite/README.md` (skeleton; full content in T35)
-- Create: `interpreters/7-meta-framework/a-aflow-lite/operators/` (directory)
+- Create: `interpreters/mas-papers/7-meta-framework/README.md` (group-level)
+- Create: `interpreters/mas-papers/7-meta-framework/a-aflow-lite/INSTRUCTIONS.md` (single-line marker)
+- Create: `interpreters/mas-papers/7-meta-framework/a-aflow-lite/PROGRAM.md` (skeleton; full content in T26)
+- Create: `interpreters/mas-papers/7-meta-framework/a-aflow-lite/README.md` (skeleton; full content in T35)
+- Create: `interpreters/mas-papers/7-meta-framework/a-aflow-lite/operators/` (directory)
 - Create: `src/test/phase-7-aflow-lite.test.ts`
 
 - [ ] **Step 1: Write the failing test**
@@ -992,7 +992,7 @@ Slot reserved for any per-leaf migration follow-up that surfaces during executio
 ## Task 24: Copy reused operators byte-equal into aflow-lite   (satisfies: R26, R34)
 
 **Files:**
-- Create: `interpreters/7-meta-framework/a-aflow-lite/operators/{refine.md,reflexion.md,cove.md,plan-execute.md,debate.md,evaluate.md,reflect.md,verify.md,answer-independently.md,tackle.md,plan.md,opine.md}` (byte-equal copies of canonical sources)
+- Create: `interpreters/mas-papers/7-meta-framework/a-aflow-lite/operators/{refine.md,reflexion.md,cove.md,plan-execute.md,debate.md,evaluate.md,reflect.md,verify.md,answer-independently.md,tackle.md,plan.md,opine.md}` (byte-equal copies of canonical sources)
 
 Standard cp pattern (analogous to Phase 6b T8). Add byte-equality assertions to `phase-7-aflow-lite.test.ts`. Commit: `feat(phase-7): copy 12 reused operators byte-equal into aflow-lite (satisfies: R26, R34)`.
 
@@ -1006,15 +1006,15 @@ Extend the existing `EVALUATE_PATHS`, `REFLECT_PATHS`, `EXPAND_NODE_PATHS`, `PLA
 ## Task 26: Demo PROGRAM.md + workspace/gsm8k.jsonl fixture   (satisfies: R48, R49)
 
 **Files:**
-- Create: `interpreters/7-meta-framework/a-aflow-lite/PROGRAM.md` (full content per design.md)
-- Create: `interpreters/7-meta-framework/a-aflow-lite/workspace/gsm8k.jsonl` (20 items)
+- Create: `interpreters/mas-papers/7-meta-framework/a-aflow-lite/PROGRAM.md` (full content per design.md)
+- Create: `interpreters/mas-papers/7-meta-framework/a-aflow-lite/workspace/gsm8k.jsonl` (20 items)
 
 The 20 items are hand-curated from the GSM8K test split. Each line is `{"question": "...", "answer": <integer>}`. Cite the dataset source (Cobbe et al. 2021, arXiv:2110.14168) in the leaf README. Add fixture-format assertions to `phase-7-aflow-lite.test.ts`. Commit: `feat(phase-7): GSM8K demo PROGRAM.md + 20-item fixture (satisfies: R48, R49)`.
 
 ## Task 27: aflow-lite.md preamble + Initialize (incl. fixture loading + sampling)   (satisfies: R28, R29, R30, R31, R36, R50)
 
 **Files:**
-- Create: `interpreters/7-meta-framework/a-aflow-lite/operators/aflow-lite.md`
+- Create: `interpreters/mas-papers/7-meta-framework/a-aflow-lite/operators/aflow-lite.md`
 
 Body: strategy preamble (scoped files list, library hardcoded as `LIBRARY="refine,reflexion,cove,plan-execute,debate"`, tree ledger schema), then Initialize instruction that:
 - Copies `../../PROGRAM.md` to `./scoped/task.md`.
@@ -1043,7 +1043,7 @@ Expand-push: push `expand-workflow.md`. Expand-absorb: parse the returned `## Ch
 
 ## Task 32: New `expand-workflow.md` operator   (satisfies: R41, R42, R43, R44)
 
-Create `interpreters/7-meta-framework/a-aflow-lite/operators/expand-workflow.md` with the body specified in design.md §Interfaces — `expand-workflow.md` contract. Test assertions: push-args, single-cycle, no further pushes, `## Return: children: |` shape, domain-agnostic vocabulary (R43). Commit.
+Create `interpreters/mas-papers/7-meta-framework/a-aflow-lite/operators/expand-workflow.md` with the body specified in design.md §Interfaces — `expand-workflow.md` contract. Test assertions: push-args, single-cycle, no further pushes, `## Return: children: |` shape, domain-agnostic vocabulary (R43). Commit.
 
 ## Task 33: aflow-lite.md Simulate-push + per-item workflow execution loop   (satisfies: R33, R35)
 
@@ -1069,8 +1069,8 @@ Commit: `test(phase-7): negative-requirement pins for aflow-lite (no MoA, no met
 ## Task 36: aflow-lite + group READMEs full content + smoke check   (satisfies: R2, R3)
 
 **Files:**
-- Modify: `interpreters/7-meta-framework/README.md` (group)
-- Modify: `interpreters/7-meta-framework/a-aflow-lite/README.md` (leaf)
+- Modify: `interpreters/mas-papers/7-meta-framework/README.md` (group)
+- Modify: `interpreters/mas-papers/7-meta-framework/a-aflow-lite/README.md` (leaf)
 
 Replace skeleton READMEs with full content. Group README: cite Zhang et al. arXiv:2410.10762, list AFlow-lite as the only currently shipped variant. Leaf README: full content per requirements R3 (citation, architectural overview, operator library list with rationale, MCTS state machine summary, demo description, run-it section, Notable behaviour). Test assertions for content. Commit: `docs(phase-7): aflow-lite + group READMEs full content + smoke check (satisfies: R2, R3)`.
 

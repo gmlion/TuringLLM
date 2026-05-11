@@ -75,9 +75,9 @@ instead — do not open T0.
 ## Task 1: Build `a-self-refine` interpreter (satisfies: R1, R2, R3, R6, R7, R10, R17, R18, R23)
 
 **Files:**
-- Create: `interpreters/1-iterative-refinement/a-self-refine/INSTRUCTIONS.md`
-- Create: `interpreters/1-iterative-refinement/a-self-refine/PROGRAM.md`
-- Create: `interpreters/1-iterative-refinement/a-self-refine/operators/self-critique.md`
+- Create: `interpreters/mas-papers/1-iterative-refinement/a-self-refine/INSTRUCTIONS.md`
+- Create: `interpreters/mas-papers/1-iterative-refinement/a-self-refine/PROGRAM.md`
+- Create: `interpreters/mas-papers/1-iterative-refinement/a-self-refine/operators/self-critique.md`
 - Test:   `src/test/phase-1-self-refine.test.ts`
 
 - [ ] **Step 1: Write the failing integration test**
@@ -96,7 +96,7 @@ instead — do not open T0.
 
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = dirname(__filename);
-    const INTERP = resolve(__dirname, "../../interpreters/1-iterative-refinement/a-self-refine");
+    const INTERP = resolve(__dirname, "../../interpreters/mas-papers/1-iterative-refinement/a-self-refine");
 
     function readTarget(p: string): string | null {
       const full = resolve(INTERP, p);
@@ -203,7 +203,7 @@ instead — do not open T0.
 
 - [ ] **Step 3: Create the strategy file**
 
-    Create `interpreters/1-iterative-refinement/a-self-refine/INSTRUCTIONS.md`
+    Create `interpreters/mas-papers/1-iterative-refinement/a-self-refine/INSTRUCTIONS.md`
     with this exact content:
 
     ````markdown
@@ -236,7 +236,7 @@ instead — do not open T0.
 
 - [ ] **Step 4: Create the demo `PROGRAM.md`**
 
-    Create `interpreters/1-iterative-refinement/a-self-refine/PROGRAM.md`
+    Create `interpreters/mas-papers/1-iterative-refinement/a-self-refine/PROGRAM.md`
     with this exact content:
 
     ```markdown
@@ -255,7 +255,7 @@ instead — do not open T0.
 
 - [ ] **Step 5: Create the self-critique dynamic**
 
-    Create `interpreters/1-iterative-refinement/a-self-refine/operators/self-critique.md`
+    Create `interpreters/mas-papers/1-iterative-refinement/a-self-refine/operators/self-critique.md`
     with this exact content:
 
     ````markdown
@@ -283,7 +283,7 @@ instead — do not open T0.
 - [ ] **Step 7: Commit**
 
     ```bash
-    git add interpreters/1-iterative-refinement/a-self-refine src/test/phase-1-self-refine.test.ts
+    git add interpreters/mas-papers/1-iterative-refinement/a-self-refine src/test/phase-1-self-refine.test.ts
     git commit -m "feat(interpreters): add a-self-refine with scripted push/pop test (satisfies: R1, R2, R3, R6, R7, R10, R17, R18, R23)"
     ```
 
@@ -292,9 +292,9 @@ instead — do not open T0.
 ## Task 2: Build `b-evaluator-optimizer` interpreter (satisfies: R1, R2, R4, R6, R7, R10, R17, R18, R23)
 
 **Files:**
-- Create: `interpreters/1-iterative-refinement/b-evaluator-optimizer/INSTRUCTIONS.md`
-- Create: `interpreters/1-iterative-refinement/b-evaluator-optimizer/PROGRAM.md`
-- Create: `interpreters/1-iterative-refinement/b-evaluator-optimizer/operators/evaluate.md`
+- Create: `interpreters/mas-papers/1-iterative-refinement/b-evaluator-optimizer/INSTRUCTIONS.md`
+- Create: `interpreters/mas-papers/1-iterative-refinement/b-evaluator-optimizer/PROGRAM.md`
+- Create: `interpreters/mas-papers/1-iterative-refinement/b-evaluator-optimizer/operators/evaluate.md`
 - Test:   `src/test/phase-1-evaluator-optimizer.test.ts`
 
 - [ ] **Step 1: Write the failing integration test**
@@ -313,7 +313,7 @@ instead — do not open T0.
 
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = dirname(__filename);
-    const INTERP = resolve(__dirname, "../../interpreters/1-iterative-refinement/b-evaluator-optimizer");
+    const INTERP = resolve(__dirname, "../../interpreters/mas-papers/1-iterative-refinement/b-evaluator-optimizer");
 
     function readTarget(p: string): string | null {
       const full = resolve(INTERP, p);
@@ -423,7 +423,7 @@ instead — do not open T0.
 
 - [ ] **Step 3: Create the strategy file**
 
-    Create `interpreters/1-iterative-refinement/b-evaluator-optimizer/INSTRUCTIONS.md`
+    Create `interpreters/mas-papers/1-iterative-refinement/b-evaluator-optimizer/INSTRUCTIONS.md`
     with this exact content:
 
     ````markdown
@@ -456,7 +456,7 @@ instead — do not open T0.
 
 - [ ] **Step 4: Create the demo `PROGRAM.md`**
 
-    Create `interpreters/1-iterative-refinement/b-evaluator-optimizer/PROGRAM.md`
+    Create `interpreters/mas-papers/1-iterative-refinement/b-evaluator-optimizer/PROGRAM.md`
     with this exact content:
 
     ````markdown
@@ -477,7 +477,7 @@ instead — do not open T0.
 
 - [ ] **Step 5: Create the evaluate dynamic**
 
-    Create `interpreters/1-iterative-refinement/b-evaluator-optimizer/operators/evaluate.md`
+    Create `interpreters/mas-papers/1-iterative-refinement/b-evaluator-optimizer/operators/evaluate.md`
     with this exact content:
 
     ````markdown
@@ -500,7 +500,7 @@ instead — do not open T0.
 - [ ] **Step 7: Commit**
 
     ```bash
-    git add interpreters/1-iterative-refinement/b-evaluator-optimizer src/test/phase-1-evaluator-optimizer.test.ts
+    git add interpreters/mas-papers/1-iterative-refinement/b-evaluator-optimizer src/test/phase-1-evaluator-optimizer.test.ts
     git commit -m "feat(interpreters): add b-evaluator-optimizer with scripted push/pop test (satisfies: R1, R2, R4, R6, R7, R10, R17, R18, R23)"
     ```
 
@@ -509,11 +509,11 @@ instead — do not open T0.
 ## Task 3: Build `c-reflexion` interpreter with palindrome harness (satisfies: R1, R2, R4, R5, R6, R7, R10, R11, R12, R17, R18, R19, R23)
 
 **Files:**
-- Create: `interpreters/1-iterative-refinement/c-reflexion/INSTRUCTIONS.md`
-- Create: `interpreters/1-iterative-refinement/c-reflexion/PROGRAM.md`
-- Create: `interpreters/1-iterative-refinement/c-reflexion/test_palindrome.md`
-- Create: `interpreters/1-iterative-refinement/c-reflexion/operators/evaluate.md`  *(byte-equal copy of b's)*
-- Create: `interpreters/1-iterative-refinement/c-reflexion/operators/reflect.md`
+- Create: `interpreters/mas-papers/1-iterative-refinement/c-reflexion/INSTRUCTIONS.md`
+- Create: `interpreters/mas-papers/1-iterative-refinement/c-reflexion/PROGRAM.md`
+- Create: `interpreters/mas-papers/1-iterative-refinement/c-reflexion/test_palindrome.md`
+- Create: `interpreters/mas-papers/1-iterative-refinement/c-reflexion/operators/evaluate.md`  *(byte-equal copy of b's)*
+- Create: `interpreters/mas-papers/1-iterative-refinement/c-reflexion/operators/reflect.md`
 - Test:   `src/test/phase-1-reflexion.test.ts`
 
 - [ ] **Step 1: Write the failing integration test**
@@ -531,7 +531,7 @@ instead — do not open T0.
 
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = dirname(__filename);
-    const INTERP = resolve(__dirname, "../../interpreters/1-iterative-refinement/c-reflexion");
+    const INTERP = resolve(__dirname, "../../interpreters/mas-papers/1-iterative-refinement/c-reflexion");
 
     function readTarget(p: string): string | null {
       const full = resolve(INTERP, p);
@@ -679,7 +679,7 @@ instead — do not open T0.
 
 - [ ] **Step 3: Create the strategy file**
 
-    Create `interpreters/1-iterative-refinement/c-reflexion/INSTRUCTIONS.md`
+    Create `interpreters/mas-papers/1-iterative-refinement/c-reflexion/INSTRUCTIONS.md`
     with this exact content:
 
     ````markdown
@@ -724,7 +724,7 @@ instead — do not open T0.
 
 - [ ] **Step 4: Create the demo `PROGRAM.md`**
 
-    Create `interpreters/1-iterative-refinement/c-reflexion/PROGRAM.md`
+    Create `interpreters/mas-papers/1-iterative-refinement/c-reflexion/PROGRAM.md`
     with this exact content:
 
     ````markdown
@@ -744,7 +744,7 @@ instead — do not open T0.
 
 - [ ] **Step 5: Create the palindrome test harness (`test_palindrome.md`)**
 
-    Create `interpreters/1-iterative-refinement/c-reflexion/test_palindrome.md`
+    Create `interpreters/mas-papers/1-iterative-refinement/c-reflexion/test_palindrome.md`
     with this exact content:
 
     ````markdown
@@ -799,15 +799,15 @@ instead — do not open T0.
     Copy the file byte-for-byte from the b interpreter:
 
     ```bash
-    cp interpreters/1-iterative-refinement/b-evaluator-optimizer/operators/evaluate.md \
-       interpreters/1-iterative-refinement/c-reflexion/operators/evaluate.md
+    cp interpreters/mas-papers/1-iterative-refinement/b-evaluator-optimizer/operators/evaluate.md \
+       interpreters/mas-papers/1-iterative-refinement/c-reflexion/operators/evaluate.md
     ```
 
     Do NOT edit the copy. Drift will be caught by T4's byte-equality test.
 
 - [ ] **Step 7: Create the `reflect.md` dynamic**
 
-    Create `interpreters/1-iterative-refinement/c-reflexion/operators/reflect.md`
+    Create `interpreters/mas-papers/1-iterative-refinement/c-reflexion/operators/reflect.md`
     with this exact content:
 
     ````markdown
@@ -830,7 +830,7 @@ instead — do not open T0.
 - [ ] **Step 9: Commit**
 
     ```bash
-    git add interpreters/1-iterative-refinement/c-reflexion src/test/phase-1-reflexion.test.ts
+    git add interpreters/mas-papers/1-iterative-refinement/c-reflexion src/test/phase-1-reflexion.test.ts
     git commit -m "feat(interpreters): add c-reflexion with palindrome harness and scripted push/pop test (satisfies: R1, R2, R4, R5, R6, R7, R10, R11, R12, R17, R18, R19, R23)"
     ```
 
@@ -860,10 +860,10 @@ instead — do not open T0.
     describe("phase-1 dynamics identity", () => {
       test("evaluate.md is byte-equal across b and c", () => {
         const a = readFileSync(
-          resolve(REPO, "interpreters/1-iterative-refinement/b-evaluator-optimizer/operators/evaluate.md"),
+          resolve(REPO, "interpreters/mas-papers/1-iterative-refinement/b-evaluator-optimizer/operators/evaluate.md"),
         );
         const b = readFileSync(
-          resolve(REPO, "interpreters/1-iterative-refinement/c-reflexion/operators/evaluate.md"),
+          resolve(REPO, "interpreters/mas-papers/1-iterative-refinement/c-reflexion/operators/evaluate.md"),
         );
         assert.ok(a.equals(b), "evaluate.md diverged between b and c");
       });
@@ -908,9 +908,9 @@ instead — do not open T0.
     ```markdown
     - **default** (no argument to new-instance.sh) — Step-by-step executor. Reads PROGRAM.md steps, decomposes each into sub-instructions with verification.
     - **`interpreters/game-team`** — Game dev team simulation with fuzzy natural-language conditions. Six roles (team lead, architect, game designer, developer, 2D artist, UI/UX). Scheduled for deletion in Phase 4 of the agent-workflows plan; exempt from the Phase-1 directory layout convention.
-    - **`interpreters/1-iterative-refinement/a-self-refine`** — Self-Refine (patterns.md Group 1). Single role drafts, critiques its own output via `self-critique.md`, iterates until accepted.
-    - **`interpreters/1-iterative-refinement/b-evaluator-optimizer`** — Evaluator–Optimizer (patterns.md Group 1). Generator produces attempts; external evaluator (`evaluate.md`) judges against an explicit `## Criterion` and returns pass/fail with feedback.
-    - **`interpreters/1-iterative-refinement/c-reflexion`** — Reflexion (patterns.md Group 1). Evaluator–Optimizer plus a `reflect.md` step that distils each failed attempt into a verbal lesson accumulated in `## Lessons` and read back into every subsequent attempt.
+    - **`interpreters/mas-papers/1-iterative-refinement/a-self-refine`** — Self-Refine (patterns.md Group 1). Single role drafts, critiques its own output via `self-critique.md`, iterates until accepted.
+    - **`interpreters/mas-papers/1-iterative-refinement/b-evaluator-optimizer`** — Evaluator–Optimizer (patterns.md Group 1). Generator produces attempts; external evaluator (`evaluate.md`) judges against an explicit `## Criterion` and returns pass/fail with feedback.
+    - **`interpreters/mas-papers/1-iterative-refinement/c-reflexion`** — Reflexion (patterns.md Group 1). Evaluator–Optimizer plus a `reflect.md` step that distils each failed attempt into a verbal lesson accumulated in `## Lessons` and read back into every subsequent attempt.
     ```
 
     The original game-team bullet's detailed description (scope
@@ -962,7 +962,7 @@ inspects the result, and records findings in `docs/agent-workflows/phase-1-notes
 
     Run:
     ```bash
-    ./new-instance.sh p1-a interpreters/1-iterative-refinement/a-self-refine
+    ./new-instance.sh p1-a interpreters/mas-papers/1-iterative-refinement/a-self-refine
     TURING_PROVIDER=claude-code instances/p1-a/run.sh
     ```
     Expected:
@@ -976,7 +976,7 @@ inspects the result, and records findings in `docs/agent-workflows/phase-1-notes
 
     Run:
     ```bash
-    ./new-instance.sh p1-b interpreters/1-iterative-refinement/b-evaluator-optimizer
+    ./new-instance.sh p1-b interpreters/mas-papers/1-iterative-refinement/b-evaluator-optimizer
     TURING_PROVIDER=claude-code instances/p1-b/run.sh
     ```
     Expected:
@@ -990,7 +990,7 @@ inspects the result, and records findings in `docs/agent-workflows/phase-1-notes
 
     Run:
     ```bash
-    ./new-instance.sh p1-c interpreters/1-iterative-refinement/c-reflexion
+    ./new-instance.sh p1-c interpreters/mas-papers/1-iterative-refinement/c-reflexion
     TURING_PROVIDER=claude-code instances/p1-c/run.sh
     ```
     Expected:

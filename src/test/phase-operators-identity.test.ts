@@ -9,80 +9,80 @@ const __dirname = dirname(__filename);
 const REPO = resolve(__dirname, "../..");
 
 const EVALUATE_PATHS = [
-  "interpreters/1-iterative-refinement/b-evaluator-optimizer/operators/evaluate.md",
-  "interpreters/1-iterative-refinement/c-reflexion/operators/evaluate.md",
-  "interpreters/5-fixed-sop-teams/a-metagpt/operators/evaluate.md",
-  "interpreters/5-fixed-sop-teams/b-chatdev/operators/evaluate.md",
-  "interpreters/3-search/a-tot/operators/evaluate.md",
-  "interpreters/3-search/b-lats/operators/evaluate.md",
-  "interpreters/7-meta-framework/a-aflow-lite/operators/evaluate.md",
+  "interpreters/mas-papers/1-iterative-refinement/b-evaluator-optimizer/operators/evaluate.md",
+  "interpreters/mas-papers/1-iterative-refinement/c-reflexion/operators/evaluate.md",
+  "interpreters/mas-papers/5-fixed-sop-teams/a-metagpt/operators/evaluate.md",
+  "interpreters/mas-papers/5-fixed-sop-teams/b-chatdev/operators/evaluate.md",
+  "interpreters/mas-papers/3-search/a-tot/operators/evaluate.md",
+  "interpreters/mas-papers/3-search/b-lats/operators/evaluate.md",
+  "interpreters/mas-papers/7-meta-framework/a-aflow-lite/operators/evaluate.md",
 ];
 
 const REFLECT_PATHS = [
-  "interpreters/1-iterative-refinement/c-reflexion/operators/reflect.md",
-  "interpreters/3-search/b-lats/operators/reflect.md",
-  "interpreters/7-meta-framework/a-aflow-lite/operators/reflect.md",
+  "interpreters/mas-papers/1-iterative-refinement/c-reflexion/operators/reflect.md",
+  "interpreters/mas-papers/3-search/b-lats/operators/reflect.md",
+  "interpreters/mas-papers/7-meta-framework/a-aflow-lite/operators/reflect.md",
 ];
 
 const EXPAND_NODE_PATHS = [
-  "interpreters/3-search/a-tot/operators/expand-node.md",
-  "interpreters/3-search/b-lats/operators/expand-node.md",
+  "interpreters/mas-papers/3-search/a-tot/operators/expand-node.md",
+  "interpreters/mas-papers/3-search/b-lats/operators/expand-node.md",
 ];
 
 const PLAN_EXECUTE_PATHS = [
-  "interpreters/2-planning-decomposition/a-plan-execute/operators/plan-execute.md",
-  "interpreters/2-planning-decomposition/b-orchestrator-workers/operators/plan-execute.md",
-  "interpreters/2-planning-decomposition/c-deep-research/operators/plan-execute.md",
-  "interpreters/7-meta-framework/a-aflow-lite/operators/plan-execute.md",
+  "interpreters/mas-papers/2-planning-decomposition/a-plan-execute/operators/plan-execute.md",
+  "interpreters/mas-papers/2-planning-decomposition/b-orchestrator-workers/operators/plan-execute.md",
+  "interpreters/mas-papers/2-planning-decomposition/c-deep-research/operators/plan-execute.md",
+  "interpreters/mas-papers/7-meta-framework/a-aflow-lite/operators/plan-execute.md",
 ];
 
 const PLAN_PATHS = [
-  "interpreters/2-planning-decomposition/a-plan-execute/operators/plan.md",
-  "interpreters/2-planning-decomposition/b-orchestrator-workers/operators/plan.md",
-  "interpreters/2-planning-decomposition/c-deep-research/operators/plan.md",
-  "interpreters/7-meta-framework/a-aflow-lite/operators/plan.md",
+  "interpreters/mas-papers/2-planning-decomposition/a-plan-execute/operators/plan.md",
+  "interpreters/mas-papers/2-planning-decomposition/b-orchestrator-workers/operators/plan.md",
+  "interpreters/mas-papers/2-planning-decomposition/c-deep-research/operators/plan.md",
+  "interpreters/mas-papers/7-meta-framework/a-aflow-lite/operators/plan.md",
 ];
 
 const TACKLE_PATHS = [
-  "interpreters/2-planning-decomposition/a-plan-execute/operators/tackle.md",
-  "interpreters/2-planning-decomposition/b-orchestrator-workers/operators/tackle.md",
-  "interpreters/2-planning-decomposition/c-deep-research/operators/tackle.md",
-  "interpreters/7-meta-framework/a-aflow-lite/operators/tackle.md",
+  "interpreters/mas-papers/2-planning-decomposition/a-plan-execute/operators/tackle.md",
+  "interpreters/mas-papers/2-planning-decomposition/b-orchestrator-workers/operators/tackle.md",
+  "interpreters/mas-papers/2-planning-decomposition/c-deep-research/operators/tackle.md",
+  "interpreters/mas-papers/7-meta-framework/a-aflow-lite/operators/tackle.md",
 ];
 
 const REFINE_PATHS = [
-  "interpreters/1-iterative-refinement/b-evaluator-optimizer/operators/refine.md",
-  "interpreters/7-meta-framework/a-aflow-lite/operators/refine.md",
+  "interpreters/mas-papers/1-iterative-refinement/b-evaluator-optimizer/operators/refine.md",
+  "interpreters/mas-papers/7-meta-framework/a-aflow-lite/operators/refine.md",
 ];
 
 const REFLEXION_PATHS = [
-  "interpreters/1-iterative-refinement/c-reflexion/operators/reflexion.md",
-  "interpreters/7-meta-framework/a-aflow-lite/operators/reflexion.md",
+  "interpreters/mas-papers/1-iterative-refinement/c-reflexion/operators/reflexion.md",
+  "interpreters/mas-papers/7-meta-framework/a-aflow-lite/operators/reflexion.md",
 ];
 
 const COVE_PATHS = [
-  "interpreters/1-iterative-refinement/d-cove/operators/cove.md",
-  "interpreters/7-meta-framework/a-aflow-lite/operators/cove.md",
+  "interpreters/mas-papers/1-iterative-refinement/d-cove/operators/cove.md",
+  "interpreters/mas-papers/7-meta-framework/a-aflow-lite/operators/cove.md",
 ];
 
 const VERIFY_PATHS = [
-  "interpreters/1-iterative-refinement/d-cove/operators/verify.md",
-  "interpreters/7-meta-framework/a-aflow-lite/operators/verify.md",
+  "interpreters/mas-papers/1-iterative-refinement/d-cove/operators/verify.md",
+  "interpreters/mas-papers/7-meta-framework/a-aflow-lite/operators/verify.md",
 ];
 
 const ANSWER_INDEPENDENTLY_PATHS = [
-  "interpreters/1-iterative-refinement/d-cove/operators/answer-independently.md",
-  "interpreters/7-meta-framework/a-aflow-lite/operators/answer-independently.md",
+  "interpreters/mas-papers/1-iterative-refinement/d-cove/operators/answer-independently.md",
+  "interpreters/mas-papers/7-meta-framework/a-aflow-lite/operators/answer-independently.md",
 ];
 
 const DEBATE_PATHS = [
-  "interpreters/4-peer-collaboration/a-debate/operators/debate.md",
-  "interpreters/7-meta-framework/a-aflow-lite/operators/debate.md",
+  "interpreters/mas-papers/4-peer-collaboration/a-debate/operators/debate.md",
+  "interpreters/mas-papers/7-meta-framework/a-aflow-lite/operators/debate.md",
 ];
 
 const OPINE_PATHS = [
-  "interpreters/4-peer-collaboration/a-debate/operators/opine.md",
-  "interpreters/7-meta-framework/a-aflow-lite/operators/opine.md",
+  "interpreters/mas-papers/4-peer-collaboration/a-debate/operators/opine.md",
+  "interpreters/mas-papers/7-meta-framework/a-aflow-lite/operators/opine.md",
 ];
 
 describe("evaluate.md identity across phases", () => {

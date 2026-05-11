@@ -36,7 +36,7 @@ Every R# (R1–R20 from `requirements.md`) appears in at least one task.
 ## Task 1: Scaffold `opine.md` dynamic + test file   (satisfies: R14, R15, R16, R20)
 
 **Files:**
-- Create: `interpreters/4-peer-collaboration/a-debate/operators/opine.md`
+- Create: `interpreters/mas-papers/4-peer-collaboration/a-debate/operators/opine.md`
 - Create: `src/test/phase-5-debate.test.ts`
 
 - [ ] **Step 1: Write the failing test**
@@ -53,7 +53,7 @@ Every R# (R1–R20 from `requirements.md`) appears in at least one task.
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = dirname(__filename);
     const REPO = resolve(__dirname, "../..");
-    const INTERP = resolve(REPO, "interpreters/4-peer-collaboration/a-debate");
+    const INTERP = resolve(REPO, "interpreters/mas-papers/4-peer-collaboration/a-debate");
 
     function escapeRegExp(s: string) {
       return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -109,7 +109,7 @@ Every R# (R1–R20 from `requirements.md`) appears in at least one task.
 
 - [ ] **Step 3: Write minimal implementation**
 
-    Create the directory and write `interpreters/4-peer-collaboration/a-debate/operators/opine.md`:
+    Create the directory and write `interpreters/mas-papers/4-peer-collaboration/a-debate/operators/opine.md`:
 
     ````markdown
     # Dynamic: Opine
@@ -168,7 +168,7 @@ Every R# (R1–R20 from `requirements.md`) appears in at least one task.
 - [ ] **Step 5: Commit**
 
     ```bash
-    git add interpreters/4-peer-collaboration/a-debate/operators/opine.md src/test/phase-5-debate.test.ts
+    git add interpreters/mas-papers/4-peer-collaboration/a-debate/operators/opine.md src/test/phase-5-debate.test.ts
     git commit -m "feat(debate): scaffold opine.md dynamic and test file (satisfies: R14, R15, R16, R20)"
     ```
 
@@ -177,7 +177,7 @@ Every R# (R1–R20 from `requirements.md`) appears in at least one task.
 ## Task 2: Demo `PROGRAM.md`   (satisfies: R17)
 
 **Files:**
-- Create: `interpreters/4-peer-collaboration/a-debate/PROGRAM.md`
+- Create: `interpreters/mas-papers/4-peer-collaboration/a-debate/PROGRAM.md`
 - Modify: `src/test/phase-5-debate.test.ts`
 
 - [ ] **Step 1: Write the failing test**
@@ -210,7 +210,7 @@ Every R# (R1–R20 from `requirements.md`) appears in at least one task.
 
 - [ ] **Step 3: Write minimal implementation**
 
-    Create `interpreters/4-peer-collaboration/a-debate/PROGRAM.md`:
+    Create `interpreters/mas-papers/4-peer-collaboration/a-debate/PROGRAM.md`:
 
     ```markdown
     # Goal
@@ -241,7 +241,7 @@ Every R# (R1–R20 from `requirements.md`) appears in at least one task.
 - [ ] **Step 5: Commit**
 
     ```bash
-    git add interpreters/4-peer-collaboration/a-debate/PROGRAM.md src/test/phase-5-debate.test.ts
+    git add interpreters/mas-papers/4-peer-collaboration/a-debate/PROGRAM.md src/test/phase-5-debate.test.ts
     git commit -m "feat(debate): demo PROGRAM.md with Postgres-vs-SQLite + 3 personas (satisfies: R17)"
     ```
 
@@ -250,7 +250,7 @@ Every R# (R1–R20 from `requirements.md`) appears in at least one task.
 ## Task 3: Strategy preamble + `Initialize` instruction   (satisfies: R1, R2, R3, R4, R19)
 
 **Files:**
-- Create: `interpreters/4-peer-collaboration/a-debate/INSTRUCTIONS.md`
+- Create: `interpreters/mas-papers/4-peer-collaboration/a-debate/INSTRUCTIONS.md`
 - Modify: `src/test/phase-5-debate.test.ts`
 
 - [ ] **Step 1: Write the failing test**
@@ -306,7 +306,7 @@ Every R# (R1–R20 from `requirements.md`) appears in at least one task.
 
 - [ ] **Step 3: Write minimal implementation**
 
-    Create `interpreters/4-peer-collaboration/a-debate/INSTRUCTIONS.md`:
+    Create `interpreters/mas-papers/4-peer-collaboration/a-debate/INSTRUCTIONS.md`:
 
     ````markdown
     # Strategy: Multi-Agent Debate
@@ -402,7 +402,7 @@ Every R# (R1–R20 from `requirements.md`) appears in at least one task.
 - [ ] **Step 5: Commit**
 
     ```bash
-    git add interpreters/4-peer-collaboration/a-debate/INSTRUCTIONS.md src/test/phase-5-debate.test.ts
+    git add interpreters/mas-papers/4-peer-collaboration/a-debate/INSTRUCTIONS.md src/test/phase-5-debate.test.ts
     git commit -m "feat(debate): strategy preamble + Initialize instruction (satisfies: R1, R2, R3, R4, R19)"
     ```
 
@@ -411,7 +411,7 @@ Every R# (R1–R20 from `requirements.md`) appears in at least one task.
 ## Task 4: `Stage` instruction   (satisfies: R5, R6)
 
 **Files:**
-- Modify: `interpreters/4-peer-collaboration/a-debate/INSTRUCTIONS.md`
+- Modify: `interpreters/mas-papers/4-peer-collaboration/a-debate/INSTRUCTIONS.md`
 - Modify: `src/test/phase-5-debate.test.ts`
 
 - [ ] **Step 1: Write the failing test**
@@ -528,7 +528,7 @@ Every R# (R1–R20 from `requirements.md`) appears in at least one task.
 - [ ] **Step 5: Commit**
 
     ```bash
-    git add interpreters/4-peer-collaboration/a-debate/INSTRUCTIONS.md src/test/phase-5-debate.test.ts
+    git add interpreters/mas-papers/4-peer-collaboration/a-debate/INSTRUCTIONS.md src/test/phase-5-debate.test.ts
     git commit -m "feat(debate): Stage instruction with strict round isolation (satisfies: R5, R6)"
     ```
 
@@ -537,7 +537,7 @@ Every R# (R1–R20 from `requirements.md`) appears in at least one task.
 ## Task 5: `Push` instruction   (satisfies: R8, R14)
 
 **Files:**
-- Modify: `interpreters/4-peer-collaboration/a-debate/INSTRUCTIONS.md`
+- Modify: `interpreters/mas-papers/4-peer-collaboration/a-debate/INSTRUCTIONS.md`
 - Modify: `src/test/phase-5-debate.test.ts`
 
 - [ ] **Step 1: Write the failing test**
@@ -639,7 +639,7 @@ Every R# (R1–R20 from `requirements.md`) appears in at least one task.
 - [ ] **Step 5: Commit**
 
     ```bash
-    git add interpreters/4-peer-collaboration/a-debate/INSTRUCTIONS.md src/test/phase-5-debate.test.ts
+    git add interpreters/mas-papers/4-peer-collaboration/a-debate/INSTRUCTIONS.md src/test/phase-5-debate.test.ts
     git commit -m "feat(debate): Push instruction with static MEMORY template (satisfies: R8, R14)"
     ```
 
@@ -648,7 +648,7 @@ Every R# (R1–R20 from `requirements.md`) appears in at least one task.
 ## Task 6: `Absorb` instruction   (satisfies: R7, R9, R11)
 
 **Files:**
-- Modify: `interpreters/4-peer-collaboration/a-debate/INSTRUCTIONS.md`
+- Modify: `interpreters/mas-papers/4-peer-collaboration/a-debate/INSTRUCTIONS.md`
 - Modify: `src/test/phase-5-debate.test.ts`
 
 - [ ] **Step 1: Write the failing test**
@@ -759,7 +759,7 @@ Every R# (R1–R20 from `requirements.md`) appears in at least one task.
 - [ ] **Step 5: Commit**
 
     ```bash
-    git add interpreters/4-peer-collaboration/a-debate/INSTRUCTIONS.md src/test/phase-5-debate.test.ts
+    git add interpreters/mas-papers/4-peer-collaboration/a-debate/INSTRUCTIONS.md src/test/phase-5-debate.test.ts
     git commit -m "feat(debate): Absorb instruction with per-round snapshot (satisfies: R7, R9, R11)"
     ```
 
@@ -768,7 +768,7 @@ Every R# (R1–R20 from `requirements.md`) appears in at least one task.
 ## Task 7: `Round transition` instruction   (satisfies: R10, R11)
 
 **Files:**
-- Modify: `interpreters/4-peer-collaboration/a-debate/INSTRUCTIONS.md`
+- Modify: `interpreters/mas-papers/4-peer-collaboration/a-debate/INSTRUCTIONS.md`
 - Modify: `src/test/phase-5-debate.test.ts`
 
 - [ ] **Step 1: Write the failing test**
@@ -849,7 +849,7 @@ Every R# (R1–R20 from `requirements.md`) appears in at least one task.
 - [ ] **Step 5: Commit**
 
     ```bash
-    git add interpreters/4-peer-collaboration/a-debate/INSTRUCTIONS.md src/test/phase-5-debate.test.ts
+    git add interpreters/mas-papers/4-peer-collaboration/a-debate/INSTRUCTIONS.md src/test/phase-5-debate.test.ts
     git commit -m "feat(debate): Round transition instruction (satisfies: R10, R11)"
     ```
 
@@ -858,7 +858,7 @@ Every R# (R1–R20 from `requirements.md`) appears in at least one task.
 ## Task 8: `Conclude` instruction   (satisfies: R12, R13)
 
 **Files:**
-- Modify: `interpreters/4-peer-collaboration/a-debate/INSTRUCTIONS.md`
+- Modify: `interpreters/mas-papers/4-peer-collaboration/a-debate/INSTRUCTIONS.md`
 - Modify: `src/test/phase-5-debate.test.ts`
 
 - [ ] **Step 1: Write the failing test**
@@ -952,7 +952,7 @@ Every R# (R1–R20 from `requirements.md`) appears in at least one task.
 - [ ] **Step 5: Commit**
 
     ```bash
-    git add interpreters/4-peer-collaboration/a-debate/INSTRUCTIONS.md src/test/phase-5-debate.test.ts
+    git add interpreters/mas-papers/4-peer-collaboration/a-debate/INSTRUCTIONS.md src/test/phase-5-debate.test.ts
     git commit -m "feat(debate): Conclude instruction with neutral synthesis (satisfies: R12, R13)"
     ```
 
@@ -961,7 +961,7 @@ Every R# (R1–R20 from `requirements.md`) appears in at least one task.
 ## Task 9: README + final integration sweep   (satisfies: R10, R18, R20)
 
 **Files:**
-- Create: `interpreters/4-peer-collaboration/a-debate/README.md`
+- Create: `interpreters/mas-papers/4-peer-collaboration/a-debate/README.md`
 - Modify: `src/test/phase-5-debate.test.ts`
 
 - [ ] **Step 1: Write the failing test**
@@ -1006,7 +1006,7 @@ Every R# (R1–R20 from `requirements.md`) appears in at least one task.
 
 - [ ] **Step 3: Write minimal implementation**
 
-    Create `interpreters/4-peer-collaboration/a-debate/README.md`:
+    Create `interpreters/mas-papers/4-peer-collaboration/a-debate/README.md`:
 
     ```markdown
     # Multi-Agent Debate
@@ -1028,7 +1028,7 @@ Every R# (R1–R20 from `requirements.md`) appears in at least one task.
     ## Run
 
     ```
-    ./new-instance.sh debate-demo interpreters/4-peer-collaboration/a-debate
+    ./new-instance.sh debate-demo interpreters/mas-papers/4-peer-collaboration/a-debate
     instances/debate-demo/run.sh
     ```
 
@@ -1059,7 +1059,7 @@ Every R# (R1–R20 from `requirements.md`) appears in at least one task.
 - [ ] **Step 5: Commit**
 
     ```bash
-    git add interpreters/4-peer-collaboration/a-debate/README.md src/test/phase-5-debate.test.ts
+    git add interpreters/mas-papers/4-peer-collaboration/a-debate/README.md src/test/phase-5-debate.test.ts
     git commit -m "feat(debate): README + integrity sweep (satisfies: R10, R18, R20)"
     ```
 

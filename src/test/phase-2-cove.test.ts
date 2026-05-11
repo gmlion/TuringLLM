@@ -9,7 +9,7 @@ import { applyPop, applyPush, type CallStack } from "../call-stack.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const INTERP = resolve(__dirname, "../../interpreters/1-iterative-refinement/d-cove");
+const INTERP = resolve(__dirname, "../../interpreters/mas-papers/1-iterative-refinement/d-cove");
 const REPO = resolve(__dirname, "../..");
 
 // Module-level helper: creates the root frame directory structure and returns a
@@ -339,7 +339,7 @@ describe("d-cove", () => {
 });
 
 describe("R20-R27 Phase 7 migration: marker + canonical operator", () => {
-  const LEAF = "interpreters/1-iterative-refinement/d-cove";
+  const LEAF = "interpreters/mas-papers/1-iterative-refinement/d-cove";
 
   test("R21: INSTRUCTIONS.md is single-line marker pointing at operators/cove.md", () => {
     const inst = readFileSync(resolve(REPO, LEAF, "INSTRUCTIONS.md"), "utf-8").trim();

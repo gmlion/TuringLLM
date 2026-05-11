@@ -6,7 +6,7 @@ Phase 2 introduces the **arguments-via-INSTRUCTIONS** convention to
 the shell (`## Push-Args` + `{{var}}` substitution at push time),
 retrofits the existing `a`/`b`/`c` dynamics onto it, and ships a new
 one-shot Chain-of-Verification interpreter at
-`interpreters/1-iterative-refinement/d-cove/`. The convention
+`interpreters/mas-papers/1-iterative-refinement/d-cove/`. The convention
 formalises the split between per-frame arguments (INSTRUCTIONS-local)
 and shared heap (MEMORY), which is what makes `answer-independently.md`'s
 no-access-to-draft guarantee load-bearing without inventing
@@ -56,7 +56,7 @@ src/
 ├── call-stack.ts              # ← extended (parse/sub/strip push-args)
 └── memory.ts                  # ← extended (parsePushArgs, removePushArgs)
 
-interpreters/1-iterative-refinement/
+interpreters/mas-papers/1-iterative-refinement/
 ├── README.md                  # ← updated (add d-cove row + convention)
 ├── a-self-refine/
 │   ├── INSTRUCTIONS.md        # ← updated (Request critique emits ## Push-Args)
@@ -481,7 +481,7 @@ of the guarantee is deliberately accepted — see §Risks.
 
 ## Demo program — satisfies R19
 
-`interpreters/1-iterative-refinement/d-cove/PROGRAM.md`:
+`interpreters/mas-papers/1-iterative-refinement/d-cove/PROGRAM.md`:
 
 ```markdown
 # Goal
@@ -554,7 +554,7 @@ rechecking.
 
 - **`src/test/phase-2-cove.test.ts`** — d-cove scripted integration
   (R14–R20)
-  - Files exist at `interpreters/1-iterative-refinement/d-cove/`
+  - Files exist at `interpreters/mas-papers/1-iterative-refinement/d-cove/`
   - Strategy declares the four required states (`empty`, `drafted`,
     `drafted_completed`, `done`)
   - `verify.md` declares the four required states (`empty`, `asking`,

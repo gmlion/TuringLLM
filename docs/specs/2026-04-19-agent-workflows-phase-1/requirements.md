@@ -49,15 +49,15 @@ struck-through and kept for traceability.
 ### Interpreters and dynamics present
 
 - **R1**: THE SYSTEM SHALL introduce three new interpreter directories
-  under `interpreters/1-iterative-refinement/` (patterns.md Group 1):
+  under `interpreters/mas-papers/1-iterative-refinement/` (patterns.md Group 1):
   `a-self-refine/`, `b-evaluator-optimizer/`, and `c-reflexion/`, each
   containing at minimum an `INSTRUCTIONS.md` and a demo `PROGRAM.md`.
 - **R2**: THE SYSTEM SHALL introduce three reusable dynamics —
   `self-critique.md`, `evaluate.md`, `reflect.md` — each placed under the
   owning interpreter's `operators/` directory (e.g.
-  `interpreters/1-iterative-refinement/a-self-refine/operators/self-critique.md`)
+  `interpreters/mas-papers/1-iterative-refinement/a-self-refine/operators/self-critique.md`)
   so that
-  `./new-instance.sh foo interpreters/1-iterative-refinement/<exploration-letter>-<slug>`
+  `./new-instance.sh foo interpreters/mas-papers/1-iterative-refinement/<exploration-letter>-<slug>`
   copies them verbatim into `instances/foo/operators/`.
 - **R3**: THE SYSTEM SHALL make the `self-critique.md` dynamic consume
   MEMORY section `## Draft` and produce `## Critique` and `## Refined`
@@ -82,7 +82,7 @@ struck-through and kept for traceability.
   and a task that genuinely benefits from retries (e.g. a riddle or a code
   task graded against a hidden check) for `reflexion`.
 - **R8**: WHEN a user runs
-  `./new-instance.sh foo interpreters/1-iterative-refinement/<exploration-letter>-<slug>`
+  `./new-instance.sh foo interpreters/mas-papers/1-iterative-refinement/<exploration-letter>-<slug>`
   followed by `instances/foo/run.sh` with `TURING_PROVIDER=claude-code`
   and the default `CC_MODEL`, THE SYSTEM SHALL halt the machine with
   MEMORY state `done` on the shipped demo `PROGRAM.md` without manual

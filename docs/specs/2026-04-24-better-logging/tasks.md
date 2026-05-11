@@ -1547,10 +1547,10 @@
     rm -rf instances/*
 
     # 2. Recreate the four demo instances.
-    ./new-instance.sh bl-a interpreters/1-iterative-refinement/a-self-refine
-    ./new-instance.sh bl-b interpreters/1-iterative-refinement/b-evaluator-optimizer
-    ./new-instance.sh bl-c interpreters/1-iterative-refinement/c-reflexion
-    ./new-instance.sh bl-d interpreters/1-iterative-refinement/d-cove
+    ./new-instance.sh bl-a interpreters/mas-papers/1-iterative-refinement/a-self-refine
+    ./new-instance.sh bl-b interpreters/mas-papers/1-iterative-refinement/b-evaluator-optimizer
+    ./new-instance.sh bl-c interpreters/mas-papers/1-iterative-refinement/c-reflexion
+    ./new-instance.sh bl-d interpreters/mas-papers/1-iterative-refinement/d-cove
     ```
 
     Then copy the same demo PROGRAM.md files used in p2b-{a,b,c,d} (or write fresh ones — the existing ones are documented in `docs/agent-workflows/phase-2b-notes.md`).

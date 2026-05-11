@@ -32,11 +32,11 @@
 ## Task 1: Bootstrap directory layout, group README, test-file skeleton   (satisfies: R1, R2, R51)
 
 **Files:**
-- Create: `interpreters/3-search/README.md`
-- Create: `interpreters/3-search/a-tot/INSTRUCTIONS.md` (skeleton — full body in T3)
-- Create: `interpreters/3-search/a-tot/PROGRAM.md` (skeleton — full content in T13)
-- Create: `interpreters/3-search/a-tot/README.md` (skeleton — full body in T15)
-- Create: `interpreters/3-search/a-tot/dynamics/` (directory)
+- Create: `interpreters/mas-papers/3-search/README.md`
+- Create: `interpreters/mas-papers/3-search/a-tot/INSTRUCTIONS.md` (skeleton — full body in T3)
+- Create: `interpreters/mas-papers/3-search/a-tot/PROGRAM.md` (skeleton — full content in T13)
+- Create: `interpreters/mas-papers/3-search/a-tot/README.md` (skeleton — full body in T15)
+- Create: `interpreters/mas-papers/3-search/a-tot/dynamics/` (directory)
 - Create: `src/test/phase-6-tot.test.ts`
 
 - [ ] **Step 1: Write the failing test**
@@ -53,14 +53,14 @@
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = dirname(__filename);
     const REPO = resolve(__dirname, "../..");
-    const GROUP = resolve(REPO, "interpreters/3-search");
+    const GROUP = resolve(REPO, "interpreters/mas-papers/3-search");
     const INTERP = resolve(GROUP, "a-tot");
 
     describe("phase-6 a-tot: directory layout (R1)", () => {
-      test("group dir interpreters/3-search/ exists", () => {
+      test("group dir interpreters/mas-papers/3-search/ exists", () => {
         assert.ok(existsSync(GROUP), "group directory missing");
       });
-      test("interpreter dir interpreters/3-search/a-tot/ exists (R1)", () => {
+      test("interpreter dir interpreters/mas-papers/3-search/a-tot/ exists (R1)", () => {
         assert.ok(existsSync(INTERP), "interpreter directory missing");
       });
       test("interpreter has INSTRUCTIONS.md, PROGRAM.md, README.md, dynamics/ (R1)", () => {
@@ -72,7 +72,7 @@
     });
 
     describe("phase-6 a-tot: group README (R2)", () => {
-      test("group README at interpreters/3-search/README.md exists", () => {
+      test("group README at interpreters/mas-papers/3-search/README.md exists", () => {
         assert.ok(existsSync(resolve(GROUP, "README.md")), "group README missing");
       });
       test("group README mentions ToT (shipped), GoT (deferred), LATS (Phase 6b)", () => {
@@ -97,7 +97,7 @@
 
 - [ ] **Step 3: Write minimal implementation**
 
-    Create the directory `interpreters/3-search/a-tot/dynamics/` (empty for now). Create the group README:
+    Create the directory `interpreters/mas-papers/3-search/a-tot/dynamics/` (empty for now). Create the group README:
 
     ```markdown
     # Group 3 — Search
@@ -119,7 +119,7 @@
 
     Create skeleton interpreter files (they will be filled in by later tasks):
 
-    `interpreters/3-search/a-tot/INSTRUCTIONS.md`:
+    `interpreters/mas-papers/3-search/a-tot/INSTRUCTIONS.md`:
 
     ```markdown
     # Strategy: Tree of Thoughts
@@ -133,13 +133,13 @@
     (none — this interpreter needs none.)
     ```
 
-    `interpreters/3-search/a-tot/PROGRAM.md`:
+    `interpreters/mas-papers/3-search/a-tot/PROGRAM.md`:
 
     ```markdown
     (puzzle prose added in T13)
     ```
 
-    `interpreters/3-search/a-tot/README.md`:
+    `interpreters/mas-papers/3-search/a-tot/README.md`:
 
     ```markdown
     # a — Tree of Thoughts
@@ -157,7 +157,7 @@
 - [ ] **Step 5: Commit**
 
     ```bash
-    git add interpreters/3-search/ src/test/phase-6-tot.test.ts
+    git add interpreters/mas-papers/3-search/ src/test/phase-6-tot.test.ts
     git commit -m "feat(phase-6): bootstrap interpreter dir + group README + test file (satisfies: R1, R2, R51)"
     ```
 
@@ -166,7 +166,7 @@
 ## Task 2: `evaluate.md` byte-equal copy + identity test extension   (satisfies: R45, R46)
 
 **Files:**
-- Create: `interpreters/3-search/a-tot/dynamics/evaluate.md` (byte-equal copy)
+- Create: `interpreters/mas-papers/3-search/a-tot/dynamics/evaluate.md` (byte-equal copy)
 - Modify: `src/test/phase-operators-identity.test.ts`
 - Modify: `src/test/phase-6-tot.test.ts` (append assertions)
 
@@ -177,11 +177,11 @@
     ```typescript
     // Replace the existing EVALUATE_PATHS array with:
     const EVALUATE_PATHS = [
-      "interpreters/1-iterative-refinement/b-evaluator-optimizer/dynamics/evaluate.md",
-      "interpreters/1-iterative-refinement/c-reflexion/dynamics/evaluate.md",
-      "interpreters/5-fixed-sop-teams/a-metagpt/dynamics/evaluate.md",
-      "interpreters/5-fixed-sop-teams/b-chatdev/dynamics/evaluate.md",
-      "interpreters/3-search/a-tot/dynamics/evaluate.md",
+      "interpreters/mas-papers/1-iterative-refinement/b-evaluator-optimizer/dynamics/evaluate.md",
+      "interpreters/mas-papers/1-iterative-refinement/c-reflexion/dynamics/evaluate.md",
+      "interpreters/mas-papers/5-fixed-sop-teams/a-metagpt/dynamics/evaluate.md",
+      "interpreters/mas-papers/5-fixed-sop-teams/b-chatdev/dynamics/evaluate.md",
+      "interpreters/mas-papers/3-search/a-tot/dynamics/evaluate.md",
     ];
     ```
 
@@ -197,7 +197,7 @@
       });
       test("dynamics/evaluate.md is byte-equal to canonical 1b copy (R45)", () => {
         const canon = readFileSync(
-          resolve(REPO, "interpreters/1-iterative-refinement/b-evaluator-optimizer/dynamics/evaluate.md"),
+          resolve(REPO, "interpreters/mas-papers/1-iterative-refinement/b-evaluator-optimizer/dynamics/evaluate.md"),
         );
         const here = readFileSync(resolve(INTERP, "dynamics/evaluate.md"));
         assert.ok(canon.equals(here), "evaluate.md diverged from canonical");
@@ -208,15 +208,15 @@
 - [ ] **Step 2: Run test to verify it fails**
 
     Run: `npm test 2>&1 | grep -E "phase-6|phase-operators-identity|FAIL"`
-    Expected: FAIL with substring `evaluate.md missing in a-tot/dynamics/` and FAIL in the identity test for "evaluate.md diverged between … and interpreters/3-search/a-tot/dynamics/evaluate.md".
+    Expected: FAIL with substring `evaluate.md missing in a-tot/dynamics/` and FAIL in the identity test for "evaluate.md diverged between … and interpreters/mas-papers/3-search/a-tot/dynamics/evaluate.md".
 
 - [ ] **Step 3: Write minimal implementation**
 
     Copy the canonical `evaluate.md` byte-equal to the new path. From the repo root:
 
     ```bash
-    cp interpreters/1-iterative-refinement/b-evaluator-optimizer/dynamics/evaluate.md \
-       interpreters/3-search/a-tot/dynamics/evaluate.md
+    cp interpreters/mas-papers/1-iterative-refinement/b-evaluator-optimizer/dynamics/evaluate.md \
+       interpreters/mas-papers/3-search/a-tot/dynamics/evaluate.md
     ```
 
 - [ ] **Step 4: Run test to verify it passes**
@@ -227,7 +227,7 @@
 - [ ] **Step 5: Commit**
 
     ```bash
-    git add interpreters/3-search/a-tot/dynamics/evaluate.md \
+    git add interpreters/mas-papers/3-search/a-tot/dynamics/evaluate.md \
             src/test/phase-operators-identity.test.ts \
             src/test/phase-6-tot.test.ts
     git commit -m "feat(phase-6): copy evaluate.md byte-equal + extend identity test (satisfies: R45, R46)"
@@ -238,7 +238,7 @@
 ## Task 3: Strategy preamble + Initialize instruction + scoped files   (satisfies: R5, R6, R7, R8, R9)
 
 **Files:**
-- Modify: `interpreters/3-search/a-tot/INSTRUCTIONS.md`
+- Modify: `interpreters/mas-papers/3-search/a-tot/INSTRUCTIONS.md`
 - Modify: `src/test/phase-6-tot.test.ts` (append assertions)
 
 - [ ] **Step 1: Write the failing test**
@@ -323,7 +323,7 @@
 
 - [ ] **Step 3: Write minimal implementation**
 
-    Edit `interpreters/3-search/a-tot/INSTRUCTIONS.md`. Replace the placeholder line `(strategy body added in T3 …)` with the strategy overview prose followed by the `## Instruction: Initialize` block. The full Instruction body is specified verbatim in `design.md §Interfaces — Initialize`. Paste that body, ensuring all of the patterns the test asserts are present.
+    Edit `interpreters/mas-papers/3-search/a-tot/INSTRUCTIONS.md`. Replace the placeholder line `(strategy body added in T3 …)` with the strategy overview prose followed by the `## Instruction: Initialize` block. The full Instruction body is specified verbatim in `design.md §Interfaces — Initialize`. Paste that body, ensuring all of the patterns the test asserts are present.
 
     The strategy overview prose to insert just below the IMPORTANT line:
 
@@ -414,7 +414,7 @@
 - [ ] **Step 5: Commit**
 
     ```bash
-    git add interpreters/3-search/a-tot/INSTRUCTIONS.md src/test/phase-6-tot.test.ts
+    git add interpreters/mas-papers/3-search/a-tot/INSTRUCTIONS.md src/test/phase-6-tot.test.ts
     git commit -m "feat(phase-6): strategy preamble + Initialize instruction (satisfies: R5, R6, R7, R8, R9)"
     ```
 
@@ -526,7 +526,7 @@
 - [ ] **Step 5: Commit**
 
     ```bash
-    git add interpreters/3-search/a-tot/INSTRUCTIONS.md src/test/phase-6-tot.test.ts
+    git add interpreters/mas-papers/3-search/a-tot/INSTRUCTIONS.md src/test/phase-6-tot.test.ts
     git commit -m "feat(phase-6): tree ledger contract + surgical-edit primitives (satisfies: R10, R11, R12, R13, R14)"
     ```
 
@@ -535,7 +535,7 @@
 ## Task 5: `expand-node.md` dynamic   (satisfies: R38, R39, R40)
 
 **Files:**
-- Create: `interpreters/3-search/a-tot/dynamics/expand-node.md`
+- Create: `interpreters/mas-papers/3-search/a-tot/dynamics/expand-node.md`
 - Modify: `src/test/phase-6-tot.test.ts` (append assertions)
 
 - [ ] **Step 1: Write the failing test**
@@ -589,7 +589,7 @@
 
 - [ ] **Step 3: Write minimal implementation**
 
-    Create `interpreters/3-search/a-tot/dynamics/expand-node.md`:
+    Create `interpreters/mas-papers/3-search/a-tot/dynamics/expand-node.md`:
 
     ```markdown
     # Dynamic: Expand Node
@@ -653,7 +653,7 @@
 - [ ] **Step 5: Commit**
 
     ```bash
-    git add interpreters/3-search/a-tot/dynamics/expand-node.md src/test/phase-6-tot.test.ts
+    git add interpreters/mas-papers/3-search/a-tot/dynamics/expand-node.md src/test/phase-6-tot.test.ts
     git commit -m "feat(phase-6): expand-node.md dynamic (k=5 children, single-cycle) (satisfies: R38, R39, R40)"
     ```
 
@@ -662,7 +662,7 @@
 ## Task 6: Expand-push + Expand-absorb + Phase-router   (satisfies: R15, R16, R17, R18, R47)
 
 **Files:**
-- Modify: `interpreters/3-search/a-tot/INSTRUCTIONS.md`
+- Modify: `interpreters/mas-papers/3-search/a-tot/INSTRUCTIONS.md`
 - Modify: `src/test/phase-6-tot.test.ts` (append assertions)
 
 - [ ] **Step 1: Write the failing test**
@@ -870,7 +870,7 @@
 - [ ] **Step 5: Commit**
 
     ```bash
-    git add interpreters/3-search/a-tot/INSTRUCTIONS.md src/test/phase-6-tot.test.ts
+    git add interpreters/mas-papers/3-search/a-tot/INSTRUCTIONS.md src/test/phase-6-tot.test.ts
     git commit -m "feat(phase-6): Expand-push + Expand-absorb with Phase-router (satisfies: R15, R16, R17, R18, R47)"
     ```
 
@@ -879,7 +879,7 @@
 ## Task 7: `score.md` dynamic   (satisfies: R41, R42, R43)
 
 **Files:**
-- Create: `interpreters/3-search/a-tot/dynamics/score.md`
+- Create: `interpreters/mas-papers/3-search/a-tot/dynamics/score.md`
 - Modify: `src/test/phase-6-tot.test.ts` (append assertions)
 
 - [ ] **Step 1: Write the failing test**
@@ -935,7 +935,7 @@
 
 - [ ] **Step 3: Write minimal implementation**
 
-    Create `interpreters/3-search/a-tot/dynamics/score.md`:
+    Create `interpreters/mas-papers/3-search/a-tot/dynamics/score.md`:
 
     ```markdown
     # Dynamic: Score
@@ -985,7 +985,7 @@
 - [ ] **Step 5: Commit**
 
     ```bash
-    git add interpreters/3-search/a-tot/dynamics/score.md src/test/phase-6-tot.test.ts
+    git add interpreters/mas-papers/3-search/a-tot/dynamics/score.md src/test/phase-6-tot.test.ts
     git commit -m "feat(phase-6): score.md dynamic (sure/likely/impossible labels) (satisfies: R41, R42, R43)"
     ```
 
@@ -994,7 +994,7 @@
 ## Task 8: Score-push + Score-absorb (weight mapping, malformed labels)   (satisfies: R19, R20, R21, R22, R23, R44)
 
 **Files:**
-- Modify: `interpreters/3-search/a-tot/INSTRUCTIONS.md`
+- Modify: `interpreters/mas-papers/3-search/a-tot/INSTRUCTIONS.md`
 - Modify: `src/test/phase-6-tot.test.ts` (append assertions)
 
 - [ ] **Step 1: Write the failing test**
@@ -1192,7 +1192,7 @@
 - [ ] **Step 5: Commit**
 
     ```bash
-    git add interpreters/3-search/a-tot/INSTRUCTIONS.md src/test/phase-6-tot.test.ts
+    git add interpreters/mas-papers/3-search/a-tot/INSTRUCTIONS.md src/test/phase-6-tot.test.ts
     git commit -m "feat(phase-6): Score-push + Score-absorb (sure/likely/impossible weighted sum) (satisfies: R19, R20, R21, R22, R23, R44)"
     ```
 
@@ -1201,7 +1201,7 @@
 ## Task 9: Prune instruction (top-b retention, R37 dead-end)   (satisfies: R24, R25, R37)
 
 **Files:**
-- Modify: `interpreters/3-search/a-tot/INSTRUCTIONS.md`
+- Modify: `interpreters/mas-papers/3-search/a-tot/INSTRUCTIONS.md`
 - Modify: `src/test/phase-6-tot.test.ts` (append assertions)
 
 - [ ] **Step 1: Write the failing test**
@@ -1318,7 +1318,7 @@
 - [ ] **Step 5: Commit**
 
     ```bash
-    git add interpreters/3-search/a-tot/INSTRUCTIONS.md src/test/phase-6-tot.test.ts
+    git add interpreters/mas-papers/3-search/a-tot/INSTRUCTIONS.md src/test/phase-6-tot.test.ts
     git commit -m "feat(phase-6): Prune instruction (top-b=5 + R37 dead-end) (satisfies: R24, R25, R37)"
     ```
 
@@ -1327,7 +1327,7 @@
 ## Task 10: Advance instruction   (satisfies: R26, R27)
 
 **Files:**
-- Modify: `interpreters/3-search/a-tot/INSTRUCTIONS.md`
+- Modify: `interpreters/mas-papers/3-search/a-tot/INSTRUCTIONS.md`
 - Modify: `src/test/phase-6-tot.test.ts` (append assertions)
 
 - [ ] **Step 1: Write the failing test**
@@ -1403,7 +1403,7 @@
 - [ ] **Step 5: Commit**
 
     ```bash
-    git add interpreters/3-search/a-tot/INSTRUCTIONS.md src/test/phase-6-tot.test.ts
+    git add interpreters/mas-papers/3-search/a-tot/INSTRUCTIONS.md src/test/phase-6-tot.test.ts
     git commit -m "feat(phase-6): Advance instruction (depth+1 or goal_checking) (satisfies: R26, R27)"
     ```
 
@@ -1412,7 +1412,7 @@
 ## Task 11: Goal-push + Goal-absorb (parent-walk, terminal evaluation)   (satisfies: R28, R29, R30, R31, R32, R33, R34)
 
 **Files:**
-- Modify: `interpreters/3-search/a-tot/INSTRUCTIONS.md`
+- Modify: `interpreters/mas-papers/3-search/a-tot/INSTRUCTIONS.md`
 - Modify: `src/test/phase-6-tot.test.ts` (append assertions)
 
 - [ ] **Step 1: Write the failing test**
@@ -1630,7 +1630,7 @@
 - [ ] **Step 5: Commit**
 
     ```bash
-    git add interpreters/3-search/a-tot/INSTRUCTIONS.md src/test/phase-6-tot.test.ts
+    git add interpreters/mas-papers/3-search/a-tot/INSTRUCTIONS.md src/test/phase-6-tot.test.ts
     git commit -m "feat(phase-6): Goal-push + Goal-absorb (terminal eval pipeline) (satisfies: R28, R29, R30, R31, R32, R33, R34)"
     ```
 
@@ -1639,7 +1639,7 @@
 ## Task 12: Solved instruction   (satisfies: R35, R36)
 
 **Files:**
-- Modify: `interpreters/3-search/a-tot/INSTRUCTIONS.md`
+- Modify: `interpreters/mas-papers/3-search/a-tot/INSTRUCTIONS.md`
 - Modify: `src/test/phase-6-tot.test.ts` (append assertions)
 
 - [ ] **Step 1: Write the failing test**
@@ -1736,7 +1736,7 @@
 - [ ] **Step 5: Commit**
 
     ```bash
-    git add interpreters/3-search/a-tot/INSTRUCTIONS.md src/test/phase-6-tot.test.ts
+    git add interpreters/mas-papers/3-search/a-tot/INSTRUCTIONS.md src/test/phase-6-tot.test.ts
     git commit -m "feat(phase-6): Solved instruction (## Solution + done) (satisfies: R35, R36)"
     ```
 
@@ -1745,7 +1745,7 @@
 ## Task 13: Demo `PROGRAM.md` (Game of 24)   (satisfies: R48, R49)
 
 **Files:**
-- Modify: `interpreters/3-search/a-tot/PROGRAM.md`
+- Modify: `interpreters/mas-papers/3-search/a-tot/PROGRAM.md`
 - Modify: `src/test/phase-6-tot.test.ts` (append assertions)
 
 - [ ] **Step 1: Write the failing test**
@@ -1778,7 +1778,7 @@
 
 - [ ] **Step 3: Write minimal implementation**
 
-    Replace `interpreters/3-search/a-tot/PROGRAM.md` content with:
+    Replace `interpreters/mas-papers/3-search/a-tot/PROGRAM.md` content with:
 
     ```markdown
     # Game of 24
@@ -1802,7 +1802,7 @@
 - [ ] **Step 5: Commit**
 
     ```bash
-    git add interpreters/3-search/a-tot/PROGRAM.md src/test/phase-6-tot.test.ts
+    git add interpreters/mas-papers/3-search/a-tot/PROGRAM.md src/test/phase-6-tot.test.ts
     git commit -m "feat(phase-6): demo PROGRAM.md (Game of 24, 4 5 6 10 -> 24) (satisfies: R48, R49)"
     ```
 
@@ -1900,7 +1900,7 @@
 ## Task 15: Leaf README full content + smoke-check note   (satisfies: R3, R50)
 
 **Files:**
-- Modify: `interpreters/3-search/a-tot/README.md`
+- Modify: `interpreters/mas-papers/3-search/a-tot/README.md`
 - Modify: `src/test/phase-6-tot.test.ts` (append assertions)
 
 - [ ] **Step 1: Write the failing test**
@@ -1961,7 +1961,7 @@
 
 - [ ] **Step 3: Write minimal implementation**
 
-    Replace `interpreters/3-search/a-tot/README.md` with:
+    Replace `interpreters/mas-papers/3-search/a-tot/README.md` with:
 
     ```markdown
     # a — Tree of Thoughts
@@ -2011,7 +2011,7 @@
     ## Run it
 
     ```bash
-    ./new-instance.sh my-tot interpreters/3-search/a-tot
+    ./new-instance.sh my-tot interpreters/mas-papers/3-search/a-tot
     instances/my-tot/run.sh
     ```
 
@@ -2037,7 +2037,7 @@
 - [ ] **Step 5: Commit**
 
     ```bash
-    git add interpreters/3-search/a-tot/README.md src/test/phase-6-tot.test.ts
+    git add interpreters/mas-papers/3-search/a-tot/README.md src/test/phase-6-tot.test.ts
     git commit -m "docs(phase-6): leaf README with state machine, dynamics, run-it + Notable behaviour (satisfies: R3, R50)"
     ```
 

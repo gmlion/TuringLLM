@@ -82,8 +82,8 @@ npm run build
 ./new-instance.sh my-project
 
 # Or with a specific interpreter
-./new-instance.sh my-a interpreters/1-iterative-refinement/a-self-refine
-./new-instance.sh foo interpreters/2-planning-decomposition/a-plan-execute
+./new-instance.sh interpreters/mas-papers/1-iterative-refinement/a-self-refine my-a
+./new-instance.sh interpreters/mas-papers/2-planning-decomposition/a-plan-execute foo
 
 # Edit the program
 vim instances/my-project/PROGRAM.md
@@ -115,14 +115,14 @@ indicating a recommended exploration order, not strict prerequisites.
   executor. Reads steps from `PROGRAM.md`, decomposes each into
   sub-instructions with verification, hands back to the strategy after
   each step.
-- **`interpreters/1-iterative-refinement/`** — `generate → critique →
+- **`interpreters/mas-papers/1-iterative-refinement/`** — `generate → critique →
   revise` family ([patterns.md Group 1](docs/agent-workflows/patterns.md)).
   - `a-self-refine` — single role drafts, self-critiques, iterates.
   - `b-evaluator-optimizer` — generator + separate evaluator with
     explicit `## Criterion`.
   - `c-reflexion` — `b` plus distilled lessons accumulated in
     `## Lessons` across retries.
-- **`interpreters/2-planning-decomposition/`** — Plan-and-Execute family
+- **`interpreters/mas-papers/2-planning-decomposition/`** — Plan-and-Execute family
   ([patterns.md Group 2](docs/agent-workflows/patterns.md)). Three
   leaves with byte-equal `INSTRUCTIONS.md` and `operators/` differing
   only in their demo `PROGRAM.md`:
@@ -130,7 +130,7 @@ indicating a recommended exploration order, not strict prerequisites.
   - `b-orchestrator-workers` — d2: summarise N technical notes.
   - `c-deep-research` — d3: open research prompt; exercises stack
     depth 2 via recursive `plan.md` push.
-- **`interpreters/5-fixed-sop-teams/`** — Fixed-SOP teams
+- **`interpreters/mas-papers/5-fixed-sop-teams/`** — Fixed-SOP teams
   ([patterns.md Group 5](docs/agent-workflows/patterns.md)).
   - `a-metagpt` — document hand-off SOP (PM → Architect → Engineer →
     QA).

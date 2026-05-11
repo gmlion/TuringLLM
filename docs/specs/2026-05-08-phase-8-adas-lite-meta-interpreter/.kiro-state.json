@@ -1,0 +1,9 @@
+{
+  "slug": "2026-05-08-phase-8-adas-lite-meta-interpreter",
+  "feature": "phase-8-adas-lite-meta-interpreter",
+  "phase": "implementation",
+  "awaiting_approval": false,
+  "phases_complete": ["requirements", "design", "tasks", "implementation"],
+  "created_at": "2026-05-08T05:54:10Z",
+  "updated_at": "2026-05-08T19:25:00Z"
+}

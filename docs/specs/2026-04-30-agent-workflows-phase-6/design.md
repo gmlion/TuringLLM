@@ -9,7 +9,7 @@ The Tree-of-Thoughts interpreter is a single strategy frame that drives a level-
 | R# | Summary | Addressed in |
 | -- | ------- | ------------ |
 | R1 | Interpreter directory layout | §Architecture, §Test strategy |
-| R2 | Group-level README at `interpreters/3-search/README.md` | §Architecture, §Test strategy |
+| R2 | Group-level README at `interpreters/mas-papers/3-search/README.md` | §Architecture, §Test strategy |
 | R3 | Leaf README content | §Architecture, §Test strategy |
 | R4 | Source-spec dynamics-table update | §Architecture (Source-spec mutation) |
 | R5 | Parse PROGRAM.md for numbers and target | §Interfaces (Initialize), §Error handling |
@@ -71,7 +71,7 @@ The Tree-of-Thoughts interpreter is a single strategy frame that drives a level-
 ### Component layout
 
 ```
-interpreters/3-search/
+interpreters/mas-papers/3-search/
 ├── README.md                     # group-level: Group 3 — Search                 (R2)
 └── a-tot/
     ├── INSTRUCTIONS.md           # strategy: BFS controller                       (R1)
@@ -670,13 +670,13 @@ Return:
 
 ### `evaluate.md` (R45, R46)
 
-Byte-equal copy of `interpreters/1-iterative-refinement/b-evaluator-optimizer/dynamics/evaluate.md`. Push-args `{{attempt}}`, `{{criterion}}`. Returns `verdict` (`pass`/`fail`) and `feedback`. Identity is enforced by the extended `phase-operators-identity.test.ts` (see §Test strategy).
+Byte-equal copy of `interpreters/mas-papers/1-iterative-refinement/b-evaluator-optimizer/dynamics/evaluate.md`. Push-args `{{attempt}}`, `{{criterion}}`. Returns `verdict` (`pass`/`fail`) and `feedback`. Identity is enforced by the extended `phase-operators-identity.test.ts` (see §Test strategy).
 
 The `evaluate.md` will run in **text-only mode** for ToT (R30's criterion is plain prose with no `../../workspace/` paths), so no filesystem inspection is required.
 
 ### Push-args contract for all dynamics (R56)
 
-All three dynamics in `interpreters/3-search/a-tot/dynamics/` declare their push-args explicitly via `{{var}}` placeholders in their text. The shell's `applyPush` substitution fails the push (with `unresolved-placeholder`) if the strategy omits any required arg — this is the boundary of strategy↔dynamic communication, and the design adds no other channel.
+All three dynamics in `interpreters/mas-papers/3-search/a-tot/dynamics/` declare their push-args explicitly via `{{var}}` placeholders in their text. The shell's `applyPush` substitution fails the push (with `unresolved-placeholder`) if the strategy omits any required arg — this is the boundary of strategy↔dynamic communication, and the design adds no other channel.
 
 ## Error handling
 
@@ -700,7 +700,7 @@ Following the file-pattern style of `phase-5-debate.test.ts` (no live LLM execut
 | Test group | Asserts | R# |
 | ---------- | ------- | -- |
 | Directory layout | `INSTRUCTIONS.md`, `PROGRAM.md`, `README.md`, `dynamics/expand-node.md`, `dynamics/score.md`, `dynamics/evaluate.md` exist; `dynamics/` contains exactly these three files | R1, R45 |
-| Group README | `interpreters/3-search/README.md` exists; mentions ToT, GoT (deferred), LATS (Phase 6b) | R2 |
+| Group README | `interpreters/mas-papers/3-search/README.md` exists; mentions ToT, GoT (deferred), LATS (Phase 6b) | R2 |
 | Leaf README | mentions Yao et al. arXiv:2305.10601, contains a state-machine summary, run instructions, the 3× sampling note | R3 |
 | Strategy preamble | `# Strategy` / `# Sub-instructions` boundaries present; "VERBATIM into every update_instructions call" preamble present | structural |
 | State machine completeness | INSTRUCTIONS.md declares the 11 instructions (Initialize, Expand-push, Expand-absorb, Score-push, Score-absorb, Prune, Advance, Goal-push, Goal-absorb, Solved, plus Phase-router helper if separate) | R9, R15, R17, R19, R21, R24, R26, R28, R31, R35 |
@@ -730,15 +730,15 @@ If a future Phase-6 follow-up wants live-execution validation, the natural home 
 
 ### `src/test/phase-operators-identity.test.ts` — EXTENDED (R46)
 
-Append `interpreters/3-search/a-tot/dynamics/evaluate.md` to the existing `EVALUATE_PATHS` constant. The existing assertion ("evaluate.md is byte-equal across all consumers") then transparently covers ToT.
+Append `interpreters/mas-papers/3-search/a-tot/dynamics/evaluate.md` to the existing `EVALUATE_PATHS` constant. The existing assertion ("evaluate.md is byte-equal across all consumers") then transparently covers ToT.
 
 ```typescript
 const EVALUATE_PATHS = [
-  "interpreters/1-iterative-refinement/b-evaluator-optimizer/dynamics/evaluate.md",
-  "interpreters/1-iterative-refinement/c-reflexion/dynamics/evaluate.md",
-  "interpreters/5-fixed-sop-teams/a-metagpt/dynamics/evaluate.md",
-  "interpreters/5-fixed-sop-teams/b-chatdev/dynamics/evaluate.md",
-  "interpreters/3-search/a-tot/dynamics/evaluate.md",   // NEW
+  "interpreters/mas-papers/1-iterative-refinement/b-evaluator-optimizer/dynamics/evaluate.md",
+  "interpreters/mas-papers/1-iterative-refinement/c-reflexion/dynamics/evaluate.md",
+  "interpreters/mas-papers/5-fixed-sop-teams/a-metagpt/dynamics/evaluate.md",
+  "interpreters/mas-papers/5-fixed-sop-teams/b-chatdev/dynamics/evaluate.md",
+  "interpreters/mas-papers/3-search/a-tot/dynamics/evaluate.md",   // NEW
 ];
 ```
 
@@ -746,7 +746,7 @@ const EVALUATE_PATHS = [
 
 A Run-it section in the leaf README directs the user through:
 
-1. `./new-instance.sh my-tot interpreters/3-search/a-tot`
+1. `./new-instance.sh my-tot interpreters/mas-papers/3-search/a-tot`
 2. `instances/my-tot/run.sh`
 3. After completion, inspect `instances/my-tot/frames/f000-strategy/MEMORY.md` for `## Solution` and `instances/my-tot/frames/f000-strategy/scoped/tree.md` for the full search trace.
 

@@ -7,7 +7,7 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const REPO = resolve(__dirname, "../..");
-const INTERP = resolve(REPO, "interpreters/2-planning-decomposition/a-plan-execute");
+const INTERP = resolve(REPO, "interpreters/mas-papers/2-planning-decomposition/a-plan-execute");
 
 describe("phase-3 a-plan-execute: file layout and content", () => {
   test("all required files exist", () => {
@@ -113,7 +113,7 @@ describe("phase-3 a-plan-execute: file layout and content", () => {
 });
 
 describe("R20-R27 Phase 7 migration: marker + canonical operator (2a plan-execute)", () => {
-  const LEAF = "interpreters/2-planning-decomposition/a-plan-execute";
+  const LEAF = "interpreters/mas-papers/2-planning-decomposition/a-plan-execute";
 
   test("R21: INSTRUCTIONS.md is single-line marker pointing at operators/plan-execute.md", () => {
     const inst = readFileSync(resolve(REPO, LEAF, "INSTRUCTIONS.md"), "utf-8").trim();

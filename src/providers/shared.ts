@@ -1,6 +1,10 @@
 import { readFileSync } from "fs";
 import { log } from "../logger.js";
 import type { ToolResult } from "../tools.js";
+import {
+  emitLlmRequest, emitLlmResponse,
+  emitToolCall, emitToolResult, emitRetry,
+} from "../events.js";
 
 export const MAX_RETRIES = 20;
 
@@ -10,6 +14,35 @@ export type ProviderEvent =
   | { type: "tool_call"; tool: string; input: string }
   | { type: "tool_result"; tool: string; output: string; isError: boolean }
   | { type: "retry"; attempt: number; reason: string };
+
+/**
+ * Translate the buffered ProviderEvent list (returned by every provider's
+ * runCycle) into the corresponding emit calls. Providers buffer rather
+ * than emit directly so a provider can be unit-tested without an active
+ * events.jsonl, and so the shell can decide on ordering vs. its own
+ * cycle-start/end emissions.
+ */
+export function drainProviderEvents(events: ProviderEvent[]): void {
+  for (const ev of events) {
+    switch (ev.type) {
+      case "llm_request":
+        emitLlmRequest(ev.provider, ev.model, ev.prompt);
+        break;
+      case "llm_response":
+        emitLlmResponse(ev.output, ev.durationMs, ev.usage);
+        break;
+      case "tool_call":
+        emitToolCall(ev.tool, ev.input);
+        break;
+      case "tool_result":
+        emitToolResult(ev.tool, ev.output, ev.isError);
+        break;
+      case "retry":
+        emitRetry(ev.attempt, ev.reason);
+        break;
+    }
+  }
+}
 
 export type CycleResult = {
   halt: boolean;

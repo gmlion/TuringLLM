@@ -2,7 +2,7 @@
 
 > **For executors:** use `kiro-flow:spec-execute` (it wraps `superpowers:subagent-driven-development` or `superpowers:executing-plans`). Each task below is TDD-shaped — write the failing test first, then minimal code, then verify, then commit. Commit messages must reference the task's `(satisfies: R#)` tag.
 
-> **Note on shape:** this phase delivers two things at once — (a) an in-place refactor of Phase 6's dynamics + strategy + ledger to drop Game-of-24 vocabulary and move per-node state into per-node files; (b) a new LATS interpreter at `interpreters/3-search/b-lats/` that reuses the refactored dynamics byte-equal and adds a single new dynamic (`rollout.md`). Both are delivered primarily as markdown artefacts; the "failing test" in each task is a regex-pattern assertion against the markdown — same shape as `src/test/phase-6-tot.test.ts`. Bash pseudocode bodies referenced below are specified in full in `docs/specs/2026-05-01-implement-phase-6b/design.md`; executors should copy those bodies verbatim where this file says "the body specified in design.md §<section>".
+> **Note on shape:** this phase delivers two things at once — (a) an in-place refactor of Phase 6's dynamics + strategy + ledger to drop Game-of-24 vocabulary and move per-node state into per-node files; (b) a new LATS interpreter at `interpreters/mas-papers/3-search/b-lats/` that reuses the refactored dynamics byte-equal and adds a single new dynamic (`rollout.md`). Both are delivered primarily as markdown artefacts; the "failing test" in each task is a regex-pattern assertion against the markdown — same shape as `src/test/phase-6-tot.test.ts`. Bash pseudocode bodies referenced below are specified in full in `docs/specs/2026-05-01-implement-phase-6b/design.md`; executors should copy those bodies verbatim where this file says "the body specified in design.md §<section>".
 
 > **Build/test commands:** the repo uses `npm test` (which runs `npm run build` first). To narrow output during TDD: `npm test 2>&1 | grep -E "phase-6|FAIL|✘"`. After writing markdown, no rebuild is needed (tests load markdown via `readFileSync`), but `npm test` still rebuilds TypeScript — that's expected.
 
@@ -41,7 +41,7 @@
 ## Task 1: Refactor `expand-node.md` to domain-agnostic   (satisfies: R14, R16, R30, R32, R33)
 
 **Files:**
-- Modify: `interpreters/3-search/a-tot/dynamics/expand-node.md`
+- Modify: `interpreters/mas-papers/3-search/a-tot/dynamics/expand-node.md`
 - Modify: `src/test/phase-6-tot.test.ts`
 
 - [ ] **Step 1: Write the failing test**
@@ -105,7 +105,7 @@
 
 - [ ] **Step 3: Write minimal implementation**
 
-    **Replace** the entire contents of `interpreters/3-search/a-tot/dynamics/expand-node.md` with the body specified in `design.md §Interfaces — `expand-node.md` (post-refactor)`. Reproduced here for completeness:
+    **Replace** the entire contents of `interpreters/mas-papers/3-search/a-tot/dynamics/expand-node.md` with the body specified in `design.md §Interfaces — `expand-node.md` (post-refactor)`. Reproduced here for completeness:
 
     ````markdown
     # Dynamic: Expand Node
@@ -170,7 +170,7 @@
 - [ ] **Step 5: Commit**
 
     ```bash
-    git add interpreters/3-search/a-tot/dynamics/expand-node.md src/test/phase-6-tot.test.ts
+    git add interpreters/mas-papers/3-search/a-tot/dynamics/expand-node.md src/test/phase-6-tot.test.ts
     git commit -m "refactor(phase-6): expand-node.md domain-agnostic; partial_state/task push-args (satisfies: R14, R16, R30, R32, R33)"
     ```
 
@@ -179,7 +179,7 @@
 ## Task 2: Refactor `score.md` to domain-agnostic   (satisfies: R15, R16, R31, R32, R33)
 
 **Files:**
-- Modify: `interpreters/3-search/a-tot/dynamics/score.md`
+- Modify: `interpreters/mas-papers/3-search/a-tot/dynamics/score.md`
 - Modify: `src/test/phase-6-tot.test.ts`
 
 - [ ] **Step 1: Write the failing test**
@@ -233,7 +233,7 @@
 
 - [ ] **Step 3: Write minimal implementation**
 
-    **Replace** the entire contents of `interpreters/3-search/a-tot/dynamics/score.md` with the body specified in `design.md §Interfaces — `score.md` (post-refactor)`. Reproduced:
+    **Replace** the entire contents of `interpreters/mas-papers/3-search/a-tot/dynamics/score.md` with the body specified in `design.md §Interfaces — `score.md` (post-refactor)`. Reproduced:
 
     ````markdown
     # Dynamic: Score
@@ -292,7 +292,7 @@
 - [ ] **Step 5: Commit**
 
     ```bash
-    git add interpreters/3-search/a-tot/dynamics/score.md src/test/phase-6-tot.test.ts
+    git add interpreters/mas-papers/3-search/a-tot/dynamics/score.md src/test/phase-6-tot.test.ts
     git commit -m "refactor(phase-6): score.md domain-agnostic; partial_state/task push-args (satisfies: R15, R16, R31, R32, R33)"
     ```
 
@@ -301,7 +301,7 @@
 ## Task 3: Phase 6 Initialize delta + ledger schema (root)   (satisfies: R17, R18, R19, R24, R25)
 
 **Files:**
-- Modify: `interpreters/3-search/a-tot/INSTRUCTIONS.md`
+- Modify: `interpreters/mas-papers/3-search/a-tot/INSTRUCTIONS.md`
 - Modify: `src/test/phase-6-tot.test.ts`
 
 - [ ] **Step 1: Write the failing test**
@@ -364,7 +364,7 @@
 
 - [ ] **Step 3: Write minimal implementation**
 
-    Edit `interpreters/3-search/a-tot/INSTRUCTIONS.md`:
+    Edit `interpreters/mas-papers/3-search/a-tot/INSTRUCTIONS.md`:
 
     1. **In the strategy preamble** (the prose between `# Strategy` and the first `## Instruction`), add a sentence to the "Scoped files" list documenting the new entries — `task.md` and `state-<id>.md`.
 
@@ -413,7 +413,7 @@
 - [ ] **Step 5: Commit**
 
     ```bash
-    git add interpreters/3-search/a-tot/INSTRUCTIONS.md src/test/phase-6-tot.test.ts
+    git add interpreters/mas-papers/3-search/a-tot/INSTRUCTIONS.md src/test/phase-6-tot.test.ts
     git commit -m "refactor(phase-6): Initialize copies PROGRAM.md to task.md; ledger drops op/left at root (satisfies: R17, R18, R19, R24, R25)"
     ```
 
@@ -422,7 +422,7 @@
 ## Task 4: Phase 6 Expand-push + Expand-absorb + Score-push deltas   (satisfies: R19, R20, R21, R26)
 
 **Files:**
-- Modify: `interpreters/3-search/a-tot/INSTRUCTIONS.md`
+- Modify: `interpreters/mas-papers/3-search/a-tot/INSTRUCTIONS.md`
 - Modify: `src/test/phase-6-tot.test.ts`
 
 - [ ] **Step 1: Write the failing test**
@@ -525,7 +525,7 @@
 
 - [ ] **Step 3: Write minimal implementation**
 
-    Edit `interpreters/3-search/a-tot/INSTRUCTIONS.md`:
+    Edit `interpreters/mas-papers/3-search/a-tot/INSTRUCTIONS.md`:
 
     **Replace the Expand-push instruction body** with the form specified in `design.md §Interfaces — Phase 6 Expand-push delta`. The minimum diff: replace the `printf 'op: %s\nleft: %s\n' "$OP" "$LEFT" > ./scoped/staged/parent_thought.md` and `echo "$LEFT" > ./scoped/staged/numbers_remaining.md` lines with:
 
@@ -563,7 +563,7 @@
 - [ ] **Step 5: Commit**
 
     ```bash
-    git add interpreters/3-search/a-tot/INSTRUCTIONS.md src/test/phase-6-tot.test.ts
+    git add interpreters/mas-papers/3-search/a-tot/INSTRUCTIONS.md src/test/phase-6-tot.test.ts
     git commit -m "refactor(phase-6): Expand/Score push partial_state+task; per-node state files; ledger drops op/left in children (satisfies: R19, R20, R21, R26)"
     ```
 
@@ -572,7 +572,7 @@
 ## Task 5: Phase 6 Goal-push + Solved deltas (drop parent-walk)   (satisfies: R22, R23)
 
 **Files:**
-- Modify: `interpreters/3-search/a-tot/INSTRUCTIONS.md`
+- Modify: `interpreters/mas-papers/3-search/a-tot/INSTRUCTIONS.md`
 - Modify: `src/test/phase-6-tot.test.ts`
 
 - [ ] **Step 1: Write the failing test**
@@ -628,7 +628,7 @@
 
 - [ ] **Step 3: Write minimal implementation**
 
-    Edit `interpreters/3-search/a-tot/INSTRUCTIONS.md`:
+    Edit `interpreters/mas-papers/3-search/a-tot/INSTRUCTIONS.md`:
 
     **Replace the Goal-push instruction body** so that, after finding the live terminal `$ID`, instead of walking the parent chain:
 
@@ -678,7 +678,7 @@
 - [ ] **Step 5: Commit**
 
     ```bash
-    git add interpreters/3-search/a-tot/INSTRUCTIONS.md src/test/phase-6-tot.test.ts
+    git add interpreters/mas-papers/3-search/a-tot/INSTRUCTIONS.md src/test/phase-6-tot.test.ts
     git commit -m "refactor(phase-6): Goal-push + Solved read state-<id>.md; drop parent-walk primitive (satisfies: R22, R23)"
     ```
 
@@ -687,7 +687,7 @@
 ## Task 6: Phase 6 leaf README delta + BFS-preservation regression test   (satisfies: R27, R29, R84)
 
 **Files:**
-- Modify: `interpreters/3-search/a-tot/README.md`
+- Modify: `interpreters/mas-papers/3-search/a-tot/README.md`
 - Modify: `src/test/phase-6-tot.test.ts`
 
 - [ ] **Step 1: Write the failing test**
@@ -761,7 +761,7 @@
 
 - [ ] **Step 3: Write minimal implementation**
 
-    Edit `interpreters/3-search/a-tot/README.md`:
+    Edit `interpreters/mas-papers/3-search/a-tot/README.md`:
 
     1. **Update the dynamics table** — replace the `parent_thought, target, numbers_remaining` and `thought, target` push-arg cells with `partial_state, task` for both `expand-node.md` and `score.md`.
 
@@ -781,7 +781,7 @@
 - [ ] **Step 5: Commit**
 
     ```bash
-    git add interpreters/3-search/a-tot/README.md src/test/phase-6-tot.test.ts
+    git add interpreters/mas-papers/3-search/a-tot/README.md src/test/phase-6-tot.test.ts
     git commit -m "docs(phase-6): README reflects 6b refactor; BFS-preservation regression pinned (satisfies: R27, R29, R84)"
     ```
 
@@ -790,11 +790,11 @@
 ## Task 7: Bootstrap LATS dir + group README delta + test-file skeleton   (satisfies: R1, R2, R4, R5, R72)
 
 **Files:**
-- Create: `interpreters/3-search/b-lats/INSTRUCTIONS.md` (skeleton — full body in T12–T19)
-- Create: `interpreters/3-search/b-lats/PROGRAM.md` (skeleton — full content in T10)
-- Create: `interpreters/3-search/b-lats/README.md` (skeleton — full body in T20)
-- Create: `interpreters/3-search/b-lats/dynamics/` (directory)
-- Modify: `interpreters/3-search/README.md` (group README — add LATS row)
+- Create: `interpreters/mas-papers/3-search/b-lats/INSTRUCTIONS.md` (skeleton — full body in T12–T19)
+- Create: `interpreters/mas-papers/3-search/b-lats/PROGRAM.md` (skeleton — full content in T10)
+- Create: `interpreters/mas-papers/3-search/b-lats/README.md` (skeleton — full body in T20)
+- Create: `interpreters/mas-papers/3-search/b-lats/dynamics/` (directory)
+- Modify: `interpreters/mas-papers/3-search/README.md` (group README — add LATS row)
 - Create: `src/test/phase-6b-lats.test.ts`
 
 - [ ] **Step 1: Write the failing test**
@@ -811,7 +811,7 @@
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = dirname(__filename);
     const REPO = resolve(__dirname, "../..");
-    const GROUP = resolve(REPO, "interpreters/3-search");
+    const GROUP = resolve(REPO, "interpreters/mas-papers/3-search");
     const INTERP = resolve(GROUP, "b-lats");
 
     function escapeRegExp(s: string) {
@@ -830,7 +830,7 @@
     }
 
     describe("phase-6b b-lats: directory layout (R1, R4, R5)", () => {
-      test("interpreter dir interpreters/3-search/b-lats/ exists (R1)", () => {
+      test("interpreter dir interpreters/mas-papers/3-search/b-lats/ exists (R1)", () => {
         assert.ok(existsSync(INTERP), "interpreter directory missing");
       });
       test("interpreter has INSTRUCTIONS.md, PROGRAM.md, README.md, dynamics/ (R1)", () => {
@@ -865,9 +865,9 @@
 
 - [ ] **Step 3: Write minimal implementation**
 
-    Create the directory `interpreters/3-search/b-lats/dynamics/` (empty for now).
+    Create the directory `interpreters/mas-papers/3-search/b-lats/dynamics/` (empty for now).
 
-    **Update** `interpreters/3-search/README.md`'s "Variants" table — replace the existing rows with:
+    **Update** `interpreters/mas-papers/3-search/README.md`'s "Variants" table — replace the existing rows with:
 
     ```markdown
     | `a-tot/`  | Shipped (Phase 6)   | Tree of Thoughts            | Yao et al., NeurIPS 2023, arXiv:2305.10601 |
@@ -881,7 +881,7 @@
 
     Create skeleton interpreter files (filled in later):
 
-    `interpreters/3-search/b-lats/INSTRUCTIONS.md`:
+    `interpreters/mas-papers/3-search/b-lats/INSTRUCTIONS.md`:
 
     ```markdown
     # Strategy: Language Agent Tree Search
@@ -895,13 +895,13 @@
     (none — this interpreter needs none.)
     ```
 
-    `interpreters/3-search/b-lats/PROGRAM.md`:
+    `interpreters/mas-papers/3-search/b-lats/PROGRAM.md`:
 
     ```markdown
     (puzzle prose added in T10 — byte-equal copy of a-tot/PROGRAM.md)
     ```
 
-    `interpreters/3-search/b-lats/README.md`:
+    `interpreters/mas-papers/3-search/b-lats/README.md`:
 
     ```markdown
     # b — Language Agent Tree Search
@@ -919,7 +919,7 @@
 - [ ] **Step 5: Commit**
 
     ```bash
-    git add interpreters/3-search/b-lats/ interpreters/3-search/README.md src/test/phase-6b-lats.test.ts
+    git add interpreters/mas-papers/3-search/b-lats/ interpreters/mas-papers/3-search/README.md src/test/phase-6b-lats.test.ts
     git commit -m "feat(phase-6b): bootstrap LATS dir + group README + test file (satisfies: R1, R2, R4, R5, R72)"
     ```
 
@@ -928,9 +928,9 @@
 ## Task 8: Copy three reused dynamics into `b-lats/dynamics/`   (satisfies: R6, R7, R8)
 
 **Files:**
-- Create: `interpreters/3-search/b-lats/dynamics/expand-node.md` (byte-equal copy of `a-tot/dynamics/expand-node.md`)
-- Create: `interpreters/3-search/b-lats/dynamics/evaluate.md` (byte-equal copy of `1b/dynamics/evaluate.md`)
-- Create: `interpreters/3-search/b-lats/dynamics/reflect.md` (byte-equal copy of `1c/dynamics/reflect.md`)
+- Create: `interpreters/mas-papers/3-search/b-lats/dynamics/expand-node.md` (byte-equal copy of `a-tot/dynamics/expand-node.md`)
+- Create: `interpreters/mas-papers/3-search/b-lats/dynamics/evaluate.md` (byte-equal copy of `1b/dynamics/evaluate.md`)
+- Create: `interpreters/mas-papers/3-search/b-lats/dynamics/reflect.md` (byte-equal copy of `1c/dynamics/reflect.md`)
 - Modify: `src/test/phase-6b-lats.test.ts`
 
 - [ ] **Step 1: Write the failing test**
@@ -940,17 +940,17 @@
     ```typescript
     describe("phase-6b b-lats: reused dynamics byte-equality (R6, R7, R8)", () => {
       test("dynamics/expand-node.md is byte-equal to a-tot post-refactor copy (R6)", () => {
-        const canon = readFileSync(resolve(REPO, "interpreters/3-search/a-tot/dynamics/expand-node.md"));
+        const canon = readFileSync(resolve(REPO, "interpreters/mas-papers/3-search/a-tot/dynamics/expand-node.md"));
         const here = readFileSync(resolve(INTERP, "dynamics/expand-node.md"));
         assert.ok(canon.equals(here), "expand-node.md diverged from a-tot canonical");
       });
       test("dynamics/evaluate.md is byte-equal to canonical 1b copy (R7)", () => {
-        const canon = readFileSync(resolve(REPO, "interpreters/1-iterative-refinement/b-evaluator-optimizer/dynamics/evaluate.md"));
+        const canon = readFileSync(resolve(REPO, "interpreters/mas-papers/1-iterative-refinement/b-evaluator-optimizer/dynamics/evaluate.md"));
         const here = readFileSync(resolve(INTERP, "dynamics/evaluate.md"));
         assert.ok(canon.equals(here), "evaluate.md diverged from canonical");
       });
       test("dynamics/reflect.md is byte-equal to canonical 1c copy (R8)", () => {
-        const canon = readFileSync(resolve(REPO, "interpreters/1-iterative-refinement/c-reflexion/dynamics/reflect.md"));
+        const canon = readFileSync(resolve(REPO, "interpreters/mas-papers/1-iterative-refinement/c-reflexion/dynamics/reflect.md"));
         const here = readFileSync(resolve(INTERP, "dynamics/reflect.md"));
         assert.ok(canon.equals(here), "reflect.md diverged from canonical");
       });
@@ -967,12 +967,12 @@
     Run, from the repo root:
 
     ```bash
-    cp interpreters/3-search/a-tot/dynamics/expand-node.md \
-       interpreters/3-search/b-lats/dynamics/expand-node.md
-    cp interpreters/1-iterative-refinement/b-evaluator-optimizer/dynamics/evaluate.md \
-       interpreters/3-search/b-lats/dynamics/evaluate.md
-    cp interpreters/1-iterative-refinement/c-reflexion/dynamics/reflect.md \
-       interpreters/3-search/b-lats/dynamics/reflect.md
+    cp interpreters/mas-papers/3-search/a-tot/dynamics/expand-node.md \
+       interpreters/mas-papers/3-search/b-lats/dynamics/expand-node.md
+    cp interpreters/mas-papers/1-iterative-refinement/b-evaluator-optimizer/dynamics/evaluate.md \
+       interpreters/mas-papers/3-search/b-lats/dynamics/evaluate.md
+    cp interpreters/mas-papers/1-iterative-refinement/c-reflexion/dynamics/reflect.md \
+       interpreters/mas-papers/3-search/b-lats/dynamics/reflect.md
     ```
 
 - [ ] **Step 4: Run test to verify it passes**
@@ -983,7 +983,7 @@
 - [ ] **Step 5: Commit**
 
     ```bash
-    git add interpreters/3-search/b-lats/dynamics/
+    git add interpreters/mas-papers/3-search/b-lats/dynamics/
     git commit -m "feat(phase-6b): byte-equal copies of expand-node/evaluate/reflect dynamics (satisfies: R6, R7, R8)"
     ```
 
@@ -996,26 +996,26 @@
 
 - [ ] **Step 1: Write the failing test**
 
-    Edit `src/test/phase-operators-identity.test.ts`. Append `interpreters/3-search/b-lats/dynamics/evaluate.md` to the existing `EVALUATE_PATHS` array (last entry). Add two new identity blocks below the `evaluate.md` describe:
+    Edit `src/test/phase-operators-identity.test.ts`. Append `interpreters/mas-papers/3-search/b-lats/dynamics/evaluate.md` to the existing `EVALUATE_PATHS` array (last entry). Add two new identity blocks below the `evaluate.md` describe:
 
     ```typescript
     const EVALUATE_PATHS = [
-      "interpreters/1-iterative-refinement/b-evaluator-optimizer/dynamics/evaluate.md",
-      "interpreters/1-iterative-refinement/c-reflexion/dynamics/evaluate.md",
-      "interpreters/5-fixed-sop-teams/a-metagpt/dynamics/evaluate.md",
-      "interpreters/5-fixed-sop-teams/b-chatdev/dynamics/evaluate.md",
-      "interpreters/3-search/a-tot/dynamics/evaluate.md",
-      "interpreters/3-search/b-lats/dynamics/evaluate.md",
+      "interpreters/mas-papers/1-iterative-refinement/b-evaluator-optimizer/dynamics/evaluate.md",
+      "interpreters/mas-papers/1-iterative-refinement/c-reflexion/dynamics/evaluate.md",
+      "interpreters/mas-papers/5-fixed-sop-teams/a-metagpt/dynamics/evaluate.md",
+      "interpreters/mas-papers/5-fixed-sop-teams/b-chatdev/dynamics/evaluate.md",
+      "interpreters/mas-papers/3-search/a-tot/dynamics/evaluate.md",
+      "interpreters/mas-papers/3-search/b-lats/dynamics/evaluate.md",
     ];
 
     const REFLECT_PATHS = [
-      "interpreters/1-iterative-refinement/c-reflexion/dynamics/reflect.md",
-      "interpreters/3-search/b-lats/dynamics/reflect.md",
+      "interpreters/mas-papers/1-iterative-refinement/c-reflexion/dynamics/reflect.md",
+      "interpreters/mas-papers/3-search/b-lats/dynamics/reflect.md",
     ];
 
     const EXPAND_NODE_PATHS = [
-      "interpreters/3-search/a-tot/dynamics/expand-node.md",
-      "interpreters/3-search/b-lats/dynamics/expand-node.md",
+      "interpreters/mas-papers/3-search/a-tot/dynamics/expand-node.md",
+      "interpreters/mas-papers/3-search/b-lats/dynamics/expand-node.md",
     ];
 
     describe("reflect.md identity across phases", () => {
@@ -1071,7 +1071,7 @@
 ## Task 10: LATS demo `PROGRAM.md` (byte-equal Phase 6)   (satisfies: R69)
 
 **Files:**
-- Modify: `interpreters/3-search/b-lats/PROGRAM.md`
+- Modify: `interpreters/mas-papers/3-search/b-lats/PROGRAM.md`
 - Modify: `src/test/phase-6b-lats.test.ts`
 
 - [ ] **Step 1: Write the failing test**
@@ -1081,7 +1081,7 @@
     ```typescript
     describe("phase-6b b-lats: demo PROGRAM.md (R69)", () => {
       test("b-lats/PROGRAM.md is byte-equal to a-tot/PROGRAM.md (R69)", () => {
-        const canon = readFileSync(resolve(REPO, "interpreters/3-search/a-tot/PROGRAM.md"));
+        const canon = readFileSync(resolve(REPO, "interpreters/mas-papers/3-search/a-tot/PROGRAM.md"));
         const here  = readFileSync(resolve(INTERP, "PROGRAM.md"));
         assert.ok(canon.equals(here), "PROGRAM.md diverged from a-tot");
       });
@@ -1098,7 +1098,7 @@
     Run from the repo root:
 
     ```bash
-    cp interpreters/3-search/a-tot/PROGRAM.md interpreters/3-search/b-lats/PROGRAM.md
+    cp interpreters/mas-papers/3-search/a-tot/PROGRAM.md interpreters/mas-papers/3-search/b-lats/PROGRAM.md
     ```
 
 - [ ] **Step 4: Run test to verify it passes**
@@ -1109,7 +1109,7 @@
 - [ ] **Step 5: Commit**
 
     ```bash
-    git add interpreters/3-search/b-lats/PROGRAM.md
+    git add interpreters/mas-papers/3-search/b-lats/PROGRAM.md
     git commit -m "feat(phase-6b): demo PROGRAM.md byte-equal w/ Phase 6 ToT for A/B comparison (satisfies: R69)"
     ```
 
@@ -1118,7 +1118,7 @@
 ## Task 11: New `rollout.md` dynamic   (satisfies: R10, R11, R12, R13)
 
 **Files:**
-- Create: `interpreters/3-search/b-lats/dynamics/rollout.md`
+- Create: `interpreters/mas-papers/3-search/b-lats/dynamics/rollout.md`
 - Modify: `src/test/phase-6b-lats.test.ts`
 
 - [ ] **Step 1: Write the failing test**
@@ -1181,7 +1181,7 @@
 
 - [ ] **Step 3: Write minimal implementation**
 
-    Create `interpreters/3-search/b-lats/dynamics/rollout.md` with the body specified in `design.md §Interfaces — `rollout.md``:
+    Create `interpreters/mas-papers/3-search/b-lats/dynamics/rollout.md` with the body specified in `design.md §Interfaces — `rollout.md``:
 
     ````markdown
     # Dynamic: Rollout
@@ -1239,7 +1239,7 @@
 - [ ] **Step 5: Commit**
 
     ```bash
-    git add interpreters/3-search/b-lats/dynamics/rollout.md src/test/phase-6b-lats.test.ts
+    git add interpreters/mas-papers/3-search/b-lats/dynamics/rollout.md src/test/phase-6b-lats.test.ts
     git commit -m "feat(phase-6b): rollout.md (LLM-policy single-shot, domain-agnostic) (satisfies: R10, R11, R12, R13)"
     ```
 
@@ -1248,7 +1248,7 @@
 ## Task 12: LATS strategy preamble + Initialize   (satisfies: R34, R35, R36)
 
 **Files:**
-- Modify: `interpreters/3-search/b-lats/INSTRUCTIONS.md`
+- Modify: `interpreters/mas-papers/3-search/b-lats/INSTRUCTIONS.md`
 - Modify: `src/test/phase-6b-lats.test.ts`
 
 - [ ] **Step 1: Write the failing test**
@@ -1318,7 +1318,7 @@
 
 - [ ] **Step 3: Write minimal implementation**
 
-    Edit `interpreters/3-search/b-lats/INSTRUCTIONS.md`. Replace the placeholder `(strategy body added in T12, …)` with:
+    Edit `interpreters/mas-papers/3-search/b-lats/INSTRUCTIONS.md`. Replace the placeholder `(strategy body added in T12, …)` with:
 
     ````markdown
     This interpreter implements Language Agent Tree Search (Zhou et al., 2023; patterns.md Group 3 — Search). The strategy is a single-frame MCTS controller running selection → expansion → simulation → evaluation → back-prop → reflection in a loop bounded by `max_iterations`. The growing tree lives in the strategy frame's `./scoped/tree.md` as an append-only YAML-block ledger; per-node partial states live in `./scoped/state-<id>.md` files (write-once); per-node accumulated lessons live in `./scoped/lessons-<id>.md` files (lazy + append-only). All MCTS arithmetic (UCT selection, back-prop) runs in bash; the dynamics are LLM-faceting only.
@@ -1382,7 +1382,7 @@
 - [ ] **Step 5: Commit**
 
     ```bash
-    git add interpreters/3-search/b-lats/INSTRUCTIONS.md src/test/phase-6b-lats.test.ts
+    git add interpreters/mas-papers/3-search/b-lats/INSTRUCTIONS.md src/test/phase-6b-lats.test.ts
     git commit -m "feat(phase-6b): strategy preamble + Initialize (scoped files, root node, no PROGRAM validation) (satisfies: R34, R35, R36)"
     ```
 
@@ -1391,7 +1391,7 @@
 ## Task 13: LATS tree ledger primitives + per-node state files + lessons convention   (satisfies: R37, R38, R39, R40, R41, R42, R43)
 
 **Files:**
-- Modify: `interpreters/3-search/b-lats/INSTRUCTIONS.md`
+- Modify: `interpreters/mas-papers/3-search/b-lats/INSTRUCTIONS.md`
 - Modify: `src/test/phase-6b-lats.test.ts`
 
 - [ ] **Step 1: Write the failing test**
@@ -1498,7 +1498,7 @@
 - [ ] **Step 5: Commit**
 
     ```bash
-    git add interpreters/3-search/b-lats/INSTRUCTIONS.md src/test/phase-6b-lats.test.ts
+    git add interpreters/mas-papers/3-search/b-lats/INSTRUCTIONS.md src/test/phase-6b-lats.test.ts
     git commit -m "feat(phase-6b): tree ledger schema + primitives + per-node state/lessons file conventions (satisfies: R37, R38, R39, R40, R41, R42, R43)"
     ```
 
@@ -1507,7 +1507,7 @@
 ## Task 14: LATS Compose-partial-state primitive + ancestor walk   (satisfies: R48, R64, R65, R66)
 
 **Files:**
-- Modify: `interpreters/3-search/b-lats/INSTRUCTIONS.md`
+- Modify: `interpreters/mas-papers/3-search/b-lats/INSTRUCTIONS.md`
 - Modify: `src/test/phase-6b-lats.test.ts`
 
 - [ ] **Step 1: Write the failing test**
@@ -1613,7 +1613,7 @@
 - [ ] **Step 5: Commit**
 
     ```bash
-    git add interpreters/3-search/b-lats/INSTRUCTIONS.md src/test/phase-6b-lats.test.ts
+    git add interpreters/mas-papers/3-search/b-lats/INSTRUCTIONS.md src/test/phase-6b-lats.test.ts
     git commit -m "feat(phase-6b): compose_partial_state primitive (root-first ancestor lesson walk) (satisfies: R48, R64, R65, R66)"
     ```
 
@@ -1622,7 +1622,7 @@
 ## Task 15: LATS Select instruction + UCT formula   (satisfies: R44, R45, R46)
 
 **Files:**
-- Modify: `interpreters/3-search/b-lats/INSTRUCTIONS.md`
+- Modify: `interpreters/mas-papers/3-search/b-lats/INSTRUCTIONS.md`
 - Modify: `src/test/phase-6b-lats.test.ts`
 
 - [ ] **Step 1: Write the failing test**
@@ -1671,7 +1671,7 @@
 
 - [ ] **Step 3: Write minimal implementation**
 
-    Append to `interpreters/3-search/b-lats/INSTRUCTIONS.md` (in the strategy section, after the preamble and before `# Sub-instructions`):
+    Append to `interpreters/mas-papers/3-search/b-lats/INSTRUCTIONS.md` (in the strategy section, after the preamble and before `# Sub-instructions`):
 
     ````markdown
     ## Instruction: Select
@@ -1734,7 +1734,7 @@
 - [ ] **Step 5: Commit**
 
     ```bash
-    git add interpreters/3-search/b-lats/INSTRUCTIONS.md src/test/phase-6b-lats.test.ts
+    git add interpreters/mas-papers/3-search/b-lats/INSTRUCTIONS.md src/test/phase-6b-lats.test.ts
     git commit -m "feat(phase-6b): Select instruction (UCT descent + leftmost-unvisited tiebreak) (satisfies: R44, R45, R46)"
     ```
 
@@ -1743,7 +1743,7 @@
 ## Task 16: LATS Expand-push + Expand-absorb (chosen_child, R50 fallback)   (satisfies: R47, R49, R50)
 
 **Files:**
-- Modify: `interpreters/3-search/b-lats/INSTRUCTIONS.md`
+- Modify: `interpreters/mas-papers/3-search/b-lats/INSTRUCTIONS.md`
 - Modify: `src/test/phase-6b-lats.test.ts`
 
 - [ ] **Step 1: Write the failing test**
@@ -1815,7 +1815,7 @@
 
 - [ ] **Step 3: Write minimal implementation**
 
-    Append two `## Instruction:` blocks to `interpreters/3-search/b-lats/INSTRUCTIONS.md` (in the strategy section, after Select). Bodies follow `design.md §Interfaces — LATS Expand-push` and `LATS Expand-absorb`. Concrete content:
+    Append two `## Instruction:` blocks to `interpreters/mas-papers/3-search/b-lats/INSTRUCTIONS.md` (in the strategy section, after Select). Bodies follow `design.md §Interfaces — LATS Expand-push` and `LATS Expand-absorb`. Concrete content:
 
     ````markdown
     ## Instruction: Expand-push
@@ -1949,7 +1949,7 @@
 - [ ] **Step 5: Commit**
 
     ```bash
-    git add interpreters/3-search/b-lats/INSTRUCTIONS.md src/test/phase-6b-lats.test.ts
+    git add interpreters/mas-papers/3-search/b-lats/INSTRUCTIONS.md src/test/phase-6b-lats.test.ts
     git commit -m "feat(phase-6b): Expand-push + Expand-absorb (chosen_child, R50 fallback) (satisfies: R47, R49, R50)"
     ```
 
@@ -1958,7 +1958,7 @@
 ## Task 17: LATS Simulate-push + Simulate-absorb (rollout + evaluate dispatch)   (satisfies: R51, R52, R53)
 
 **Files:**
-- Modify: `interpreters/3-search/b-lats/INSTRUCTIONS.md`
+- Modify: `interpreters/mas-papers/3-search/b-lats/INSTRUCTIONS.md`
 - Modify: `src/test/phase-6b-lats.test.ts`
 
 - [ ] **Step 1: Write the failing test**
@@ -2020,7 +2020,7 @@
 
 - [ ] **Step 3: Write minimal implementation**
 
-    Append to `interpreters/3-search/b-lats/INSTRUCTIONS.md`:
+    Append to `interpreters/mas-papers/3-search/b-lats/INSTRUCTIONS.md`:
 
     ````markdown
     ## Instruction: Simulate-push
@@ -2113,7 +2113,7 @@
 - [ ] **Step 5: Commit**
 
     ```bash
-    git add interpreters/3-search/b-lats/INSTRUCTIONS.md src/test/phase-6b-lats.test.ts
+    git add interpreters/mas-papers/3-search/b-lats/INSTRUCTIONS.md src/test/phase-6b-lats.test.ts
     git commit -m "feat(phase-6b): Simulate-push + Simulate-absorb (rollout dispatch + R53 malformed) (satisfies: R51, R52, R53)"
     ```
 
@@ -2122,7 +2122,7 @@
 ## Task 18: LATS Evaluate-absorb + Back-prop primitive + solve termination   (satisfies: R54, R55, R56, R57, R67, R68, R82)
 
 **Files:**
-- Modify: `interpreters/3-search/b-lats/INSTRUCTIONS.md`
+- Modify: `interpreters/mas-papers/3-search/b-lats/INSTRUCTIONS.md`
 - Modify: `src/test/phase-6b-lats.test.ts`
 
 - [ ] **Step 1: Write the failing test**
@@ -2281,7 +2281,7 @@
         fi
     ````
 
-    R67 (text-only mode) and R68 (evaluate.md contract not mutated) are satisfied implicitly: criterion is `./scoped/task.md` (no workspace paths) and Evaluate-absorb does not touch `interpreters/3-search/b-lats/dynamics/evaluate.md`.
+    R67 (text-only mode) and R68 (evaluate.md contract not mutated) are satisfied implicitly: criterion is `./scoped/task.md` (no workspace paths) and Evaluate-absorb does not touch `interpreters/mas-papers/3-search/b-lats/dynamics/evaluate.md`.
 
 - [ ] **Step 4: Run test to verify it passes**
 
@@ -2291,7 +2291,7 @@
 - [ ] **Step 5: Commit**
 
     ```bash
-    git add interpreters/3-search/b-lats/INSTRUCTIONS.md src/test/phase-6b-lats.test.ts
+    git add interpreters/mas-papers/3-search/b-lats/INSTRUCTIONS.md src/test/phase-6b-lats.test.ts
     git commit -m "feat(phase-6b): Evaluate-absorb + back-prop + solve termination (record-A) (satisfies: R54, R55, R56, R57, R67, R68, R82)"
     ```
 
@@ -2300,7 +2300,7 @@
 ## Task 19: LATS Reflect-push + Reflect-absorb + budget exhaustion   (satisfies: R58, R59, R60, R61, R62, R63)
 
 **Files:**
-- Modify: `interpreters/3-search/b-lats/INSTRUCTIONS.md`
+- Modify: `interpreters/mas-papers/3-search/b-lats/INSTRUCTIONS.md`
 - Modify: `src/test/phase-6b-lats.test.ts`
 
 - [ ] **Step 1: Write the failing test**
@@ -2382,7 +2382,7 @@
 
 - [ ] **Step 3: Write minimal implementation**
 
-    Append two `## Instruction:` blocks to `interpreters/3-search/b-lats/INSTRUCTIONS.md`:
+    Append two `## Instruction:` blocks to `interpreters/mas-papers/3-search/b-lats/INSTRUCTIONS.md`:
 
     ````markdown
     ## Instruction: Reflect-push
@@ -2480,7 +2480,7 @@
 - [ ] **Step 5: Commit**
 
     ```bash
-    git add interpreters/3-search/b-lats/INSTRUCTIONS.md src/test/phase-6b-lats.test.ts
+    git add interpreters/mas-papers/3-search/b-lats/INSTRUCTIONS.md src/test/phase-6b-lats.test.ts
     git commit -m "feat(phase-6b): Reflect-push + Reflect-absorb + budget exhaustion (satisfies: R58, R59, R60, R61, R62, R63)"
     ```
 
@@ -2489,7 +2489,7 @@
 ## Task 20: LATS leaf README full content + smoke-check   (satisfies: R3, R70, R71)
 
 **Files:**
-- Modify: `interpreters/3-search/b-lats/README.md`
+- Modify: `interpreters/mas-papers/3-search/b-lats/README.md`
 - Modify: `src/test/phase-6b-lats.test.ts`
 
 - [ ] **Step 1: Write the failing test**
@@ -2546,7 +2546,7 @@
 
 - [ ] **Step 3: Write minimal implementation**
 
-    Replace `interpreters/3-search/b-lats/README.md` with:
+    Replace `interpreters/mas-papers/3-search/b-lats/README.md` with:
 
     ````markdown
     # b — Language Agent Tree Search
@@ -2592,12 +2592,12 @@
 
     ## Demo `PROGRAM.md`
 
-    Byte-equal with `interpreters/3-search/a-tot/PROGRAM.md`: "Find an arithmetic expression using 4, 5, 6, and 10 exactly once that evaluates to 24 using only `+`, `−`, `×`, `÷` and parentheses." Same puzzle as ToT, enabling A/B comparison.
+    Byte-equal with `interpreters/mas-papers/3-search/a-tot/PROGRAM.md`: "Find an arithmetic expression using 4, 5, 6, and 10 exactly once that evaluates to 24 using only `+`, `−`, `×`, `÷` and parentheses." Same puzzle as ToT, enabling A/B comparison.
 
     ## Run it
 
     ```bash
-    ./new-instance.sh my-lats interpreters/3-search/b-lats
+    ./new-instance.sh my-lats interpreters/mas-papers/3-search/b-lats
     instances/my-lats/run.sh
     ```
 
@@ -2611,7 +2611,7 @@
     For A/B comparison against Phase 6 ToT on the same puzzle:
 
     ```bash
-    ./new-instance.sh my-tot interpreters/3-search/a-tot
+    ./new-instance.sh my-tot interpreters/mas-papers/3-search/a-tot
     instances/my-tot/run.sh
     ```
 
@@ -2636,7 +2636,7 @@
 - [ ] **Step 5: Commit**
 
     ```bash
-    git add interpreters/3-search/b-lats/README.md src/test/phase-6b-lats.test.ts
+    git add interpreters/mas-papers/3-search/b-lats/README.md src/test/phase-6b-lats.test.ts
     git commit -m "docs(phase-6b): leaf README full content (state machine, dynamics, smoke check, notable behaviour) (satisfies: R3, R70, R71)"
     ```
 

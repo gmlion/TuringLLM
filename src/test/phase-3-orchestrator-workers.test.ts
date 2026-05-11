@@ -7,7 +7,7 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const REPO = resolve(__dirname, "../..");
-const INTERP = resolve(REPO, "interpreters/2-planning-decomposition/b-orchestrator-workers");
+const INTERP = resolve(REPO, "interpreters/mas-papers/2-planning-decomposition/b-orchestrator-workers");
 
 describe("phase-3 b-orchestrator-workers: layout, PROGRAM, inputs, README", () => {
   test("required files exist", () => {

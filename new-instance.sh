@@ -2,20 +2,25 @@
 set -euo pipefail
 
 if [ -z "${1:-}" ]; then
-  echo "Usage: ./new-instance.sh <name> [interpreter-path]"
+  echo "Usage: ./new-instance.sh [interpreter-path] <name>"
   echo ""
-  echo "  name              Name of the instance"
   echo "  interpreter-path  Path to an interpreter directory containing INSTRUCTIONS.md"
-  echo "                    (default: built-in generic strategy)"
+  echo "                    (omit to use built-in generic strategy)"
+  echo "  name              Name of the instance"
   echo ""
   echo "Examples:"
   echo "  ./new-instance.sh my-project"
-  echo "  ./new-instance.sh my-a interpreters/2-planning-decomposition/a-plan-execute"
+  echo "  ./new-instance.sh interpreters/mas-papers/2-planning-decomposition/a-plan-execute my-a"
   exit 1
 fi
 
-NAME="$1"
-INTERPRETER="${2:-}"
+if [ -n "${2:-}" ]; then
+  INTERPRETER="$1"
+  NAME="$2"
+else
+  INTERPRETER=""
+  NAME="$1"
+fi
 DIR="instances/$NAME"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 

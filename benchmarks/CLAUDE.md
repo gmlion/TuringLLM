@@ -78,7 +78,7 @@ the interpreter under test on the same PROGRAM. For ChatDev the
 canonical reference is `instances/<name>/` created via:
 
 ```bash
-./new-instance.sh <name> interpreters/<group>/<leaf>
+./new-instance.sh interpreters/<group>/<leaf> <name>
 # verify the PROGRAM matches; if needed:
 cp <path-to-source-PROGRAM.md> instances/<name>/PROGRAM.md
 instances/<name>/run.sh
@@ -131,7 +131,7 @@ Recreate by deleting the old instance and re-running:
 
 ```bash
 rm -rf instances/<name>
-./new-instance.sh <name> interpreters/<group>/<leaf>
+./new-instance.sh interpreters/<group>/<leaf> <name>
 cp <source-PROGRAM> instances/<name>/PROGRAM.md   # if needed
 instances/<name>/run.sh
 ```

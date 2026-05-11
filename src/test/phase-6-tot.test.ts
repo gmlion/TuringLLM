@@ -9,14 +9,14 @@ import { execFileSync } from "child_process";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const REPO = resolve(__dirname, "../..");
-const GROUP = resolve(REPO, "interpreters/3-search");
+const GROUP = resolve(REPO, "interpreters/mas-papers/3-search");
 const INTERP = resolve(GROUP, "a-tot");
 
 describe("phase-6 a-tot: directory layout (R1)", () => {
-  test("group dir interpreters/3-search/ exists", () => {
+  test("group dir interpreters/mas-papers/3-search/ exists", () => {
     assert.ok(existsSync(GROUP), "group directory missing");
   });
-  test("interpreter dir interpreters/3-search/a-tot/ exists (R1)", () => {
+  test("interpreter dir interpreters/mas-papers/3-search/a-tot/ exists (R1)", () => {
     assert.ok(existsSync(INTERP), "interpreter directory missing");
   });
   test("interpreter has INSTRUCTIONS.md, PROGRAM.md, README.md, operators/ (R1)", () => {
@@ -28,7 +28,7 @@ describe("phase-6 a-tot: directory layout (R1)", () => {
 });
 
 describe("phase-6 a-tot: group README (R2)", () => {
-  test("group README at interpreters/3-search/README.md exists", () => {
+  test("group README at interpreters/mas-papers/3-search/README.md exists", () => {
     assert.ok(existsSync(resolve(GROUP, "README.md")), "group README missing");
   });
   test("group README mentions ToT (shipped), GoT (deferred), LATS (Phase 6b)", () => {
@@ -54,7 +54,7 @@ describe("phase-6 a-tot: evaluate.md reuse (R45)", () => {
   });
   test("operators/evaluate.md is byte-equal to canonical 1b copy (R45)", () => {
     const canon = readFileSync(
-      resolve(REPO, "interpreters/1-iterative-refinement/b-evaluator-optimizer/operators/evaluate.md"),
+      resolve(REPO, "interpreters/mas-papers/1-iterative-refinement/b-evaluator-optimizer/operators/evaluate.md"),
     );
     const here = readFileSync(resolve(INTERP, "operators/evaluate.md"));
     assert.ok(canon.equals(here), "evaluate.md diverged from canonical");

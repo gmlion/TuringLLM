@@ -269,8 +269,8 @@ MEMORY-as-heap onto per-frame scoped files and declared returns.
 ### Preservation invariants
 
 - **R25**: THE SYSTEM SHALL preserve byte-equality between
-  `interpreters/1-iterative-refinement/b-evaluator-optimizer/dynamics/evaluate.md`
-  and `interpreters/1-iterative-refinement/c-reflexion/dynamics/evaluate.md`
+  `interpreters/mas-papers/1-iterative-refinement/b-evaluator-optimizer/dynamics/evaluate.md`
+  and `interpreters/mas-papers/1-iterative-refinement/c-reflexion/dynamics/evaluate.md`
   after the migration. `src/test/phase-1-dynamics-identity.test.ts`
   SHALL continue to pass unmodified.
 - **R26**: THE SYSTEM SHALL preserve the Phase-1 R11 invariant: the
@@ -291,7 +291,7 @@ MEMORY-as-heap onto per-frame scoped files and declared returns.
   cwd-based access model with invariant `../../PROGRAM.md` and
   `../../workspace/`, the surgical-edit rule, and the breaking-change
   note for pre-Phase-2b paused instances.
-- **R29**: `interpreters/1-iterative-refinement/README.md` SHALL be
+- **R29**: `interpreters/mas-papers/1-iterative-refinement/README.md` SHALL be
   updated to describe how each of a/b/c/d uses its frame's
   `./scoped/` subdirectory.
 - **R30**: `docs/agent-workflows/requirements.md` SHALL be updated
@@ -321,7 +321,7 @@ MEMORY-as-heap onto per-frame scoped files and declared returns.
   malformed-return failure paths.
 - **R34**: WHEN the `d-cove` live demo is re-run end-to-end against
   the 20-person knights-and-knaves puzzle
-  (`interpreters/1-iterative-refinement/d-cove/PROGRAM.md`), THE
+  (`interpreters/mas-papers/1-iterative-refinement/d-cove/PROGRAM.md`), THE
   SYSTEM SHALL halt at `state=done` with a `## Revised` section in
   the strategy's `MEMORY.md`, and the cycle history SHALL confirm
   that `verifications.md` in verify.md's frame directory is mutated

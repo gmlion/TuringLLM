@@ -118,7 +118,7 @@ interpreters/
 ```
 
 No files move. `new-instance.sh` needs no edit because it already accepts
-arbitrary paths (`./new-instance.sh foo interpreters/1-iterative-refinement/a-self-refine`)
+arbitrary paths (`./new-instance.sh foo interpreters/mas-papers/1-iterative-refinement/a-self-refine`)
 and `cp -r "$INTERP_DIR/dynamics"` operates on each leaf's own folder.
 
 ## Data model — MEMORY sections
@@ -407,7 +407,7 @@ Plus one small additional test file:
 ### End-to-end (R8, R9, R18)
 
 Non-automated: the implementer runs each demo via
-`./new-instance.sh foo2a interpreters/1-iterative-refinement/a-self-refine`
+`./new-instance.sh foo2a interpreters/mas-papers/1-iterative-refinement/a-self-refine`
 (and peers) + `instances/foo2a/run.sh` with `TURING_PROVIDER=claude-code`
 and confirms:
 

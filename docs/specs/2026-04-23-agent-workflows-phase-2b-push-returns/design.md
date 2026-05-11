@@ -120,7 +120,7 @@ src/
 new-instance.sh             # rewritten to create frames/f000-strategy/ (R7, R39)
                             # plus the rm -rf cleanup step (R44)
 
-interpreters/1-iterative-refinement/
+interpreters/mas-papers/1-iterative-refinement/
 ├── a-self-refine/          # retrofit (R21)
 ├── b-evaluator-optimizer/  # retrofit (R22)
 ├── c-reflexion/            # retrofit (R23, R25)

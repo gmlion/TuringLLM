@@ -7,7 +7,7 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const REPO = resolve(__dirname, "../..");
-const GROUP = resolve(REPO, "interpreters/3-search");
+const GROUP = resolve(REPO, "interpreters/mas-papers/3-search");
 const INTERP = resolve(GROUP, "b-lats");
 
 function escapeRegExp(s: string) {
@@ -26,7 +26,7 @@ function extractInstructionBody(src: string, name: string): string {
 }
 
 describe("phase-6b b-lats: directory layout (R1, R4, R5)", () => {
-  test("interpreter dir interpreters/3-search/b-lats/ exists (R1)", () => {
+  test("interpreter dir interpreters/mas-papers/3-search/b-lats/ exists (R1)", () => {
     assert.ok(existsSync(INTERP), "interpreter directory missing");
   });
   test("interpreter has INSTRUCTIONS.md, PROGRAM.md, README.md, operators/ (R1)", () => {
@@ -55,17 +55,17 @@ describe("phase-6b b-lats: group README delta (R2)", () => {
 
 describe("phase-6b b-lats: reused dynamics byte-equality (R6, R7, R8)", () => {
   test("operators/expand-node.md is byte-equal to a-tot post-refactor copy (R6)", () => {
-    const canon = readFileSync(resolve(REPO, "interpreters/3-search/a-tot/operators/expand-node.md"));
+    const canon = readFileSync(resolve(REPO, "interpreters/mas-papers/3-search/a-tot/operators/expand-node.md"));
     const here = readFileSync(resolve(INTERP, "operators/expand-node.md"));
     assert.ok(canon.equals(here), "expand-node.md diverged from a-tot canonical");
   });
   test("operators/evaluate.md is byte-equal to canonical 1b copy (R7)", () => {
-    const canon = readFileSync(resolve(REPO, "interpreters/1-iterative-refinement/b-evaluator-optimizer/operators/evaluate.md"));
+    const canon = readFileSync(resolve(REPO, "interpreters/mas-papers/1-iterative-refinement/b-evaluator-optimizer/operators/evaluate.md"));
     const here = readFileSync(resolve(INTERP, "operators/evaluate.md"));
     assert.ok(canon.equals(here), "evaluate.md diverged from canonical");
   });
   test("operators/reflect.md is byte-equal to canonical 1c copy (R8)", () => {
-    const canon = readFileSync(resolve(REPO, "interpreters/1-iterative-refinement/c-reflexion/operators/reflect.md"));
+    const canon = readFileSync(resolve(REPO, "interpreters/mas-papers/1-iterative-refinement/c-reflexion/operators/reflect.md"));
     const here = readFileSync(resolve(INTERP, "operators/reflect.md"));
     assert.ok(canon.equals(here), "reflect.md diverged from canonical");
   });
@@ -73,7 +73,7 @@ describe("phase-6b b-lats: reused dynamics byte-equality (R6, R7, R8)", () => {
 
 describe("phase-6b b-lats: demo PROGRAM.md (R69)", () => {
   test("b-lats/PROGRAM.md is byte-equal to a-tot/PROGRAM.md (R69)", () => {
-    const canon = readFileSync(resolve(REPO, "interpreters/3-search/a-tot/PROGRAM.md"));
+    const canon = readFileSync(resolve(REPO, "interpreters/mas-papers/3-search/a-tot/PROGRAM.md"));
     const here  = readFileSync(resolve(INTERP, "PROGRAM.md"));
     assert.ok(canon.equals(here), "PROGRAM.md diverged from a-tot");
   });

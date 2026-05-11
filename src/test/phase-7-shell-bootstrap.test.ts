@@ -26,7 +26,7 @@ describe("R11/R12/R17: shell bootstrap reads .root-operator and creates frame f0
       "# Operator\nProgram is: {{program}}\n## Instruction: Halt\n**Condition:** state empty\n**Action:** halt\n",
     );
     try {
-      const { startupBootstrap } = await import(pathToFileURL(resolve(REPO, "dist/main.js")).href);
+      const { startupBootstrap } = await import(pathToFileURL(resolve(REPO, "dist/bootstrap.js")).href);
       startupBootstrap(dir);
       assert.ok(existsSync(join(dir, "frames/f000-test-op/INSTRUCTIONS.md")), "frame INSTRUCTIONS.md missing");
       const inst = readFileSync(join(dir, "frames/f000-test-op/INSTRUCTIONS.md"), "utf-8");
@@ -54,7 +54,7 @@ describe("R12: {{program}} substitution at bootstrap — edge cases", () => {
       "# Op\nThe program is:\n{{program}}\n",
     );
     try {
-      const { startupBootstrap } = await import(pathToFileURL(resolve(REPO, "dist/main.js")).href);
+      const { startupBootstrap } = await import(pathToFileURL(resolve(REPO, "dist/bootstrap.js")).href);
       startupBootstrap(dir);
       const inst = readFileSync(join(dir, "frames/f000-test-op/INSTRUCTIONS.md"), "utf-8");
       assert.match(inst, /Line one\nLine two\nLine three/);
@@ -69,7 +69,7 @@ describe("R12: {{program}} substitution at bootstrap — edge cases", () => {
       "# Op\nNo placeholder here.\n",
     );
     try {
-      const { startupBootstrap } = await import(pathToFileURL(resolve(REPO, "dist/main.js")).href);
+      const { startupBootstrap } = await import(pathToFileURL(resolve(REPO, "dist/bootstrap.js")).href);
       startupBootstrap(dir);
       const inst = readFileSync(join(dir, "frames/f000-test-op/INSTRUCTIONS.md"), "utf-8");
       assert.match(inst, /No placeholder here\./);
@@ -85,7 +85,7 @@ describe("R14: absent .root-operator → clean error", () => {
     const dir = mkdtempSync(join(tmpdir(), "turing-bootstrap-"));
     writeFileSync(join(dir, "PROGRAM.md"), "anything");
     try {
-      const { startupBootstrap } = await import(pathToFileURL(resolve(REPO, "dist/main.js")).href);
+      const { startupBootstrap } = await import(pathToFileURL(resolve(REPO, "dist/bootstrap.js")).href);
       assert.throws(
         () => startupBootstrap(dir),
         (err: Error) => /no \.root-operator configured/i.test(err.message),
@@ -101,7 +101,7 @@ describe("R14: absent .root-operator → clean error", () => {
     // Pre-existing call stack — must NOT save us
     writeFileSync(join(dir, ".call-stack.json"), JSON.stringify({ nextCounter: 1, stack: [{ returnState: "<root>", frameDir: "frames/f000-strategy" }] }));
     try {
-      const { startupBootstrap } = await import(pathToFileURL(resolve(REPO, "dist/main.js")).href);
+      const { startupBootstrap } = await import(pathToFileURL(resolve(REPO, "dist/bootstrap.js")).href);
       assert.throws(
         () => startupBootstrap(dir),
         (err: Error) => /no \.root-operator configured/i.test(err.message),
@@ -116,7 +116,7 @@ describe("R13/R18/R19: OUTPUT.md emission on halt", () => {
   test("done@depth1 with ## Return\\nanswer: writes ## Answer to OUTPUT.md", async () => {
     const dir = mkdtempSync(join(tmpdir(), "turing-bootstrap-"));
     try {
-      const { emitOutputMd } = await import(pathToFileURL(resolve(REPO, "dist/main.js")).href);
+      const { emitOutputMd } = await import(pathToFileURL(resolve(REPO, "dist/bootstrap.js")).href);
       const fakeMemory = "## State\ndone\n## Return\nanswer: 42\n";
       emitOutputMd(dir, fakeMemory);
       const out = readFileSync(join(dir, "OUTPUT.md"), "utf-8");
@@ -129,7 +129,7 @@ describe("R13/R18/R19: OUTPUT.md emission on halt", () => {
   test("done@depth1 with no ## Return writes diagnostic", async () => {
     const dir = mkdtempSync(join(tmpdir(), "turing-bootstrap-"));
     try {
-      const { emitOutputMd } = await import(pathToFileURL(resolve(REPO, "dist/main.js")).href);
+      const { emitOutputMd } = await import(pathToFileURL(resolve(REPO, "dist/bootstrap.js")).href);
       const fakeMemory = "## State\ndone\n## Last Action\nfoo\n";
       emitOutputMd(dir, fakeMemory);
       const out = readFileSync(join(dir, "OUTPUT.md"), "utf-8");
@@ -143,7 +143,7 @@ describe("R13/R18/R19: OUTPUT.md emission on halt", () => {
   test("done@depth1 with multiple ## Return keys writes multiple sections", async () => {
     const dir = mkdtempSync(join(tmpdir(), "turing-bootstrap-"));
     try {
-      const { emitOutputMd } = await import(pathToFileURL(resolve(REPO, "dist/main.js")).href);
+      const { emitOutputMd } = await import(pathToFileURL(resolve(REPO, "dist/bootstrap.js")).href);
       const fakeMemory = "## State\ndone\n## Return\nanswer: 18\nverdict: pass\n";
       emitOutputMd(dir, fakeMemory);
       const out = readFileSync(join(dir, "OUTPUT.md"), "utf-8");
@@ -169,7 +169,7 @@ describe("R8/R15/R16/R51: new-instance.sh creates .root-operator and copies oper
 
     const instanceName = `_phase7_test_${Date.now()}`;
     try {
-      execSync(`bash new-instance.sh ${instanceName} ${tmpInterpDir.replace(/\\/g, "/")}`, { cwd: REPO, encoding: "utf-8" });
+      execSync(`bash new-instance.sh ${tmpInterpDir.replace(/\\/g, "/")} ${instanceName}`, { cwd: REPO, encoding: "utf-8" });
       const dir = resolve(REPO, "instances", instanceName);
       // .root-operator exists with marker content
       assert.ok(existsSync(join(dir, ".root-operator")), ".root-operator missing");

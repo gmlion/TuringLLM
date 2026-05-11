@@ -9,7 +9,7 @@ import { applyPush, applyPop, type CallStack } from "../call-stack.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const INTERP = resolve(__dirname, "../../interpreters/1-iterative-refinement/a-self-refine");
+const INTERP = resolve(__dirname, "../../interpreters/mas-papers/1-iterative-refinement/a-self-refine");
 const REPO = resolve(__dirname, "../..");
 
 describe("1a self-refine", () => {
@@ -224,7 +224,7 @@ describe("1a self-refine", () => {
 });
 
 describe("R20-R27 Phase 7 migration: marker + canonical operator", () => {
-  const LEAF = "interpreters/1-iterative-refinement/a-self-refine";
+  const LEAF = "interpreters/mas-papers/1-iterative-refinement/a-self-refine";
 
   test("R21: INSTRUCTIONS.md is single-line marker pointing at operators/self-refine.md", () => {
     const inst = readFileSync(resolve(REPO, LEAF, "INSTRUCTIONS.md"), "utf-8").trim();

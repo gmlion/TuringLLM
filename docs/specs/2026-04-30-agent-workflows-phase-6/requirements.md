@@ -10,7 +10,7 @@ Phase 6 establishes scaffolding that Phase 6b (LATS) imports verbatim — `expan
 
 ## User stories
 
-- **US1**: As a developer studying agent patterns, I want a working Tree-of-Thoughts interpreter at `interpreters/3-search/a-tot/`, so that I can run the canonical Yao et al. 2023 protocol against a Game of 24 puzzle and inspect the resulting search tree.
+- **US1**: As a developer studying agent patterns, I want a working Tree-of-Thoughts interpreter at `interpreters/mas-papers/3-search/a-tot/`, so that I can run the canonical Yao et al. 2023 protocol against a Game of 24 puzzle and inspect the resulting search tree.
 - **US2**: As an author of the future Phase 6b (LATS) interpreter, I want `expand-node.md` and the BFS state machine to ship as reusable, testable components, so that LATS's MCTS controller can compose them without reinvention.
 - **US3**: As a reader of `history/` snapshots, I want the search tree to live in an append-only ledger that grows monotonically, so that scrubbing through the snapshot sequence in the visualiser produces a watchable animation of expansion and pruning.
 - **US4**: As a researcher, I want the interpreter's value-scoring step to faithfully reproduce Yao et al.'s 3-sample weighted-sum scheme (sure=20, likely=1, impossible=0.001), so that benchmark comparisons against the paper are meaningful.
@@ -20,8 +20,8 @@ Phase 6 establishes scaffolding that Phase 6b (LATS) imports verbatim — `expan
 
 ### Directory layout and READMEs
 
-- **R1**: THE INTERPRETER SHALL ship at `interpreters/3-search/a-tot/` containing at minimum `INSTRUCTIONS.md`, `PROGRAM.md`, `README.md`, and a `dynamics/` subdirectory.
-- **R2**: THE PROJECT SHALL ship a group-level `interpreters/3-search/README.md` framing Group 3 — Search, listing ToT as the only currently shipped variant, and naming GoT (deferred) and LATS (Phase 6b) as planned siblings with one-line summaries and source citations.
+- **R1**: THE INTERPRETER SHALL ship at `interpreters/mas-papers/3-search/a-tot/` containing at minimum `INSTRUCTIONS.md`, `PROGRAM.md`, `README.md`, and a `dynamics/` subdirectory.
+- **R2**: THE PROJECT SHALL ship a group-level `interpreters/mas-papers/3-search/README.md` framing Group 3 — Search, listing ToT as the only currently shipped variant, and naming GoT (deferred) and LATS (Phase 6b) as planned siblings with one-line summaries and source citations.
 - **R3**: THE INTERPRETER LEAF README SHALL include: a citation to Yao et al. arXiv:2305.10601, a state-machine summary, the dynamics-and-contracts table, run instructions, the demo description, and a "Notable behaviour" section noting (a) the ~200-cycle worst-case cost per Game of 24 puzzle and (b) the 3× value-sampling fidelity choice with its weight mapping.
 
 ### Source-spec dynamics-table update
@@ -100,8 +100,8 @@ Phase 6 establishes scaffolding that Phase 6b (LATS) imports verbatim — `expan
 
 ### `evaluate.md` reuse
 
-- **R45**: THE INTERPRETER SHALL ship `interpreters/3-search/a-tot/dynamics/evaluate.md` as a byte-equal copy of the canonical `interpreters/1-iterative-refinement/b-evaluator-optimizer/dynamics/evaluate.md`.
-- **R46**: `src/test/phase-operators-identity.test.ts` SHALL be extended to assert byte equality of `evaluate.md` between the canonical location and `interpreters/3-search/a-tot/dynamics/evaluate.md`.
+- **R45**: THE INTERPRETER SHALL ship `interpreters/mas-papers/3-search/a-tot/dynamics/evaluate.md` as a byte-equal copy of the canonical `interpreters/mas-papers/1-iterative-refinement/b-evaluator-optimizer/dynamics/evaluate.md`.
+- **R46**: `src/test/phase-operators-identity.test.ts` SHALL be extended to assert byte equality of `evaluate.md` between the canonical location and `interpreters/mas-papers/3-search/a-tot/dynamics/evaluate.md`.
 
 ### Robustness — malformed `expand-node.md` output
 
@@ -128,7 +128,7 @@ Phase 6 establishes scaffolding that Phase 6b (LATS) imports verbatim — `expan
 
 ## Out of scope
 
-- Graph of Thoughts (GoT) — flagged as a future sibling under `interpreters/3-search/`; not built here.
+- Graph of Thoughts (GoT) — flagged as a future sibling under `interpreters/mas-papers/3-search/`; not built here.
 - LATS (Phase 6b) — depends on Phase 6 + an MCTS harness that does not yet exist.
 - Project-git-per-node branching in `workspace/` — the demo (Game of 24) has no per-branch workspace artefacts, so the integration is speculative until a code-search variant lands.
 - Configurability of k or b via PROGRAM.md — both fixed at the paper's values.

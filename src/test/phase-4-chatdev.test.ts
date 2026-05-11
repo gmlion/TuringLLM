@@ -7,7 +7,7 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const REPO = resolve(__dirname, "../..");
-const INTERP = resolve(REPO, "interpreters/5-fixed-sop-teams/b-chatdev");
+const INTERP = resolve(REPO, "interpreters/mas-papers/5-fixed-sop-teams/b-chatdev");
 
 describe("phase-4 b-chatdev: layout, dialogue, PROGRAM parity", () => {
   test("required files exist (interpreter + roles/)", () => {
@@ -30,7 +30,7 @@ describe("phase-4 b-chatdev: layout, dialogue, PROGRAM parity", () => {
   });
 
   test("PROGRAM.md is byte-equal to a-metagpt/PROGRAM.md (R22)", () => {
-    const a = readFileSync(resolve(REPO, "interpreters/5-fixed-sop-teams/a-metagpt/PROGRAM.md"));
+    const a = readFileSync(resolve(REPO, "interpreters/mas-papers/5-fixed-sop-teams/a-metagpt/PROGRAM.md"));
     const b = readFileSync(resolve(INTERP, "PROGRAM.md"));
     assert.ok(a.equals(b), "PROGRAM.md diverged between a-metagpt and b-chatdev");
   });
@@ -62,7 +62,7 @@ describe("phase-4 b-chatdev: layout, dialogue, PROGRAM parity", () => {
 
   test("evaluate.md byte-equal to Phase 1b copy", () => {
     const a = readFileSync(resolve(INTERP, "operators/evaluate.md"));
-    const b = readFileSync(resolve(REPO, "interpreters/1-iterative-refinement/b-evaluator-optimizer/operators/evaluate.md"));
+    const b = readFileSync(resolve(REPO, "interpreters/mas-papers/1-iterative-refinement/b-evaluator-optimizer/operators/evaluate.md"));
     assert.ok(a.equals(b), "evaluate.md in b-chatdev diverged from Phase 1b copy");
   });
 

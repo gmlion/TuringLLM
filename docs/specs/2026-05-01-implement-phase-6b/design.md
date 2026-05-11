@@ -2,13 +2,13 @@
 
 ## Overview
 
-Phase 6b ships a Language Agent Tree Search (LATS) interpreter at `interpreters/3-search/b-lats/` driving paper-faithful MCTS over LLM-generated thoughts. The strategy frame runs an eight-state machine (`empty → selecting → expanding → simulating → evaluating → reflecting → … → done`) that pushes four single-cycle dynamics (`expand-node.md`, `rollout.md`, `evaluate.md`, `reflect.md`); UCT selection, back-propagation, and lesson plumbing all live in strategy bash. Because Phase 6's existing `expand-node.md` and `score.md` are Game-of-24-specific in violation of the project-wide invariant that PROGRAM.md is the sole locus of domain knowledge, Phase 6b also performs a cross-cutting in-place refactor of those two dynamics, the Phase 6 strategy, and the Phase 6 ledger schema (`op`/`left` move out of the YAML ledger and into per-node `./scoped/state-<id>.md` files). The core trade-off is **architectural correctness over scope minimisation**: shipping LATS as a sibling of a non-general ToT would have institutionalised the defect; the in-place refactor costs ~12 additional requirements but leaves `interpreters/3-search/` consistently general.
+Phase 6b ships a Language Agent Tree Search (LATS) interpreter at `interpreters/mas-papers/3-search/b-lats/` driving paper-faithful MCTS over LLM-generated thoughts. The strategy frame runs an eight-state machine (`empty → selecting → expanding → simulating → evaluating → reflecting → … → done`) that pushes four single-cycle dynamics (`expand-node.md`, `rollout.md`, `evaluate.md`, `reflect.md`); UCT selection, back-propagation, and lesson plumbing all live in strategy bash. Because Phase 6's existing `expand-node.md` and `score.md` are Game-of-24-specific in violation of the project-wide invariant that PROGRAM.md is the sole locus of domain knowledge, Phase 6b also performs a cross-cutting in-place refactor of those two dynamics, the Phase 6 strategy, and the Phase 6 ledger schema (`op`/`left` move out of the YAML ledger and into per-node `./scoped/state-<id>.md` files). The core trade-off is **architectural correctness over scope minimisation**: shipping LATS as a sibling of a non-general ToT would have institutionalised the defect; the in-place refactor costs ~12 additional requirements but leaves `interpreters/mas-papers/3-search/` consistently general.
 
 ## Requirement coverage
 
 | R# | Summary | Addressed in |
 | -- | ------- | ------------ |
-| R1 | Interpreter dir at `interpreters/3-search/b-lats/` | §Architecture (Component layout) |
+| R1 | Interpreter dir at `interpreters/mas-papers/3-search/b-lats/` | §Architecture (Component layout) |
 | R2 | Group README updated to list LATS | §Architecture (Component layout, Group README delta) |
 | R3 | Leaf README content | §Architecture (Component layout, Leaf README) |
 | R4 | dynamics/ contains exactly four files | §Architecture (Component layout) |
@@ -100,7 +100,7 @@ Phase 6b ships a Language Agent Tree Search (LATS) interpreter at `interpreters/
 ### Component layout (R1, R2, R4, R5, R77)
 
 ```
-interpreters/3-search/
+interpreters/mas-papers/3-search/
 ├── README.md                     # group-level (UPDATED for R2)
 ├── a-tot/                        # Phase 6 — REFACTORED in place (R14–R29)
 │   ├── INSTRUCTIONS.md           # strategy: BFS controller (delta R17, R19, R20, R21, R22, R23)
@@ -125,7 +125,7 @@ interpreters/3-search/
 
 ### Group README delta (R2)
 
-`interpreters/3-search/README.md`'s "Variants" table gains a row for `b-lats/` and the `interpreters/lats/` placeholder row is removed:
+`interpreters/mas-papers/3-search/README.md`'s "Variants" table gains a row for `b-lats/` and the `interpreters/lats/` placeholder row is removed:
 
 ```
 | `a-tot/`  | Shipped (Phase 6)   | Tree of Thoughts            | Yao et al., NeurIPS 2023, arXiv:2305.10601 |
@@ -137,12 +137,12 @@ The "Shared dynamics" section is updated: `expand-node.md` and `score.md` become
 
 ### Leaf README (R3)
 
-`interpreters/3-search/b-lats/README.md` mirrors `a-tot/README.md`'s shape with LATS-specific content:
+`interpreters/mas-papers/3-search/b-lats/README.md` mirrors `a-tot/README.md`'s shape with LATS-specific content:
 
 - Citation: Zhou et al. arXiv:2310.04406; cross-link to `docs/agent-workflows/patterns.md` § Group 3 — Search.
 - State-machine summary: the 10 state names from §Interfaces below.
 - Dynamics-and-contracts table: four rows (expand-node/rollout/evaluate/reflect) with push-args and return shapes.
-- Run-it section: `./new-instance.sh my-lats interpreters/3-search/b-lats` then `instances/my-lats/run.sh`; inspect `frames/f000-strategy/MEMORY.md` (`## Solution` / `## No Solution Found`) and `frames/f000-strategy/scoped/tree.md` for the tree.
+- Run-it section: `./new-instance.sh my-lats interpreters/mas-papers/3-search/b-lats` then `instances/my-lats/run.sh`; inspect `frames/f000-strategy/MEMORY.md` (`## Solution` / `## No Solution Found`) and `frames/f000-strategy/scoped/tree.md` for the tree.
 - Demo description: byte-equal Game of 24 from Phase 6, enabling A/B comparison.
 - "Notable behaviour" section listing:
   - cycle cost ~10–13 cycles per MCTS iteration, ~3–4 LLM calls per iteration, ~30 iterations max → ~90–120 LLM calls worst case;
@@ -154,7 +154,7 @@ The "Shared dynamics" section is updated: `expand-node.md` and `score.md` become
 
 ### Phase 6 README delta (R27, R29)
 
-`interpreters/3-search/a-tot/README.md` is updated:
+`interpreters/mas-papers/3-search/a-tot/README.md` is updated:
 
 - "Notable behaviour" gains a top-of-section bullet: **"Refactored in Phase 6b (`docs/specs/2026-05-01-implement-phase-6b/`). Dynamics' push-args changed from `parent_thought`/`target`/`numbers_remaining` (and `thought`/`target`) to the canonical pair `partial_state`/`task`. The ledger no longer carries `op`/`left` fields — partial states live in `./scoped/state-<id>.md` instead. BFS semantics (k=5, b=5, max_depth, 3-sample scoring, weighted-sum aggregation, pruning, goal-checking) are unchanged."**
 - The "Dynamics" table push-arg column is rewritten to the post-refactor names.
@@ -166,7 +166,7 @@ The "Shared dynamics" section is updated: `expand-node.md` and `score.md` become
 
 ### Backwards compatibility (R86)
 
-`new-instance.sh` (read at `new-instance.sh:36–66`) copies `INSTRUCTIONS.md`, `dynamics/`, and `PROGRAM.md` at instance creation time, so each instance is self-contained. The Phase 6 refactor only touches `interpreters/3-search/a-tot/`; existing instances under `instances/` keep their own snapshot of pre-refactor dynamics and pre-refactor strategy and continue to run unchanged. No `instances/` wipe is needed — Phase 2b R43's analogue does **not** apply here. The Phase 6b spec records this explicitly (R86) so future maintainers don't infer one.
+`new-instance.sh` (read at `new-instance.sh:36–66`) copies `INSTRUCTIONS.md`, `dynamics/`, and `PROGRAM.md` at instance creation time, so each instance is self-contained. The Phase 6 refactor only touches `interpreters/mas-papers/3-search/a-tot/`; existing instances under `instances/` keep their own snapshot of pre-refactor dynamics and pre-refactor strategy and continue to run unchanged. No `instances/` wipe is needed — Phase 2b R43's analogue does **not** apply here. The Phase 6b spec records this explicitly (R86) so future maintainers don't infer one.
 
 ### Stack discipline (R12, R16, R33, R62, R76, R78, R80, R81)
 
@@ -214,7 +214,7 @@ The shell intercepts `state == done` at stack depth 1 and halts (R62). Both term
 
 ### Demo (R69, R70)
 
-`interpreters/3-search/b-lats/PROGRAM.md` is **byte-equal** with `interpreters/3-search/a-tot/PROGRAM.md`, so a LATS run is directly comparable to a ToT run on identical input. The interpreter contains zero domain knowledge — swapping in any other PROGRAM.md (maze, code-passing-tests, constraint puzzle) would Just Work without touching strategy or dynamics. (R83 enforces this absence of domain vocabulary; tested via the regex check in §Test strategy.)
+`interpreters/mas-papers/3-search/b-lats/PROGRAM.md` is **byte-equal** with `interpreters/mas-papers/3-search/a-tot/PROGRAM.md`, so a LATS run is directly comparable to a ToT run on identical input. The interpreter contains zero domain knowledge — swapping in any other PROGRAM.md (maze, code-passing-tests, constraint puzzle) would Just Work without touching strategy or dynamics. (R83 enforces this absence of domain vocabulary; tested via the regex check in §Test strategy.)
 
 ## Data model
 
@@ -275,7 +275,7 @@ R79 is satisfied structurally: `max_iterations`, `uct_c`, and the implicit `k=5`
 
 ### Phase 6 ledger post-refactor (R18, R19)
 
-`interpreters/3-search/a-tot/`'s `./scoped/tree.md` schema after refactor:
+`interpreters/mas-papers/3-search/a-tot/`'s `./scoped/tree.md` schema after refactor:
 
 ```
 ---
@@ -714,7 +714,7 @@ fi
 
 R59 satisfies the append via `>>` (append-only, R65). R64 is satisfied by the file's lazy creation (the `>>` only creates when the first append fires).
 
-### `expand-node.md` (post-refactor; canonical at `interpreters/3-search/a-tot/dynamics/expand-node.md`; byte-equal copy at `interpreters/3-search/b-lats/dynamics/expand-node.md`) (R6, R14, R30, R32, R33)
+### `expand-node.md` (post-refactor; canonical at `interpreters/mas-papers/3-search/a-tot/dynamics/expand-node.md`; byte-equal copy at `interpreters/mas-papers/3-search/b-lats/dynamics/expand-node.md`) (R6, R14, R30, R32, R33)
 
 **Push-args declared** (R10-shape): `{{partial_state}}`, `{{task}}`. (No `{{target}}`, no `{{numbers_remaining}}`, no `{{parent_thought}}`.)
 
@@ -777,7 +777,7 @@ Partial state to extend:
 
 **No further pushes** (R33): the body emits a single MEMORY heredoc with the `## Return` block; it never writes `## Push`. Stack depth from caller stays at 1 (R16, R33).
 
-### `score.md` (post-refactor; at `interpreters/3-search/a-tot/dynamics/score.md`) (R15, R31, R32, R33)
+### `score.md` (post-refactor; at `interpreters/mas-papers/3-search/a-tot/dynamics/score.md`) (R15, R31, R32, R33)
 
 **Push-args declared:** `{{partial_state}}`, `{{task}}`. (No `{{target}}`, no `{{thought}}`.)
 
@@ -834,7 +834,7 @@ Partial state to score:
 
 **No further pushes** (R33).
 
-### `rollout.md` (NEW; at `interpreters/3-search/b-lats/dynamics/rollout.md`) (R10, R11, R12, R13)
+### `rollout.md` (NEW; at `interpreters/mas-papers/3-search/b-lats/dynamics/rollout.md`) (R10, R11, R12, R13)
 
 **Push-args declared** (R10): `{{partial_state}}`, `{{task}}`.
 
@@ -892,13 +892,13 @@ Starting partial state:
 
 ### `evaluate.md` (R7, R67, R68)
 
-Byte-equal copy of `interpreters/1-iterative-refinement/b-evaluator-optimizer/dynamics/evaluate.md`. Push-args `{{attempt}}`, `{{criterion}}`. Returns `verdict` (`pass`/`fail`) and `feedback`. Identity is enforced by `phase-operators-identity.test.ts` extension (R9).
+Byte-equal copy of `interpreters/mas-papers/1-iterative-refinement/b-evaluator-optimizer/dynamics/evaluate.md`. Push-args `{{attempt}}`, `{{criterion}}`. Returns `verdict` (`pass`/`fail`) and `feedback`. Identity is enforced by `phase-operators-identity.test.ts` extension (R9).
 
 LATS invokes `evaluate.md` in **text-only mode** (R67): the criterion is `./scoped/task.md` content (= PROGRAM.md text), which has no `../../workspace/` paths, so the dynamic's mode-classification routes to text-only judgement. R68 is satisfied negatively: Phase 6b adds nothing to `evaluate.md`'s prose or contract.
 
 ### `reflect.md` (R8)
 
-Byte-equal copy of `interpreters/1-iterative-refinement/c-reflexion/dynamics/reflect.md`. Push-args `{{attempt}}`, `{{verdict}}`, `{{feedback}}`. Returns `lesson`. Identity enforced by `phase-operators-identity.test.ts` extension (R9).
+Byte-equal copy of `interpreters/mas-papers/1-iterative-refinement/c-reflexion/dynamics/reflect.md`. Push-args `{{attempt}}`, `{{verdict}}`, `{{feedback}}`. Returns `lesson`. Identity enforced by `phase-operators-identity.test.ts` extension (R9).
 
 ### Phase 6 Initialize delta (R17, R19)
 
@@ -1068,8 +1068,8 @@ Following the file-pattern style of `phase-6-tot.test.ts` (no live LLM execution
 
 | Test group | Asserts | R# |
 | ---------- | ------- | -- |
-| Directory layout | `interpreters/3-search/b-lats/` exists with `INSTRUCTIONS.md`, `PROGRAM.md`, `README.md`, `dynamics/`; `dynamics/` contains exactly `expand-node.md`, `rollout.md`, `evaluate.md`, `reflect.md`; `dynamics/score.md` does **not** exist | R1, R4, R5, R77 |
-| Group README | `interpreters/3-search/README.md` mentions LATS as Shipped (Phase 6b), Zhou et al. arXiv:2310.04406 cited | R2 |
+| Directory layout | `interpreters/mas-papers/3-search/b-lats/` exists with `INSTRUCTIONS.md`, `PROGRAM.md`, `README.md`, `dynamics/`; `dynamics/` contains exactly `expand-node.md`, `rollout.md`, `evaluate.md`, `reflect.md`; `dynamics/score.md` does **not** exist | R1, R4, R5, R77 |
+| Group README | `interpreters/mas-papers/3-search/README.md` mentions LATS as Shipped (Phase 6b), Zhou et al. arXiv:2310.04406 cited | R2 |
 | Leaf README | mentions Zhou et al. arXiv:2310.04406, contains state-machine summary, run instructions, "Notable behaviour" section with the deliberate-omission notes (no score.md, no pruning, ancestor-walk lessons, record-A) | R3 |
 | Byte-equality (R6, R7, R8) | `b-lats/dynamics/expand-node.md` byte-equal `a-tot/dynamics/expand-node.md`; `b-lats/dynamics/evaluate.md` byte-equal `1b/dynamics/evaluate.md`; `b-lats/dynamics/reflect.md` byte-equal `1c/dynamics/reflect.md` | R6, R7, R8 |
 | `rollout.md` contract | declares `{{partial_state}}`, `{{task}}`; single instruction matching `state == empty`; emits `## Return: terminal_state: \|`; no `## Push dynamics/`; no `## Push` at all | R10, R11, R12 |
@@ -1114,7 +1114,7 @@ Existing tests for the Phase 6 directory, group README, evaluate.md byte-equalit
 | ---------- | ------- | -- |
 | Tree ledger schema | Replace assertions about `op`, `left` ledger fields with assertions that those fields are **absent**. Assert the post-refactor schema (R18: id/parent_id/depth/value/samples/status). | R24 |
 | Per-node state files | NEW: assert `INSTRUCTIONS.md` references `./scoped/state-` (creates per-node files at root and Expand-absorb). | R25 |
-| Vocabulary — `expand-node.md` | NEW: assert `interpreters/3-search/a-tot/dynamics/expand-node.md` does not contain `Game of 24`, `numbers`, `arithmetic`, regex `[+−×÷]`, `target`, `numbers_remaining`, `parent_thought`. | R26, R32 |
+| Vocabulary — `expand-node.md` | NEW: assert `interpreters/mas-papers/3-search/a-tot/dynamics/expand-node.md` does not contain `Game of 24`, `numbers`, `arithmetic`, regex `[+−×÷]`, `target`, `numbers_remaining`, `parent_thought`. | R26, R32 |
 | Vocabulary — `score.md` | NEW: same vocabulary check; also assert push-args are `partial_state`, `task` (regex match for `{{partial_state}}` and `{{task}}`). | R26, R32 |
 | Goal-push reconstruction | UPDATED: replace assertion that Goal-push uses parent-walk with assertion that Goal-push reads `./scoped/state-${ID}.md` directly. | R22 |
 | Solved reconstruction | UPDATED: replace assertion that Solved uses parent-walk with assertion that Solved reads `./scoped/state-${PASS_ID}.md` directly. | R23 |
@@ -1123,24 +1123,24 @@ Existing tests for the Phase 6 directory, group README, evaluate.md byte-equalit
 
 ### `src/test/phase-operators-identity.test.ts` — EXTENDED (R9)
 
-The existing `EVALUATE_PATHS` constant adds `interpreters/3-search/b-lats/dynamics/evaluate.md`. Two new identity blocks are appended for the LATS-reused dynamics:
+The existing `EVALUATE_PATHS` constant adds `interpreters/mas-papers/3-search/b-lats/dynamics/evaluate.md`. Two new identity blocks are appended for the LATS-reused dynamics:
 
 ```typescript
 const EVALUATE_PATHS = [
-  "interpreters/1-iterative-refinement/b-evaluator-optimizer/dynamics/evaluate.md",
+  "interpreters/mas-papers/1-iterative-refinement/b-evaluator-optimizer/dynamics/evaluate.md",
   // …existing entries…
-  "interpreters/3-search/a-tot/dynamics/evaluate.md",
-  "interpreters/3-search/b-lats/dynamics/evaluate.md",   // NEW
+  "interpreters/mas-papers/3-search/a-tot/dynamics/evaluate.md",
+  "interpreters/mas-papers/3-search/b-lats/dynamics/evaluate.md",   // NEW
 ];
 
 const REFLECT_PATHS = [
-  "interpreters/1-iterative-refinement/c-reflexion/dynamics/reflect.md",
-  "interpreters/3-search/b-lats/dynamics/reflect.md",   // NEW
+  "interpreters/mas-papers/1-iterative-refinement/c-reflexion/dynamics/reflect.md",
+  "interpreters/mas-papers/3-search/b-lats/dynamics/reflect.md",   // NEW
 ];
 
 const EXPAND_NODE_PATHS = [
-  "interpreters/3-search/a-tot/dynamics/expand-node.md",   // canonical (post-refactor)
-  "interpreters/3-search/b-lats/dynamics/expand-node.md",  // copy
+  "interpreters/mas-papers/3-search/a-tot/dynamics/expand-node.md",   // canonical (post-refactor)
+  "interpreters/mas-papers/3-search/b-lats/dynamics/expand-node.md",  // copy
 ];
 
 describe("reflect.md identity across phases", () => { /* same shape as evaluate */ });
@@ -1153,13 +1153,13 @@ R9 is satisfied by all three byte-equality assertion suites passing.
 
 A Run-it section in the LATS leaf README directs the user through:
 
-1. `./new-instance.sh my-lats interpreters/3-search/b-lats`
+1. `./new-instance.sh my-lats interpreters/mas-papers/3-search/b-lats`
 2. `instances/my-lats/run.sh`
 3. After completion, inspect `instances/my-lats/frames/f000-strategy/MEMORY.md` for `## Solution` (or `## No Solution Found` if the search exhausted) and `frames/f000-strategy/scoped/tree.md` for the full search ledger.
 
 Cycle-cost expectation per puzzle: ~10–13 cycles per MCTS iteration (selection 1 + push/absorb pairs at 3 cycles each for expand/rollout/evaluate, plus 3 for reflect on failure), 3–4 LLM calls per iteration, 30 iterations max → ~300–390 cycles, ~90–120 LLM calls worst case. The leaf README records this number and cross-references the MAX_ITERATIONS constant.
 
-A separate side-by-side comparison can be run by creating a Phase 6 instance against the same PROGRAM.md (`./new-instance.sh my-tot interpreters/3-search/a-tot`) and contrasting tree depth, branching factor, and final-cycle counts.
+A separate side-by-side comparison can be run by creating a Phase 6 instance against the same PROGRAM.md (`./new-instance.sh my-tot interpreters/mas-papers/3-search/a-tot`) and contrasting tree depth, branching factor, and final-cycle counts.
 
 ## Open questions
 

@@ -29,7 +29,7 @@ decomposed critique visibly valuable in a live run.
 ## User stories
 
 - **US1**: As a user of the project, I want Chain-of-Verification
-  available as `interpreters/1-iterative-refinement/d-cove/`, so that
+  available as `interpreters/mas-papers/1-iterative-refinement/d-cove/`, so that
   all four Group 1 patterns from `patterns.md` are implemented.
 - **US2**: As an interpreter author, I want the shell to support
   arguments-via-INSTRUCTIONS (`## Push-Args` + `{{var}}`), so that a
@@ -81,7 +81,7 @@ decomposed critique visibly valuable in a live run.
 ### Retrofit of a/b/c dynamics onto the new convention
 
 - **R7**: THE `self-critique.md` dynamic at
-  `interpreters/1-iterative-refinement/a-self-refine/operators/` SHALL
+  `interpreters/mas-papers/1-iterative-refinement/a-self-refine/operators/` SHALL
   be refactored to receive the draft as `{{draft}}` (not by reading
   `## Draft` from MEMORY), and SHALL continue to emit `## Critique`
   and `## Refined` to MEMORY with the same contract the caller reads.
@@ -90,7 +90,7 @@ decomposed critique visibly valuable in a live run.
   to emit `## Verdict` (literal `pass` or `fail`) and `## Feedback` to
   MEMORY with the same contract the caller reads.
 - **R9**: THE `reflect.md` dynamic at
-  `interpreters/1-iterative-refinement/c-reflexion/operators/` SHALL be
+  `interpreters/mas-papers/1-iterative-refinement/c-reflexion/operators/` SHALL be
   refactored to receive `{{attempt}}`, `{{verdict}}`, and `{{feedback}}`
   as arguments, and SHALL continue to emit `## Lesson` to MEMORY with
   the same contract the caller reads.
@@ -119,7 +119,7 @@ decomposed critique visibly valuable in a live run.
 ### New CoVe interpreter: `d-cove`
 
 - **R14**: THE SYSTEM SHALL deliver the Chain-of-Verification
-  interpreter at `interpreters/1-iterative-refinement/d-cove/` with
+  interpreter at `interpreters/mas-papers/1-iterative-refinement/d-cove/` with
   `INSTRUCTIONS.md`, `PROGRAM.md`, a `operators/` directory containing
   `verify.md` and `answer-independently.md`, and a `README.md` in the
   same format as the sibling `a`/`b`/`c` leaf READMEs (literature
@@ -169,7 +169,7 @@ decomposed critique visibly valuable in a live run.
   covering the parse format, the failure mode for unresolved
   placeholders, and the rule that no-args behaviour is unchanged from
   today.
-- **R22**: `interpreters/1-iterative-refinement/README.md` SHALL be
+- **R22**: `interpreters/mas-papers/1-iterative-refinement/README.md` SHALL be
   updated to list `d-cove` as the fourth entry in its comparison
   table, to remove the "coming next" placeholder for Phase 2, and to
   describe the arguments-via-INSTRUCTIONS convention at the group
@@ -177,7 +177,7 @@ decomposed critique visibly valuable in a live run.
   data).
 - **R23**: `docs/agent-workflows/requirements.md` §Phase 2 SHALL be
   updated to reference the final path
-  (`interpreters/1-iterative-refinement/d-cove/`), to replace the
+  (`interpreters/mas-papers/1-iterative-refinement/d-cove/`), to replace the
   "Reuse: none" note with a description of the arguments-via-
   INSTRUCTIONS convention as the cross-cutting deliverable introduced
   by this phase, and to list the a/b/c retrofit as part of the phase.

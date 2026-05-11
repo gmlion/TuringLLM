@@ -10,7 +10,7 @@ The cumulative scope is large — three interlocking refactors plus a new interp
 
 ## User stories
 
-- **US1**: As a developer studying agent patterns, I want a working AFlow-lite meta-framework at `interpreters/7-meta-framework/a-aflow-lite/` that runs MCTS over candidate workflows on a GSM8K subset, so that I can observe the meta-search discovering compositions of operators that improve over single-operator baselines.
+- **US1**: As a developer studying agent patterns, I want a working AFlow-lite meta-framework at `interpreters/mas-papers/7-meta-framework/a-aflow-lite/` that runs MCTS over candidate workflows on a GSM8K subset, so that I can observe the meta-search discovering compositions of operators that improve over single-operator baselines.
 - **US2**: As a maintainer of the operator library, I want a single canonical implementation per pattern — the pushable operator file — and zero duplication, so that bug fixes and improvements made for AFlow-lite automatically benefit standalone interpreters and vice versa.
 - **US3**: As an author of any new pattern in the future, I want a uniform "pushable operator" interface (`{{program}}` push-arg in, `## Return answer:` out) so that adding a new operator to the library is mechanical and the operator works identically standalone or inside a workflow.
 - **US4**: As a reader of the codebase, I want consistent terminology — every pushable INSTRUCTIONS file is an "operator", `dynamics/` is gone — so that "operator" is unified across the meta-framework and the building blocks it composes.
@@ -20,13 +20,13 @@ The cumulative scope is large — three interlocking refactors plus a new interp
 
 ### Top-level Phase 7 deliverable
 
-- **R1**: THE PROJECT SHALL ship a new interpreter at `interpreters/7-meta-framework/a-aflow-lite/` containing at minimum `INSTRUCTIONS.md` (a one-line marker pointing at the canonical operator), `PROGRAM.md` (the GSM8K demo), `README.md`, and `operators/` directory.
-- **R2**: THE PROJECT SHALL ship a group-level `interpreters/7-meta-framework/README.md` framing Group 7 — Meta-frameworks, listing AFlow-lite as the only currently shipped variant, and citing the AFlow paper (Zhang et al., 2024, arXiv:2410.10762).
-- **R3**: THE INTERPRETER LEAF README (`interpreters/7-meta-framework/a-aflow-lite/README.md`) SHALL include: a citation to Zhang et al. arXiv:2410.10762, an architectural overview, the operator library list (with rationale for inclusion of 1b/1c/1d/2a/4a and exclusion of 1a/5a/5b/6a/6b), the MCTS state machine summary, the demo description, run instructions, and a "Notable behaviour" section noting (a) the per-iteration cycle cost, (b) the deliberate omission of MoA pending a future spec, (c) the deliberate omission of meta-reflexion (also pending a future higher-meta-level spec).
+- **R1**: THE PROJECT SHALL ship a new interpreter at `interpreters/mas-papers/7-meta-framework/a-aflow-lite/` containing at minimum `INSTRUCTIONS.md` (a one-line marker pointing at the canonical operator), `PROGRAM.md` (the GSM8K demo), `README.md`, and `operators/` directory.
+- **R2**: THE PROJECT SHALL ship a group-level `interpreters/mas-papers/7-meta-framework/README.md` framing Group 7 — Meta-frameworks, listing AFlow-lite as the only currently shipped variant, and citing the AFlow paper (Zhang et al., 2024, arXiv:2410.10762).
+- **R3**: THE INTERPRETER LEAF README (`interpreters/mas-papers/7-meta-framework/a-aflow-lite/README.md`) SHALL include: a citation to Zhang et al. arXiv:2410.10762, an architectural overview, the operator library list (with rationale for inclusion of 1b/1c/1d/2a/4a and exclusion of 1a/5a/5b/6a/6b), the MCTS state machine summary, the demo description, run instructions, and a "Notable behaviour" section noting (a) the per-iteration cycle cost, (b) the deliberate omission of MoA pending a future spec, (c) the deliberate omission of meta-reflexion (also pending a future higher-meta-level spec).
 
 ### Rename: `dynamics/` → `operators/`
 
-- **R4**: EVERY interpreter directory currently containing a `dynamics/` subdirectory SHALL have that subdirectory renamed to `operators/`. Affected paths include all of `interpreters/1-iterative-refinement/{a-self-refine,b-evaluator-optimizer,c-reflexion,d-cove}/dynamics/`, `interpreters/2-planning-decomposition/{a-plan-execute,b-orchestrator-workers,c-deep-research}/dynamics/`, `interpreters/3-search/{a-tot,b-lats}/dynamics/`, `interpreters/4-peer-collaboration/a-debate/dynamics/`, `interpreters/5-fixed-sop-teams/{a-metagpt,b-chatdev}/dynamics/`.
+- **R4**: EVERY interpreter directory currently containing a `dynamics/` subdirectory SHALL have that subdirectory renamed to `operators/`. Affected paths include all of `interpreters/mas-papers/1-iterative-refinement/{a-self-refine,b-evaluator-optimizer,c-reflexion,d-cove}/dynamics/`, `interpreters/mas-papers/2-planning-decomposition/{a-plan-execute,b-orchestrator-workers,c-deep-research}/dynamics/`, `interpreters/mas-papers/3-search/{a-tot,b-lats}/dynamics/`, `interpreters/mas-papers/4-peer-collaboration/a-debate/dynamics/`, `interpreters/mas-papers/5-fixed-sop-teams/{a-metagpt,b-chatdev}/dynamics/`.
 - **R5**: EVERY occurrence of the literal string `dynamics/` inside an interpreter's `INSTRUCTIONS.md` (used in `## Push <path>` directives) SHALL be replaced with `operators/`.
 - **R6**: EVERY occurrence of `dynamics/` in markdown documentation under `interpreters/`, `docs/agent-workflows/`, and `CLAUDE.md` SHALL be replaced with `operators/`. Exception: spec artefacts under `docs/specs/<earlier-than-this-spec>/` are frozen historical records and SHALL NOT be edited (Phase 6b R28/R85 model carries forward).
 - **R7**: EVERY occurrence of the identifier or comment word "dynamic" used in the "pushable INSTRUCTIONS file" sense SHALL be renamed to "operator" in all source files under `src/` (e.g. function names, comment lines, type aliases). Identifiers that use "dynamic" in unrelated senses (e.g. "dynamically allocated") SHALL be left alone.
@@ -51,18 +51,18 @@ The cumulative scope is large — three interlocking refactors plus a new interp
 - **R20**: EVERY existing interpreter's strategy SHALL be repackaged as a pushable operator file under that interpreter's `operators/` directory. The new file SHALL accept push-args `{{program}}` (the user's task description, equivalent to the previous `cat ../../PROGRAM.md`) and SHALL emit `## Return\nanswer: <text>` at its `state == done` cycle.
 - **R21**: EACH affected interpreter's `INSTRUCTIONS.md` SHALL become a single-line marker file (per R16) pointing to the canonical operator file under `operators/`.
 - **R22**: THE INTERPRETERS SHALL be migrated, one canonical operator per leaf:
-  - `interpreters/1-iterative-refinement/a-self-refine/operators/self-refine.md`
-  - `interpreters/1-iterative-refinement/b-evaluator-optimizer/operators/refine.md`
-  - `interpreters/1-iterative-refinement/c-reflexion/operators/reflexion.md`
-  - `interpreters/1-iterative-refinement/d-cove/operators/cove.md`
-  - `interpreters/2-planning-decomposition/a-plan-execute/operators/plan-execute.md`
-  - `interpreters/2-planning-decomposition/b-orchestrator-workers/operators/plan-execute.md` (byte-equal to a-plan-execute's)
-  - `interpreters/2-planning-decomposition/c-deep-research/operators/plan-execute.md` (byte-equal to a-plan-execute's)
-  - `interpreters/3-search/a-tot/operators/tot.md`
-  - `interpreters/3-search/b-lats/operators/lats.md`
-  - `interpreters/4-peer-collaboration/a-debate/operators/debate.md`
-  - `interpreters/5-fixed-sop-teams/a-metagpt/operators/metagpt.md`
-  - `interpreters/5-fixed-sop-teams/b-chatdev/operators/chatdev.md`
+  - `interpreters/mas-papers/1-iterative-refinement/a-self-refine/operators/self-refine.md`
+  - `interpreters/mas-papers/1-iterative-refinement/b-evaluator-optimizer/operators/refine.md`
+  - `interpreters/mas-papers/1-iterative-refinement/c-reflexion/operators/reflexion.md`
+  - `interpreters/mas-papers/1-iterative-refinement/d-cove/operators/cove.md`
+  - `interpreters/mas-papers/2-planning-decomposition/a-plan-execute/operators/plan-execute.md`
+  - `interpreters/mas-papers/2-planning-decomposition/b-orchestrator-workers/operators/plan-execute.md` (byte-equal to a-plan-execute's)
+  - `interpreters/mas-papers/2-planning-decomposition/c-deep-research/operators/plan-execute.md` (byte-equal to a-plan-execute's)
+  - `interpreters/mas-papers/3-search/a-tot/operators/tot.md`
+  - `interpreters/mas-papers/3-search/b-lats/operators/lats.md`
+  - `interpreters/mas-papers/4-peer-collaboration/a-debate/operators/debate.md`
+  - `interpreters/mas-papers/5-fixed-sop-teams/a-metagpt/operators/metagpt.md`
+  - `interpreters/mas-papers/5-fixed-sop-teams/b-chatdev/operators/chatdev.md`
 - **R23**: EACH migrated operator's body SHALL be the previous strategy's body with: (a) the `Initialize` instruction reading `{{program}}` instead of `cat ../../PROGRAM.md`; (b) a final transformation that, on completion (when the strategy would previously emit its terminal output section like `## Solution`, `## Refined`, `## Result`, or `## Revised`), additionally writes `## Return\nanswer: <final text>` so the shell pop machinery can splice it into the caller (or write it to OUTPUT.md if at root).
 - **R24**: EXISTING terminal-output sections (e.g. `## Solution` for ToT/LATS, `## Refined` for refine, `## Result` for plan-execute, `## Revised` for cove) SHALL be preserved alongside the new `## Return\nanswer:` block. They remain useful for human inspection of MEMORY.md and for compatibility with existing per-leaf README "where to look" sections.
 - **R25**: EACH migrated operator's internal sub-pushes (e.g. the refine operator pushing `evaluate.md`) SHALL continue to use the same operator-relative paths under `operators/` (the pre-rename `dynamics/` paths are simply renamed per R5).
@@ -71,7 +71,7 @@ The cumulative scope is large — three interlocking refactors plus a new interp
 
 ### AFlow-lite meta-framework
 
-- **R28**: THE FILE `interpreters/7-meta-framework/a-aflow-lite/operators/aflow-lite.md` SHALL be the canonical aflow-lite operator (Phase 7's MCTS meta-strategy, repackaged as pushable). It accepts push-arg `{{program}}` (the GSM8K task pack — see R66) and emits `## Return\nanswer: <text>` at done state, where the answer is a brief textual summary of the best workflow discovered + its score.
+- **R28**: THE FILE `interpreters/mas-papers/7-meta-framework/a-aflow-lite/operators/aflow-lite.md` SHALL be the canonical aflow-lite operator (Phase 7's MCTS meta-strategy, repackaged as pushable). It accepts push-arg `{{program}}` (the GSM8K task pack — see R66) and emits `## Return\nanswer: <text>` at done state, where the answer is a brief textual summary of the best workflow discovered + its score.
 - **R29**: THE AFLOW-LITE OPERATOR SHALL run an MCTS controller imported verbatim from Phase 6b's `b-lats/operators/lats.md` machinery: the same UCT formula, the same selection / expansion / simulation / back-prop primitives, the same tree-ledger schema (`./scoped/tree.md` with `id, parent_id, depth, q, n, status` fields).
 - **R30**: THE AFLOW-LITE OPERATOR'S TREE NODES SHALL each store a candidate workflow as a comma-separated list of operator names (e.g. `refine,cove`) in `./scoped/state-<id>.md` (analogous to LATS's per-node state files). The root node n0 stores the empty workflow `` (no operators).
 - **R31**: THE AFLOW-LITE OPERATOR LIBRARY SHALL be hardcoded as exactly five operator names: `refine`, `reflexion`, `cove`, `plan-execute`, `debate`. These names map to the canonical operator files under aflow-lite's `operators/` directory (R34). MoA is intentionally absent (deferred to its own spec); 1a's self-refine is intentionally absent (1b's refine subsumes it).
@@ -87,7 +87,7 @@ The cumulative scope is large — three interlocking refactors plus a new interp
 
 ### `expand-workflow.md` operator (NEW)
 
-- **R41**: THE FILE `interpreters/7-meta-framework/a-aflow-lite/operators/expand-workflow.md` SHALL declare push-args `partial_state` (containing the current workflow recipe and the available library and recent scores, per R32; named `partial_state` for symmetry with Phase 6b's expand-node.md), and `task` (the GSM8K demo PROGRAM content, threaded through for context). It SHALL fail the push with `unresolved-placeholder` if either is missing.
+- **R41**: THE FILE `interpreters/mas-papers/7-meta-framework/a-aflow-lite/operators/expand-workflow.md` SHALL declare push-args `partial_state` (containing the current workflow recipe and the available library and recent scores, per R32; named `partial_state` for symmetry with Phase 6b's expand-node.md), and `task` (the GSM8K demo PROGRAM content, threaded through for context). It SHALL fail the push with `unresolved-placeholder` if either is missing.
 - **R42**: WHEN invoked, `expand-workflow.md` SHALL complete in a single cycle (state `empty` → `done`) and SHALL emit a `## Return` block with exactly one key, `children`, whose value is a literal block scalar of exactly k=5 candidate workflows. Each candidate is a single-line comma-separated list of operator names drawn from the library.
 - **R43**: THE `expand-workflow.md` OPERATOR SHALL be domain-agnostic in prose (no "GSM8K", "math", "Game of 24", etc.); the LLM is given the available library and current workflow as data and asked to propose mutations.
 - **R44**: THE `expand-workflow.md` OPERATOR SHALL NOT push any further operator; the strategy's stack depth via expand-workflow SHALL remain at 1 at all times.
@@ -102,16 +102,16 @@ The cumulative scope is large — three interlocking refactors plus a new interp
 
 ### GSM8K demo
 
-- **R48**: THE PROJECT SHALL ship `interpreters/7-meta-framework/a-aflow-lite/workspace/gsm8k.jsonl` containing exactly 20 GSM8K items. Each line is a JSON object with at minimum the keys `question` (the math word problem text) and `answer` (the integer expected answer). Items SHALL be drawn from the GSM8K test split, citing the dataset source in the leaf README.
-- **R49**: THE INTERPRETER SHALL ship a demo `PROGRAM.md` at `interpreters/7-meta-framework/a-aflow-lite/PROGRAM.md` containing short prose describing the task ("Solve the GSM8K math word problems found in `workspace/gsm8k.jsonl`. Each item is a JSON object with a `question` and an integer `answer`. Your goal is to discover, via meta-search over operator compositions, a workflow that maximises the fraction of items answered correctly.") and noting where the items come from.
+- **R48**: THE PROJECT SHALL ship `interpreters/mas-papers/7-meta-framework/a-aflow-lite/workspace/gsm8k.jsonl` containing exactly 20 GSM8K items. Each line is a JSON object with at minimum the keys `question` (the math word problem text) and `answer` (the integer expected answer). Items SHALL be drawn from the GSM8K test split, citing the dataset source in the leaf README.
+- **R49**: THE INTERPRETER SHALL ship a demo `PROGRAM.md` at `interpreters/mas-papers/7-meta-framework/a-aflow-lite/PROGRAM.md` containing short prose describing the task ("Solve the GSM8K math word problems found in `workspace/gsm8k.jsonl`. Each item is a JSON object with a `question` and an integer `answer`. Your goal is to discover, via meta-search over operator compositions, a workflow that maximises the fraction of items answered correctly.") and noting where the items come from.
 - **R50**: WHEN the aflow-lite operator's Initialize parses PROGRAM.md, it SHALL load the fixture file from `../../workspace/gsm8k.jsonl`, sample 3 items deterministically (seeded by Initialize so each run on the same fixture picks the same 3), and persist their `question` + `answer` pairs to `./scoped/benchmark_items.md`.
-- **R51**: `new-instance.sh` SHALL copy the `workspace/` directory from `interpreters/7-meta-framework/a-aflow-lite/` to the instance's `workspace/` so that the GSM8K fixture lives alongside the running instance (the existing `new-instance.sh` already supports this — see `interpreters/2-planning-decomposition/b-orchestrator-workers/workspace/`; behavior preserved post-rename).
+- **R51**: `new-instance.sh` SHALL copy the `workspace/` directory from `interpreters/mas-papers/7-meta-framework/a-aflow-lite/` to the instance's `workspace/` so that the GSM8K fixture lives alongside the running instance (the existing `new-instance.sh` already supports this — see `interpreters/mas-papers/2-planning-decomposition/b-orchestrator-workers/workspace/`; behavior preserved post-rename).
 
 ### Tests
 
 - **R52**: THE PROJECT SHALL ship `src/test/phase-7-aflow-lite.test.ts` covering at minimum:
-  - (1) Directory layout: `interpreters/7-meta-framework/a-aflow-lite/` exists with `INSTRUCTIONS.md`, `PROGRAM.md`, `README.md`, `operators/`, and `workspace/gsm8k.jsonl`.
-  - (2) Group README at `interpreters/7-meta-framework/README.md` exists and cites Zhang et al. arXiv:2410.10762.
+  - (1) Directory layout: `interpreters/mas-papers/7-meta-framework/a-aflow-lite/` exists with `INSTRUCTIONS.md`, `PROGRAM.md`, `README.md`, `operators/`, and `workspace/gsm8k.jsonl`.
+  - (2) Group README at `interpreters/mas-papers/7-meta-framework/README.md` exists and cites Zhang et al. arXiv:2410.10762.
   - (3) Operator library: aflow-lite's `operators/` contains exactly the operators required by R34 (no `score.md`, no MoA-related operators in v1).
   - (4) Byte-equality of all reused operators per R26 (refine, reflexion, cove, plan-execute, debate, plus their sub-operators).
   - (5) `expand-workflow.md` contract: push-args, single-cycle, k=5 children, no further pushes, domain-agnostic vocabulary check.

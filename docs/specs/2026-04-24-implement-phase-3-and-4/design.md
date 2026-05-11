@@ -115,7 +115,7 @@ Three parallel work streams, each with a self-contained dependency tree:
 
 ```
 ┌── Stream A (Phase 3) ──────────────────────────────────────────────┐
-│ interpreters/2-planning-decomposition/                             │
+│ interpreters/mas-papers/2-planning-decomposition/                             │
 │ ├── README.md                     ← group README (R46, R65)        │
 │ ├── a-plan-execute/               ← leaf d1                        │
 │ │   ├── INSTRUCTIONS.md  ┐                                         │
@@ -134,7 +134,7 @@ Three parallel work streams, each with a self-contained dependency tree:
 └────────────────────────────────────────────────────────────────────┘
 
 ┌── Stream B (Phase 4) ──────────────────────────────────────────────┐
-│ interpreters/5-fixed-sop-teams/                                    │
+│ interpreters/mas-papers/5-fixed-sop-teams/                                    │
 │ ├── README.md                     ← group README (R48)             │
 │ ├── a-metagpt/                                                     │
 │ │   ├── INSTRUCTIONS.md           ← strategy: PM→Arch→Eng→QA       │
@@ -806,14 +806,14 @@ additional test file added as needed.
   Orchestrator–Workers, Deep Research, XAgent) with one-line source
   citations, flags which framing this specific leaf primarily
   demonstrates, and links to siblings + group README.                                — R45, R65
-- **Phase-3 group README** (`interpreters/2-planning-decomposition/README.md`).
+- **Phase-3 group README** (`interpreters/mas-papers/2-planning-decomposition/README.md`).
   Explicit list of all four subsumed patterns with full citations, the
   collapse rationale (why sequential execution collapses them), a
   comparison table of the three demos, a note about the byte-equality
   identity test, and a pointer to `patterns.md` Group 2.                             — R46, R65
 - **Phase-4 leaf READMEs** per Phase-1 convention, no R65 additions
   (not a collapse).                                                                  — R47
-- **Phase-4 group README** (`interpreters/5-fixed-sop-teams/README.md`).
+- **Phase-4 group README** (`interpreters/mas-papers/5-fixed-sop-teams/README.md`).
   Frames document-handoff vs phase-dialogue as two framings with a
   shared demo PROGRAM.md; comparison table.                                          — R48
 - **`docs/agent-workflows/phase-3-4-notes.md`**. Post-implementation

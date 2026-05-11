@@ -7,7 +7,7 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const REPO = resolve(__dirname, "../..");
-const INTERP = resolve(REPO, "interpreters/4-peer-collaboration/a-debate");
+const INTERP = resolve(REPO, "interpreters/mas-papers/4-peer-collaboration/a-debate");
 
 function escapeRegExp(s: string) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");

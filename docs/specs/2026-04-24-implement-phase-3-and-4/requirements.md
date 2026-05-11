@@ -76,7 +76,7 @@ struck-through and kept for traceability.
 ### Phase 3 directory layout
 
 - **R1**: THE SYSTEM SHALL introduce three leaf interpreter directories
-  under `interpreters/2-planning-decomposition/`: `a-plan-execute/`,
+  under `interpreters/mas-papers/2-planning-decomposition/`: `a-plan-execute/`,
   `b-orchestrator-workers/`, and `c-deep-research/`.
 - **R2**: EACH leaf SHALL contain, at minimum, `INSTRUCTIONS.md`,
   `PROGRAM.md`, a `dynamics/` directory, and `README.md`.
@@ -143,7 +143,7 @@ struck-through and kept for traceability.
   the demo's structural validation (R19) does not depend on web
   availability.
 - **R16**: WHEN each Phase-3 demo is run via
-  `./new-instance.sh <name> interpreters/2-planning-decomposition/<leaf>`
+  `./new-instance.sh <name> interpreters/mas-papers/2-planning-decomposition/<leaf>`
   followed by `instances/<name>/run.sh` under the default provider
   (`TURING_PROVIDER=claude-code`, default `CC_MODEL`), THE SYSTEM SHALL
   halt at MEMORY `## State\ndone` without manual intervention.
@@ -162,7 +162,7 @@ struck-through and kept for traceability.
 ### Phase 4 directory layout
 
 - **R20**: THE SYSTEM SHALL introduce two leaf interpreter directories
-  under `interpreters/5-fixed-sop-teams/`: `a-metagpt/` and `b-chatdev/`.
+  under `interpreters/mas-papers/5-fixed-sop-teams/`: `a-metagpt/` and `b-chatdev/`.
 - **R21**: EACH leaf SHALL contain `INSTRUCTIONS.md`, `PROGRAM.md`,
   a `dynamics/` directory, and `README.md`. `b-chatdev/` SHALL
   additionally contain a `roles/` directory with one `.md` file per
@@ -220,7 +220,7 @@ struck-through and kept for traceability.
 ### Phase 4 demos (live runs)
 
 - **R32**: WHEN either Phase-4 demo is run via
-  `./new-instance.sh <name> interpreters/5-fixed-sop-teams/<leaf>`
+  `./new-instance.sh <name> interpreters/mas-papers/5-fixed-sop-teams/<leaf>`
   followed by `instances/<name>/run.sh` under the default provider,
   THE SYSTEM SHALL halt at `## State\ndone` without manual
   intervention.
@@ -252,9 +252,9 @@ struck-through and kept for traceability.
   interpreter.
 - **R39**: THE SYSTEM SHALL update `docs/agent-workflows/requirements.md`
   §Phase 3 and §Phase 4 to reference the final paths of the five new
-  interpreters (`interpreters/2-planning-decomposition/a-plan-execute/`,
+  interpreters (`interpreters/mas-papers/2-planning-decomposition/a-plan-execute/`,
   `.../b-orchestrator-workers/`, `.../c-deep-research/`,
-  `interpreters/5-fixed-sop-teams/a-metagpt/`, `.../b-chatdev/`) and to
+  `interpreters/mas-papers/5-fixed-sop-teams/a-metagpt/`, `.../b-chatdev/`) and to
   state the phases as complete.
 - **R40**: THE shell-level features that `game-team` exercised SHALL
   continue to be exercised by at least one of the new interpreters,
@@ -316,7 +316,7 @@ struck-through and kept for traceability.
       Research, XAgent)");
   (d) link to the sibling leaves and to the group-level README.
 - **R46**: THE SYSTEM SHALL add
-  `interpreters/2-planning-decomposition/README.md` framing the three
+  `interpreters/mas-papers/2-planning-decomposition/README.md` framing the three
   leaves as the same strategy with three demos. Per R65, the group
   README SHALL explicitly name and cite every published pattern the
   strategy subsumes: **Plan-and-Execute** (Wang et al. 2023,
@@ -334,7 +334,7 @@ struck-through and kept for traceability.
 - **R47**: EACH Phase-4 leaf SHALL ship a `README.md` matching the
   Phase-1 leaf convention.
 - **R48**: THE SYSTEM SHALL add
-  `interpreters/5-fixed-sop-teams/README.md` framing MetaGPT (document
+  `interpreters/mas-papers/5-fixed-sop-teams/README.md` framing MetaGPT (document
   hand-off) and ChatDev (phase dialogue) as two framings of fixed-SOP
   teams sharing a demo PROGRAM.md, with a comparison table.
 - **R49**: THE SYSTEM SHALL add `docs/agent-workflows/phase-3-4-notes.md`
@@ -356,7 +356,7 @@ struck-through and kept for traceability.
   demonstrates Orchestrator–Workers, Deep Research, and XAgent
   without having to read `patterns.md` first. Applies concretely in
   this spec to the three Phase-3 leaf READMEs (R45) and
-  `interpreters/2-planning-decomposition/README.md` (R46); Phase 4's
+  `interpreters/mas-papers/2-planning-decomposition/README.md` (R46); Phase 4's
   two leaves (`a-metagpt`, `b-chatdev`) are **not** a collapse —
   they are distinct patterns sharing a demo — so R65 does not
   additionally constrain their READMEs beyond the Phase-1

@@ -5,6 +5,7 @@ import { join, resolve } from "path";
 import { getSystemPrompt, getUserPrompt } from "../prompt.js";
 import { log, logRaw } from "../logger.js";
 import { QuotaExceededError } from "../errors.js";
+import { setInterrupted } from "../interrupt.js";
 import { readFile, checkCycleCompleteness, MAX_RETRIES, type CycleResult, type ProviderEvent } from "./shared.js";
 
 const QUOTA_PATTERNS = [
@@ -131,7 +132,11 @@ export async function runCycle(
         if (err instanceof QuotaExceededError) throw err;
         const e = err as { stdout?: string; stderr?: string; status?: number; signal?: string; code?: string };
         if (isCtrlCExit(e)) {
-          process.exit(0);
+          // Mark interrupted so the cycle loop in main.ts exits at the next
+          // boundary. Don't call process.exit() here — we want main()'s catch
+          // to run normal shutdown and the loop guard to print "Halted by user".
+          setInterrupted();
+          throw err;
         }
         // ENAMETOOLONG / E2BIG would mean we still exceeded the OS limit even
         // with stdin+file (e.g. a giant single allowedTools entry). Surface it

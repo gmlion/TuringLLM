@@ -2,7 +2,7 @@
 
 ## Overview
 
-A new interpreter at `interpreters/4-peer-collaboration/a-debate/` implements Multi-Agent Debate (Du et al., 2023). The strategy is a round coordinator over R rounds × N personas; each opinion is dispatched via a three-cycle **stage / push / absorb** pattern (chatdev-style) plus a dedicated **round-transition** cycle at every round boundary. Strict round isolation is enforced not by parallelism (the shell is sequential) but by the `transcript` push-arg the strategy constructs: it concatenates only completed prior-round snapshot files, deliberately excluding the in-progress current round. After R rounds, one inline concluding cycle synthesises the full transcript into `## Final Position`. One new dynamic (`opine.md`) is introduced; no existing dynamic is reused.
+A new interpreter at `interpreters/mas-papers/4-peer-collaboration/a-debate/` implements Multi-Agent Debate (Du et al., 2023). The strategy is a round coordinator over R rounds × N personas; each opinion is dispatched via a three-cycle **stage / push / absorb** pattern (chatdev-style) plus a dedicated **round-transition** cycle at every round boundary. Strict round isolation is enforced not by parallelism (the shell is sequential) but by the `transcript` push-arg the strategy constructs: it concatenates only completed prior-round snapshot files, deliberately excluding the in-progress current round. After R rounds, one inline concluding cycle synthesises the full transcript into `## Final Position`. One new dynamic (`opine.md`) is introduced; no existing dynamic is reused.
 
 Core trade-off accepted in Phase 1: by-value push-args (not by-path) for `opine.md` simplify the contract and match other Group-1/Group-2 dynamics; transcript size at R=3, N=3 is small enough that this is comfortable.
 
@@ -36,7 +36,7 @@ Core trade-off accepted in Phase 1: by-value push-args (not by-path) for `opine.
 ### File layout
 
 ```
-interpreters/4-peer-collaboration/a-debate/
+interpreters/mas-papers/4-peer-collaboration/a-debate/
 ├── INSTRUCTIONS.md         # Strategy: round coordinator
 ├── PROGRAM.md              # Demo: Postgres-vs-SQLite + 3 personas
 ├── README.md               # Mechanism summary, refs Du et al. 2023
@@ -314,7 +314,7 @@ If the test harness in `src/test/` does not already support a mocked provider, t
 
 ### Demo run (manual, observation-driven)
 
-The interpreter is shipped with a runnable demo. Validation is by running `instances/<name>/run.sh` after `./new-instance.sh debate-demo interpreters/4-peer-collaboration/a-debate` and inspecting outputs.
+The interpreter is shipped with a runnable demo. Validation is by running `instances/<name>/run.sh` after `./new-instance.sh debate-demo interpreters/mas-papers/4-peer-collaboration/a-debate` and inspecting outputs.
 
 - **Demo: Postgres-vs-SQLite produces 9 labelled opinions** — after run completes, `./scoped/transcript.md` should contain exactly nine `### Round R — Name` headers with three distinct persona names appearing three times each. *Satisfies R18(a).*
 - **Demo: Final Position present** — final MEMORY snapshot in `history/<last-N>-<hash>/MEMORY.md` should contain a `## Final Position` section in neutral voice. *Satisfies R12, R13, R18(b).*
@@ -323,7 +323,7 @@ The interpreter is shipped with a runnable demo. Validation is by running `insta
 ### Test files Phase 3 will produce or modify
 
 - New: `src/test/debate-interpreter.test.ts` (unit-shaped tests above)
-- New: `interpreters/4-peer-collaboration/a-debate/INSTRUCTIONS.md`, `operators/opine.md`, `PROGRAM.md`, `README.md`
+- New: `interpreters/mas-papers/4-peer-collaboration/a-debate/INSTRUCTIONS.md`, `operators/opine.md`, `PROGRAM.md`, `README.md`
 - No changes to: `src/main.ts`, `src/call-stack.ts`, `src/memory.ts`, or any provider — Phase 5 needs no shell-level changes.
 
 ## Open questions

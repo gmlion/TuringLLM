@@ -2,14 +2,14 @@
 
 ## Overview
 
-Phase 7 ships a Language-Agent meta-framework (AFlow-lite) at `interpreters/7-meta-framework/a-aflow-lite/` that runs MCTS over candidate workflows composed from a five-operator library (refine, reflexion, cove, plan-execute, debate). The meta-search reuses Phase 6b's MCTS controller verbatim — selection (UCT), expansion (LLM-driven), simulation (run the candidate workflow on benchmark items), back-propagation (mean-fraction-passing reward), no meta-reflexion. Three structural changes ship alongside the new interpreter: a project-wide `dynamics/` → `operators/` rename; a shell change that lets a configured "root operator" be loaded with `PROGRAM.md` content as a `{{program}}` push-arg, with the operator's `## Return` written to `OUTPUT.md` on halt; and the migration of every existing interpreter's strategy out of `INSTRUCTIONS.md` and into `operators/<name>.md` as a single canonical pushable file (no duplication — standalone interpreters and AFlow-lite consume the same operator). The core trade-off is **architectural unification over scope minimisation**: bundling rename + shell change + 11-interpreter migration + meta-framework into one spec is a beast (≈70 R#s, ≈40 file moves, ≈300+ commits estimated), but it produces a coherent end-state where "operator" is the universal pushable unit and every pattern in the catalogue is composable into Phase 7 via the same push/pop interface.
+Phase 7 ships a Language-Agent meta-framework (AFlow-lite) at `interpreters/mas-papers/7-meta-framework/a-aflow-lite/` that runs MCTS over candidate workflows composed from a five-operator library (refine, reflexion, cove, plan-execute, debate). The meta-search reuses Phase 6b's MCTS controller verbatim — selection (UCT), expansion (LLM-driven), simulation (run the candidate workflow on benchmark items), back-propagation (mean-fraction-passing reward), no meta-reflexion. Three structural changes ship alongside the new interpreter: a project-wide `dynamics/` → `operators/` rename; a shell change that lets a configured "root operator" be loaded with `PROGRAM.md` content as a `{{program}}` push-arg, with the operator's `## Return` written to `OUTPUT.md` on halt; and the migration of every existing interpreter's strategy out of `INSTRUCTIONS.md` and into `operators/<name>.md` as a single canonical pushable file (no duplication — standalone interpreters and AFlow-lite consume the same operator). The core trade-off is **architectural unification over scope minimisation**: bundling rename + shell change + 11-interpreter migration + meta-framework into one spec is a beast (≈70 R#s, ≈40 file moves, ≈300+ commits estimated), but it produces a coherent end-state where "operator" is the universal pushable unit and every pattern in the catalogue is composable into Phase 7 via the same push/pop interface.
 
 ## Requirement coverage
 
 | R# | Summary | Addressed in |
 | -- | ------- | ------------ |
-| R1 | Interpreter dir at `interpreters/7-meta-framework/a-aflow-lite/` | §Architecture (Component layout) |
-| R2 | Group README `interpreters/7-meta-framework/README.md` | §Architecture (Component layout, Group README) |
+| R1 | Interpreter dir at `interpreters/mas-papers/7-meta-framework/a-aflow-lite/` | §Architecture (Component layout) |
+| R2 | Group README `interpreters/mas-papers/7-meta-framework/README.md` | §Architecture (Component layout, Group README) |
 | R3 | Leaf README content | §Architecture (Component layout, Leaf README) |
 | R4 | Rename `dynamics/` → `operators/` in every interpreter | §Architecture (Rename), §Test strategy |
 | R5 | Update `## Push` paths in every INSTRUCTIONS.md / canonical operator | §Architecture (Rename) |
@@ -86,7 +86,7 @@ Phase 7 ships a Language-Agent meta-framework (AFlow-lite) at `interpreters/7-me
 ### Component layout
 
 ```
-interpreters/7-meta-framework/
+interpreters/mas-papers/7-meta-framework/
 ├── README.md                          # group-level (R2)
 └── a-aflow-lite/
     ├── INSTRUCTIONS.md                # marker: "operators/aflow-lite.md"           (R16, R21)
@@ -692,8 +692,8 @@ Static-shape tests against the markdown artefacts (no live LLM execution; live r
 
 | Test group | Asserts | R# |
 |------------|---------|----|
-| Directory layout | `interpreters/7-meta-framework/a-aflow-lite/` exists with `INSTRUCTIONS.md`, `PROGRAM.md`, `README.md`, `operators/`, `workspace/gsm8k.jsonl` | R1, R34, R48 |
-| Group README | `interpreters/7-meta-framework/README.md` exists, cites Zhang et al. arXiv:2410.10762 | R2 |
+| Directory layout | `interpreters/mas-papers/7-meta-framework/a-aflow-lite/` exists with `INSTRUCTIONS.md`, `PROGRAM.md`, `README.md`, `operators/`, `workspace/gsm8k.jsonl` | R1, R34, R48 |
+| Group README | `interpreters/mas-papers/7-meta-framework/README.md` exists, cites Zhang et al. arXiv:2410.10762 | R2 |
 | Leaf README | cites Zhang et al., describes operator library + exclusions, MCTS state machine, demo, run instructions, Notable behaviour notes (no MoA, no meta-reflexion in v1) | R3 |
 | Marker file | `INSTRUCTIONS.md` is a single line containing `operators/aflow-lite.md` | R16, R21 |
 | Operator library file presence | `operators/` contains exactly the 14 expected files (aflow-lite, expand-workflow, refine, reflexion, cove, plan-execute, debate, evaluate, reflect, verify, answer-independently, tackle, plan, opine); does NOT contain `self-refine.md`, `tot.md`, `lats.md`, `metagpt.md`, `chatdev.md`, `score.md`, `expand-node.md`, `rollout.md` | R31, R34, R61–R64 |
@@ -732,51 +732,51 @@ The existing `src/test/phase-operators-identity.test.ts` is renamed via `git mv`
 
 ```typescript
 const EVALUATE_PATHS = [
-  "interpreters/1-iterative-refinement/b-evaluator-optimizer/operators/evaluate.md",
-  "interpreters/1-iterative-refinement/c-reflexion/operators/evaluate.md",
-  "interpreters/3-search/a-tot/operators/evaluate.md",
-  "interpreters/3-search/b-lats/operators/evaluate.md",
-  "interpreters/5-fixed-sop-teams/a-metagpt/operators/evaluate.md",
-  "interpreters/5-fixed-sop-teams/b-chatdev/operators/evaluate.md",
-  "interpreters/7-meta-framework/a-aflow-lite/operators/evaluate.md",
+  "interpreters/mas-papers/1-iterative-refinement/b-evaluator-optimizer/operators/evaluate.md",
+  "interpreters/mas-papers/1-iterative-refinement/c-reflexion/operators/evaluate.md",
+  "interpreters/mas-papers/3-search/a-tot/operators/evaluate.md",
+  "interpreters/mas-papers/3-search/b-lats/operators/evaluate.md",
+  "interpreters/mas-papers/5-fixed-sop-teams/a-metagpt/operators/evaluate.md",
+  "interpreters/mas-papers/5-fixed-sop-teams/b-chatdev/operators/evaluate.md",
+  "interpreters/mas-papers/7-meta-framework/a-aflow-lite/operators/evaluate.md",
 ];
 
 const REFLECT_PATHS = [
-  "interpreters/1-iterative-refinement/c-reflexion/operators/reflect.md",
-  "interpreters/3-search/b-lats/operators/reflect.md",
-  "interpreters/7-meta-framework/a-aflow-lite/operators/reflect.md",
+  "interpreters/mas-papers/1-iterative-refinement/c-reflexion/operators/reflect.md",
+  "interpreters/mas-papers/3-search/b-lats/operators/reflect.md",
+  "interpreters/mas-papers/7-meta-framework/a-aflow-lite/operators/reflect.md",
 ];
 
 const EXPAND_NODE_PATHS = [
-  "interpreters/3-search/a-tot/operators/expand-node.md",
-  "interpreters/3-search/b-lats/operators/expand-node.md",
+  "interpreters/mas-papers/3-search/a-tot/operators/expand-node.md",
+  "interpreters/mas-papers/3-search/b-lats/operators/expand-node.md",
 ];
 
 const PLAN_EXECUTE_PATHS = [
-  "interpreters/2-planning-decomposition/a-plan-execute/operators/plan-execute.md",
-  "interpreters/2-planning-decomposition/b-orchestrator-workers/operators/plan-execute.md",
-  "interpreters/2-planning-decomposition/c-deep-research/operators/plan-execute.md",
-  "interpreters/7-meta-framework/a-aflow-lite/operators/plan-execute.md",
+  "interpreters/mas-papers/2-planning-decomposition/a-plan-execute/operators/plan-execute.md",
+  "interpreters/mas-papers/2-planning-decomposition/b-orchestrator-workers/operators/plan-execute.md",
+  "interpreters/mas-papers/2-planning-decomposition/c-deep-research/operators/plan-execute.md",
+  "interpreters/mas-papers/7-meta-framework/a-aflow-lite/operators/plan-execute.md",
 ];
 
 const REFINE_PATHS = [
-  "interpreters/1-iterative-refinement/b-evaluator-optimizer/operators/refine.md",
-  "interpreters/7-meta-framework/a-aflow-lite/operators/refine.md",
+  "interpreters/mas-papers/1-iterative-refinement/b-evaluator-optimizer/operators/refine.md",
+  "interpreters/mas-papers/7-meta-framework/a-aflow-lite/operators/refine.md",
 ];
 
 const REFLEXION_PATHS = [
-  "interpreters/1-iterative-refinement/c-reflexion/operators/reflexion.md",
-  "interpreters/7-meta-framework/a-aflow-lite/operators/reflexion.md",
+  "interpreters/mas-papers/1-iterative-refinement/c-reflexion/operators/reflexion.md",
+  "interpreters/mas-papers/7-meta-framework/a-aflow-lite/operators/reflexion.md",
 ];
 
 const COVE_PATHS = [
-  "interpreters/1-iterative-refinement/d-cove/operators/cove.md",
-  "interpreters/7-meta-framework/a-aflow-lite/operators/cove.md",
+  "interpreters/mas-papers/1-iterative-refinement/d-cove/operators/cove.md",
+  "interpreters/mas-papers/7-meta-framework/a-aflow-lite/operators/cove.md",
 ];
 
 const DEBATE_PATHS = [
-  "interpreters/4-peer-collaboration/a-debate/operators/debate.md",
-  "interpreters/7-meta-framework/a-aflow-lite/operators/debate.md",
+  "interpreters/mas-papers/4-peer-collaboration/a-debate/operators/debate.md",
+  "interpreters/mas-papers/7-meta-framework/a-aflow-lite/operators/debate.md",
 ];
 
 // Plus tackle.md, plan.md, verify.md, answer-independently.md, opine.md across their consumers.
@@ -822,7 +822,7 @@ For each migrated standalone interpreter, a smoke-check description in the leaf 
 The leaf README's Run-it section directs the user through:
 
 ```bash
-./new-instance.sh my-aflow interpreters/7-meta-framework/a-aflow-lite
+./new-instance.sh my-aflow interpreters/mas-papers/7-meta-framework/a-aflow-lite
 instances/my-aflow/run.sh
 ```
 

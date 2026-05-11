@@ -1156,7 +1156,7 @@
 - [ ] **Step 2: Verify before-state**
 
     1. Open `?instance=instances/demo4b`. Toggle Auto-refresh on. The graph does NOT re-render at the interval (loadInstance is called but it's the cycle-view loader).
-    2. Create an empty instance: `./new-instance.sh empty-test interpreters/2-planning-decomposition/a-plan-execute`. Open `?instance=instances/empty-test`. Empty `#cyGraph` shows but no placeholder text.
+    2. Create an empty instance: `./new-instance.sh empty-test interpreters/mas-papers/2-planning-decomposition/a-plan-execute`. Open `?instance=instances/empty-test`. Empty `#cyGraph` shows but no placeholder text.
     3. Click the Mode button — nothing happens (function not defined yet).
 
 - [ ] **Step 3: Implement**

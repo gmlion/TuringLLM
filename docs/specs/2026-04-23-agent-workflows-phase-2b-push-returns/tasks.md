@@ -1266,7 +1266,7 @@ the chroot pivot); no tasks address them — this is deliberate.
 
     Run:
     ```bash
-    ./new-instance.sh _smoke-2b interpreters/1-iterative-refinement/d-cove
+    ./new-instance.sh _smoke-2b interpreters/mas-papers/1-iterative-refinement/d-cove
     ls -la instances/_smoke-2b/
     ls -la instances/_smoke-2b/frames/f000-strategy/
     cat instances/_smoke-2b/.call-stack.json
@@ -1552,11 +1552,11 @@ the chroot pivot); no tasks address them — this is deliberate.
 ## Task 13: Migrate a-self-refine (satisfies: R21, R32)
 
 **Files:**
-- Modify: `interpreters/1-iterative-refinement/a-self-refine/INSTRUCTIONS.md`
-- Modify: `interpreters/1-iterative-refinement/a-self-refine/dynamics/self-critique.md`
+- Modify: `interpreters/mas-papers/1-iterative-refinement/a-self-refine/INSTRUCTIONS.md`
+- Modify: `interpreters/mas-papers/1-iterative-refinement/a-self-refine/dynamics/self-critique.md`
 - Modify: `src/test/phase-1-self-refine.test.ts`
 
-- [ ] **Step 1: Rewrite `interpreters/1-iterative-refinement/a-self-refine/INSTRUCTIONS.md`**
+- [ ] **Step 1: Rewrite `interpreters/mas-papers/1-iterative-refinement/a-self-refine/INSTRUCTIONS.md`**
 
     Replace the strategy to use `./scoped/draft.md` and splice-based returns:
 
@@ -1594,7 +1594,7 @@ the chroot pivot); no tasks address them — this is deliberate.
     (none — this interpreter needs none.)
     ```
 
-- [ ] **Step 2: Rewrite `interpreters/1-iterative-refinement/a-self-refine/dynamics/self-critique.md`**
+- [ ] **Step 2: Rewrite `interpreters/mas-papers/1-iterative-refinement/a-self-refine/dynamics/self-critique.md`**
 
     ```markdown
     # Dynamic: Self-Critique
@@ -1650,8 +1650,8 @@ the chroot pivot); no tasks address them — this is deliberate.
 - [ ] **Step 6: Commit**
 
     ```bash
-    git add interpreters/1-iterative-refinement/a-self-refine/INSTRUCTIONS.md \
-            interpreters/1-iterative-refinement/a-self-refine/dynamics/self-critique.md \
+    git add interpreters/mas-papers/1-iterative-refinement/a-self-refine/INSTRUCTIONS.md \
+            interpreters/mas-papers/1-iterative-refinement/a-self-refine/dynamics/self-critique.md \
             src/test/phase-1-self-refine.test.ts
     git commit -m "refactor(a-self-refine): migrate to scoped draft + ## Return splicing (satisfies: R21, R32)"
     ```
@@ -1661,8 +1661,8 @@ the chroot pivot); no tasks address them — this is deliberate.
 ## Task 14: Migrate b-evaluator-optimizer (satisfies: R22, R25, R32)
 
 **Files:**
-- Modify: `interpreters/1-iterative-refinement/b-evaluator-optimizer/INSTRUCTIONS.md`
-- Modify: `interpreters/1-iterative-refinement/b-evaluator-optimizer/dynamics/evaluate.md`
+- Modify: `interpreters/mas-papers/1-iterative-refinement/b-evaluator-optimizer/INSTRUCTIONS.md`
+- Modify: `interpreters/mas-papers/1-iterative-refinement/b-evaluator-optimizer/dynamics/evaluate.md`
 - Modify: `src/test/phase-1-evaluator-optimizer.test.ts`
 
 - [ ] **Step 1: Rewrite `INSTRUCTIONS.md`** — strategy uses `./scoped/attempt.md` + `./scoped/criterion.md`. Initialize reads `../../PROGRAM.md`, copies its `## Acceptance Criterion` section to `./scoped/criterion.md`, produces first attempt, writes to `./scoped/attempt.md`. Request-evaluation pushes `dynamics/evaluate.md` with `attempt` + `criterion` as push-args. Handle-verdict reads `## Verdict` + `## Feedback` (spliced by shell), rewrites `./scoped/attempt.md` wholesale on fail.
@@ -1684,8 +1684,8 @@ the chroot pivot); no tasks address them — this is deliberate.
 - [ ] **Step 6: Commit**
 
     ```bash
-    git add interpreters/1-iterative-refinement/b-evaluator-optimizer/INSTRUCTIONS.md \
-            interpreters/1-iterative-refinement/b-evaluator-optimizer/dynamics/evaluate.md \
+    git add interpreters/mas-papers/1-iterative-refinement/b-evaluator-optimizer/INSTRUCTIONS.md \
+            interpreters/mas-papers/1-iterative-refinement/b-evaluator-optimizer/dynamics/evaluate.md \
             src/test/phase-1-evaluator-optimizer.test.ts
     git commit -m "refactor(b-evaluator-optimizer): migrate to scoped files + ## Return (satisfies: R22, R32)
 
@@ -1697,17 +1697,17 @@ the chroot pivot); no tasks address them — this is deliberate.
 ## Task 15: Migrate c-reflexion with lessons.md surgical append (satisfies: R23, R25, R26, R32)
 
 **Files:**
-- Modify: `interpreters/1-iterative-refinement/c-reflexion/INSTRUCTIONS.md`
-- Modify: `interpreters/1-iterative-refinement/c-reflexion/dynamics/evaluate.md` (cp from b's)
-- Modify: `interpreters/1-iterative-refinement/c-reflexion/dynamics/reflect.md`
+- Modify: `interpreters/mas-papers/1-iterative-refinement/c-reflexion/INSTRUCTIONS.md`
+- Modify: `interpreters/mas-papers/1-iterative-refinement/c-reflexion/dynamics/evaluate.md` (cp from b's)
+- Modify: `interpreters/mas-papers/1-iterative-refinement/c-reflexion/dynamics/reflect.md`
 - Modify: `src/test/phase-1-reflexion.test.ts`
 
 - [ ] **Step 1: Sync c's `evaluate.md` byte-equal with b's**
 
     Run:
     ```bash
-    cp interpreters/1-iterative-refinement/b-evaluator-optimizer/dynamics/evaluate.md \
-       interpreters/1-iterative-refinement/c-reflexion/dynamics/evaluate.md
+    cp interpreters/mas-papers/1-iterative-refinement/b-evaluator-optimizer/dynamics/evaluate.md \
+       interpreters/mas-papers/1-iterative-refinement/c-reflexion/dynamics/evaluate.md
     ```
 
 - [ ] **Step 2: Rewrite `INSTRUCTIONS.md`** — strategy uses `./scoped/attempt.md`, `./scoped/criterion.md`, `./scoped/lessons.md`. Initialize creates empty `lessons.md`. Attempt reads `criterion.md` + `lessons.md`, writes new `attempt.md`. Accumulate-lesson appends `- L<N>: <text>` to `lessons.md` surgically via `echo >>`. Action text explicitly forbids `cat > ./scoped/lessons.md` (wholesale rewrite) and states the only permitted mutation is `echo "- L<N>: ..." >> ./scoped/lessons.md`.
@@ -1724,9 +1724,9 @@ the chroot pivot); no tasks address them — this is deliberate.
 - [ ] **Step 6: Commit**
 
     ```bash
-    git add interpreters/1-iterative-refinement/c-reflexion/INSTRUCTIONS.md \
-            interpreters/1-iterative-refinement/c-reflexion/dynamics/evaluate.md \
-            interpreters/1-iterative-refinement/c-reflexion/dynamics/reflect.md \
+    git add interpreters/mas-papers/1-iterative-refinement/c-reflexion/INSTRUCTIONS.md \
+            interpreters/mas-papers/1-iterative-refinement/c-reflexion/dynamics/evaluate.md \
+            interpreters/mas-papers/1-iterative-refinement/c-reflexion/dynamics/reflect.md \
             src/test/phase-1-reflexion.test.ts
     git commit -m "refactor(c-reflexion): migrate to scoped + surgical lessons.md append (satisfies: R23, R25, R26, R32)"
     ```
@@ -1736,9 +1736,9 @@ the chroot pivot); no tasks address them — this is deliberate.
 ## Task 16: Migrate d-cove with verifications.md surgical sed (satisfies: R24, R27, R32)
 
 **Files:**
-- Modify: `interpreters/1-iterative-refinement/d-cove/INSTRUCTIONS.md`
-- Modify: `interpreters/1-iterative-refinement/d-cove/dynamics/verify.md`
-- Modify: `interpreters/1-iterative-refinement/d-cove/dynamics/answer-independently.md`
+- Modify: `interpreters/mas-papers/1-iterative-refinement/d-cove/INSTRUCTIONS.md`
+- Modify: `interpreters/mas-papers/1-iterative-refinement/d-cove/dynamics/verify.md`
+- Modify: `interpreters/mas-papers/1-iterative-refinement/d-cove/dynamics/answer-independently.md`
 - Modify: `src/test/phase-2-cove.test.ts`
 
 - [ ] **Step 1: Rewrite strategy `INSTRUCTIONS.md`** — strategy owns `./scoped/draft.md`. Initialize writes the draft. Request-verification pushes `dynamics/verify.md` with `draft` push-arg. Finalize reads `## Revised` (spliced from verify's `## Return`) and halts.
@@ -1757,9 +1757,9 @@ the chroot pivot); no tasks address them — this is deliberate.
 - [ ] **Step 6: Commit**
 
     ```bash
-    git add interpreters/1-iterative-refinement/d-cove/INSTRUCTIONS.md \
-            interpreters/1-iterative-refinement/d-cove/dynamics/verify.md \
-            interpreters/1-iterative-refinement/d-cove/dynamics/answer-independently.md \
+    git add interpreters/mas-papers/1-iterative-refinement/d-cove/INSTRUCTIONS.md \
+            interpreters/mas-papers/1-iterative-refinement/d-cove/dynamics/verify.md \
+            interpreters/mas-papers/1-iterative-refinement/d-cove/dynamics/answer-independently.md \
             src/test/phase-2-cove.test.ts
     git commit -m "refactor(d-cove): migrate to scoped verifications.md + surgical sed + ## Return (satisfies: R24, R27, R32)"
     ```
@@ -1770,13 +1770,13 @@ the chroot pivot); no tasks address them — this is deliberate.
 
 **Files:**
 - Modify: `CLAUDE.md`
-- Modify: `interpreters/1-iterative-refinement/README.md`
+- Modify: `interpreters/mas-papers/1-iterative-refinement/README.md`
 - Modify: `docs/agent-workflows/requirements.md`
 - Create: `docs/agent-workflows/phase-2b-notes.md`
 
 - [ ] **Step 1: Update `CLAUDE.md`** — add a new section after the existing "Dynamics (Call Stack)" section describing: the per-frame directory layout (`instances/<name>/frames/f<NNN>-<slug>/`), the canonical per-frame MEMORY schema (no more Scope section), frame-directory naming, cwd-based access with `../../PROGRAM.md` / `../../workspace/`, `## Return` block format + splicing semantics, the surgical-edit rule with examples, and the breaking-change note that pre-2b paused instances cannot resume (R43).
 
-- [ ] **Step 2: Update `interpreters/1-iterative-refinement/README.md`** — the "Arguments via INSTRUCTIONS (push-args)" section now also describes returns via `## Return`, per-frame `./scoped/` directories, and links to CLAUDE.md for the shell convention.
+- [ ] **Step 2: Update `interpreters/mas-papers/1-iterative-refinement/README.md`** — the "Arguments via INSTRUCTIONS (push-args)" section now also describes returns via `## Return`, per-frame `./scoped/` directories, and links to CLAUDE.md for the shell convention.
 
 - [ ] **Step 3: Update `docs/agent-workflows/requirements.md`** — in §Phase 2, replace the "Reuse: the arguments-via-INSTRUCTIONS convention..." bullet with a reference to Phase 2b's broader isolation model. Add a brief note that Phase 2b ships per-frame dirs + declared returns + surgical edits.
 
@@ -1815,7 +1815,7 @@ the chroot pivot); no tasks address them — this is deliberate.
 - [ ] **Step 5: Commit**
 
     ```bash
-    git add CLAUDE.md interpreters/1-iterative-refinement/README.md docs/agent-workflows/requirements.md docs/agent-workflows/phase-2b-notes.md
+    git add CLAUDE.md interpreters/mas-papers/1-iterative-refinement/README.md docs/agent-workflows/requirements.md docs/agent-workflows/phase-2b-notes.md
     git commit -m "docs: document Phase 2b per-frame layout + ## Return + breaking change (satisfies: R28, R29, R30, R31, R43)"
     ```
 
@@ -1831,7 +1831,7 @@ the chroot pivot); no tasks address them — this is deliberate.
     For each of a, b, c, d, create a fresh instance and run it:
 
     ```bash
-    ./new-instance.sh p2b-a interpreters/1-iterative-refinement/a-self-refine
+    ./new-instance.sh p2b-a interpreters/mas-papers/1-iterative-refinement/a-self-refine
     instances/p2b-a/run.sh
     ```
 

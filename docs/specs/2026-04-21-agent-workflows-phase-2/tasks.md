@@ -499,8 +499,8 @@
 ## Task 4: Refactor `a-self-refine` (satisfies: R7, R10, R12, R13)
 
 **Files:**
-- Modify: `interpreters/1-iterative-refinement/a-self-refine/operators/self-critique.md`
-- Modify: `interpreters/1-iterative-refinement/a-self-refine/INSTRUCTIONS.md`
+- Modify: `interpreters/mas-papers/1-iterative-refinement/a-self-refine/operators/self-critique.md`
+- Modify: `interpreters/mas-papers/1-iterative-refinement/a-self-refine/INSTRUCTIONS.md`
 - Modify: `src/test/phase-1-self-refine.test.ts`
 
 - [ ] **Step 1: Update the test to reflect the new push payload shape**
@@ -542,7 +542,7 @@
 
 - [ ] **Step 3: Refactor the dynamic**
 
-    Overwrite `interpreters/1-iterative-refinement/a-self-refine/operators/self-critique.md` with:
+    Overwrite `interpreters/mas-papers/1-iterative-refinement/a-self-refine/operators/self-critique.md` with:
 
     ```markdown
     # Dynamic: Self-Critique
@@ -568,7 +568,7 @@
 
 - [ ] **Step 4: Update the strategy callsite**
 
-    In `interpreters/1-iterative-refinement/a-self-refine/INSTRUCTIONS.md`,
+    In `interpreters/mas-papers/1-iterative-refinement/a-self-refine/INSTRUCTIONS.md`,
     replace the `Request critique` instruction's Action with:
 
     ```markdown
@@ -594,7 +594,7 @@
 - [ ] **Step 7: Commit**
 
     ```bash
-    git add interpreters/1-iterative-refinement/a-self-refine/operators/self-critique.md interpreters/1-iterative-refinement/a-self-refine/INSTRUCTIONS.md src/test/phase-1-self-refine.test.ts
+    git add interpreters/mas-papers/1-iterative-refinement/a-self-refine/operators/self-critique.md interpreters/mas-papers/1-iterative-refinement/a-self-refine/INSTRUCTIONS.md src/test/phase-1-self-refine.test.ts
     git commit -m "refactor(a-self-refine): self-critique receives draft as push-arg (satisfies: R7, R10, R12, R13)"
     ```
 
@@ -603,8 +603,8 @@
 ## Task 5: Refactor `b-evaluator-optimizer` (satisfies: R8, R10, R11, R12, R13)
 
 **Files:**
-- Modify: `interpreters/1-iterative-refinement/b-evaluator-optimizer/operators/evaluate.md`
-- Modify: `interpreters/1-iterative-refinement/b-evaluator-optimizer/INSTRUCTIONS.md`
+- Modify: `interpreters/mas-papers/1-iterative-refinement/b-evaluator-optimizer/operators/evaluate.md`
+- Modify: `interpreters/mas-papers/1-iterative-refinement/b-evaluator-optimizer/INSTRUCTIONS.md`
 - Modify: `src/test/phase-1-evaluator-optimizer.test.ts`
 
 - [ ] **Step 1: Update the test to reflect the new push payload shape**
@@ -641,7 +641,7 @@
 
 - [ ] **Step 3: Refactor the dynamic**
 
-    Overwrite `interpreters/1-iterative-refinement/b-evaluator-optimizer/operators/evaluate.md` with:
+    Overwrite `interpreters/mas-papers/1-iterative-refinement/b-evaluator-optimizer/operators/evaluate.md` with:
 
     ```markdown
     # Dynamic: Evaluate
@@ -663,7 +663,7 @@
 
 - [ ] **Step 4: Update the strategy callsite**
 
-    In `interpreters/1-iterative-refinement/b-evaluator-optimizer/INSTRUCTIONS.md`,
+    In `interpreters/mas-papers/1-iterative-refinement/b-evaluator-optimizer/INSTRUCTIONS.md`,
     replace the `Request evaluation` instruction's Action with:
 
     ```markdown
@@ -693,7 +693,7 @@
 - [ ] **Step 7: Commit (with the expected identity-test failure noted in the message)**
 
     ```bash
-    git add interpreters/1-iterative-refinement/b-evaluator-optimizer/operators/evaluate.md interpreters/1-iterative-refinement/b-evaluator-optimizer/INSTRUCTIONS.md src/test/phase-1-evaluator-optimizer.test.ts
+    git add interpreters/mas-papers/1-iterative-refinement/b-evaluator-optimizer/operators/evaluate.md interpreters/mas-papers/1-iterative-refinement/b-evaluator-optimizer/INSTRUCTIONS.md src/test/phase-1-evaluator-optimizer.test.ts
     git commit -m "refactor(b-evaluator-optimizer): evaluate receives attempt+criterion as push-args (satisfies: R8, R10, R12, R13)
 
     Note: phase-1-dynamics-identity test fails until Task 6 syncs c's
@@ -707,9 +707,9 @@
 ## Task 6: Refactor `c-reflexion`: sync `evaluate.md` + refactor `reflect.md` (satisfies: R9, R10, R11, R12, R13)
 
 **Files:**
-- Modify: `interpreters/1-iterative-refinement/c-reflexion/operators/evaluate.md` (byte-equal copy from b's)
-- Modify: `interpreters/1-iterative-refinement/c-reflexion/operators/reflect.md`
-- Modify: `interpreters/1-iterative-refinement/c-reflexion/INSTRUCTIONS.md`
+- Modify: `interpreters/mas-papers/1-iterative-refinement/c-reflexion/operators/evaluate.md` (byte-equal copy from b's)
+- Modify: `interpreters/mas-papers/1-iterative-refinement/c-reflexion/operators/reflect.md`
+- Modify: `interpreters/mas-papers/1-iterative-refinement/c-reflexion/INSTRUCTIONS.md`
 - Modify: `src/test/phase-1-reflexion.test.ts`
 
 - [ ] **Step 1: Update the test to reflect new push payload shapes**
@@ -746,13 +746,13 @@
     Run from repo root:
 
     ```bash
-    cp interpreters/1-iterative-refinement/b-evaluator-optimizer/operators/evaluate.md \
-       interpreters/1-iterative-refinement/c-reflexion/operators/evaluate.md
+    cp interpreters/mas-papers/1-iterative-refinement/b-evaluator-optimizer/operators/evaluate.md \
+       interpreters/mas-papers/1-iterative-refinement/c-reflexion/operators/evaluate.md
     ```
 
 - [ ] **Step 4: Refactor `reflect.md`**
 
-    Overwrite `interpreters/1-iterative-refinement/c-reflexion/operators/reflect.md`:
+    Overwrite `interpreters/mas-papers/1-iterative-refinement/c-reflexion/operators/reflect.md`:
 
     ```markdown
     # Dynamic: Reflect
@@ -777,7 +777,7 @@
 
 - [ ] **Step 5: Update the strategy callsites**
 
-    In `interpreters/1-iterative-refinement/c-reflexion/INSTRUCTIONS.md`:
+    In `interpreters/mas-papers/1-iterative-refinement/c-reflexion/INSTRUCTIONS.md`:
 
     Replace the `Request evaluation` instruction's Action with the same
     block as Task 5 Step 4 (push evaluate.md with attempt + criterion).
@@ -807,7 +807,7 @@
 - [ ] **Step 7: Commit**
 
     ```bash
-    git add interpreters/1-iterative-refinement/c-reflexion/operators/evaluate.md interpreters/1-iterative-refinement/c-reflexion/operators/reflect.md interpreters/1-iterative-refinement/c-reflexion/INSTRUCTIONS.md src/test/phase-1-reflexion.test.ts
+    git add interpreters/mas-papers/1-iterative-refinement/c-reflexion/operators/evaluate.md interpreters/mas-papers/1-iterative-refinement/c-reflexion/operators/reflect.md interpreters/mas-papers/1-iterative-refinement/c-reflexion/INSTRUCTIONS.md src/test/phase-1-reflexion.test.ts
     git commit -m "refactor(c-reflexion): sync evaluate.md + reflect receives push-args (satisfies: R9, R10, R11, R12, R13)"
     ```
 
@@ -816,18 +816,18 @@
 ## Task 7: Scaffold `d-cove` interpreter (satisfies: R14, R15, R19, R22)
 
 **Files:**
-- Create: `interpreters/1-iterative-refinement/d-cove/INSTRUCTIONS.md`
-- Create: `interpreters/1-iterative-refinement/d-cove/PROGRAM.md`
-- Create: `interpreters/1-iterative-refinement/d-cove/README.md`
-- Create: `interpreters/1-iterative-refinement/d-cove/operators/.gitkeep` (or skip; verify.md and answer-independently.md land in T8/T9)
+- Create: `interpreters/mas-papers/1-iterative-refinement/d-cove/INSTRUCTIONS.md`
+- Create: `interpreters/mas-papers/1-iterative-refinement/d-cove/PROGRAM.md`
+- Create: `interpreters/mas-papers/1-iterative-refinement/d-cove/README.md`
+- Create: `interpreters/mas-papers/1-iterative-refinement/d-cove/operators/.gitkeep` (or skip; verify.md and answer-independently.md land in T8/T9)
 
 - [ ] **Step 1: Create the directory and write `INSTRUCTIONS.md`**
 
     ```bash
-    mkdir -p interpreters/1-iterative-refinement/d-cove/dynamics
+    mkdir -p interpreters/mas-papers/1-iterative-refinement/d-cove/dynamics
     ```
 
-    Create `interpreters/1-iterative-refinement/d-cove/INSTRUCTIONS.md`:
+    Create `interpreters/mas-papers/1-iterative-refinement/d-cove/INSTRUCTIONS.md`:
 
     ```markdown
     # Strategy: Chain-of-Verification
@@ -867,7 +867,7 @@
 
 - [ ] **Step 2: Write `PROGRAM.md`**
 
-    Create `interpreters/1-iterative-refinement/d-cove/PROGRAM.md`:
+    Create `interpreters/mas-papers/1-iterative-refinement/d-cove/PROGRAM.md`:
 
     ```markdown
     # Goal
@@ -895,7 +895,7 @@
 
 - [ ] **Step 3: Write `README.md`**
 
-    Create `interpreters/1-iterative-refinement/d-cove/README.md`:
+    Create `interpreters/mas-papers/1-iterative-refinement/d-cove/README.md`:
 
     ```markdown
     # d — Chain-of-Verification (CoVe)
@@ -952,7 +952,7 @@
     ## Run it
 
     ```bash
-    ./new-instance.sh my-d interpreters/1-iterative-refinement/d-cove
+    ./new-instance.sh my-d interpreters/mas-papers/1-iterative-refinement/d-cove
     instances/my-d/run.sh
     ```
 
@@ -974,13 +974,13 @@
 
 - [ ] **Step 4: Verify the structure exists**
 
-    Run: `ls interpreters/1-iterative-refinement/d-cove/`
+    Run: `ls interpreters/mas-papers/1-iterative-refinement/d-cove/`
     Expected: `INSTRUCTIONS.md`, `PROGRAM.md`, `README.md`, `operators/` (empty so far).
 
 - [ ] **Step 5: Commit**
 
     ```bash
-    git add interpreters/1-iterative-refinement/d-cove/INSTRUCTIONS.md interpreters/1-iterative-refinement/d-cove/PROGRAM.md interpreters/1-iterative-refinement/d-cove/README.md
+    git add interpreters/mas-papers/1-iterative-refinement/d-cove/INSTRUCTIONS.md interpreters/mas-papers/1-iterative-refinement/d-cove/PROGRAM.md interpreters/mas-papers/1-iterative-refinement/d-cove/README.md
     git commit -m "feat(d-cove): scaffold Chain-of-Verification interpreter (satisfies: R14, R15, R19, R22)"
     ```
 
@@ -989,11 +989,11 @@
 ## Task 8: Add `d-cove/operators/verify.md` (satisfies: R16, R17)
 
 **Files:**
-- Create: `interpreters/1-iterative-refinement/d-cove/operators/verify.md`
+- Create: `interpreters/mas-papers/1-iterative-refinement/d-cove/operators/verify.md`
 
 - [ ] **Step 1: Write the dynamic**
 
-    Create `interpreters/1-iterative-refinement/d-cove/operators/verify.md`:
+    Create `interpreters/mas-papers/1-iterative-refinement/d-cove/operators/verify.md`:
 
     ```markdown
     # Dynamic: Verify
@@ -1044,14 +1044,14 @@
 
     Run:
     ```bash
-    test -s interpreters/1-iterative-refinement/d-cove/operators/verify.md && echo OK
+    test -s interpreters/mas-papers/1-iterative-refinement/d-cove/operators/verify.md && echo OK
     ```
     Expected: `OK`.
 
 - [ ] **Step 3: Commit**
 
     ```bash
-    git add interpreters/1-iterative-refinement/d-cove/operators/verify.md
+    git add interpreters/mas-papers/1-iterative-refinement/d-cove/operators/verify.md
     git commit -m "feat(d-cove): add verify.md depth-1 dynamic (satisfies: R16, R17)"
     ```
 
@@ -1060,11 +1060,11 @@
 ## Task 9: Add `d-cove/operators/answer-independently.md` (satisfies: R17, R18)
 
 **Files:**
-- Create: `interpreters/1-iterative-refinement/d-cove/operators/answer-independently.md`
+- Create: `interpreters/mas-papers/1-iterative-refinement/d-cove/operators/answer-independently.md`
 
 - [ ] **Step 1: Write the dynamic**
 
-    Create `interpreters/1-iterative-refinement/d-cove/operators/answer-independently.md`:
+    Create `interpreters/mas-papers/1-iterative-refinement/d-cove/operators/answer-independently.md`:
 
     ```markdown
     # Dynamic: Answer Independently
@@ -1091,14 +1091,14 @@
 
     Run:
     ```bash
-    test -s interpreters/1-iterative-refinement/d-cove/operators/answer-independently.md && echo OK
+    test -s interpreters/mas-papers/1-iterative-refinement/d-cove/operators/answer-independently.md && echo OK
     ```
     Expected: `OK`.
 
 - [ ] **Step 3: Commit**
 
     ```bash
-    git add interpreters/1-iterative-refinement/d-cove/operators/answer-independently.md
+    git add interpreters/mas-papers/1-iterative-refinement/d-cove/operators/answer-independently.md
     git commit -m "feat(d-cove): add answer-independently.md depth-2 leaf (satisfies: R17, R18)"
     ```
 
@@ -1124,7 +1124,7 @@
 
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = dirname(__filename);
-    const INTERP = resolve(__dirname, "../../interpreters/1-iterative-refinement/d-cove");
+    const INTERP = resolve(__dirname, "../../interpreters/mas-papers/1-iterative-refinement/d-cove");
 
     function readTarget(p: string): string | null {
       const full = resolve(INTERP, p);
@@ -1299,7 +1299,7 @@
 
 **Files:**
 - Modify: `CLAUDE.md`
-- Modify: `interpreters/1-iterative-refinement/README.md`
+- Modify: `interpreters/mas-papers/1-iterative-refinement/README.md`
 - Modify: `docs/agent-workflows/requirements.md`
 - Create: `docs/agent-workflows/phase-2-notes.md`
 
@@ -1343,7 +1343,7 @@
     `applyPush` in `src/call-stack.ts`.
     ```
 
-- [ ] **Step 2: Update `interpreters/1-iterative-refinement/README.md`**
+- [ ] **Step 2: Update `interpreters/mas-papers/1-iterative-refinement/README.md`**
 
     Add a fourth row to the comparison table:
 
@@ -1402,7 +1402,7 @@
     shared heap (MEMORY).
 
     **Deliverables:**
-    - `interpreters/1-iterative-refinement/d-cove/`
+    - `interpreters/mas-papers/1-iterative-refinement/d-cove/`
     - Shell extension to `applyPush` in `src/call-stack.ts`
     - Refactored `a`/`b`/`c` dynamics
 
@@ -1462,7 +1462,7 @@
 - [ ] **Step 5: Commit**
 
     ```bash
-    git add CLAUDE.md interpreters/1-iterative-refinement/README.md docs/agent-workflows/requirements.md docs/agent-workflows/phase-2-notes.md
+    git add CLAUDE.md interpreters/mas-papers/1-iterative-refinement/README.md docs/agent-workflows/requirements.md docs/agent-workflows/phase-2-notes.md
     git commit -m "docs: document push-args + d-cove across CLAUDE.md, group README, agent-workflows (satisfies: R21, R22, R23, R24)"
     ```
 
@@ -1477,7 +1477,7 @@
 
     Run:
     ```bash
-    ./new-instance.sh p2-cove interpreters/1-iterative-refinement/d-cove
+    ./new-instance.sh p2-cove interpreters/mas-papers/1-iterative-refinement/d-cove
     ```
     Expected: `Instance 'p2-cove' created at instances/p2-cove/`.
 

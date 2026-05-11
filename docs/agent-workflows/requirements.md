@@ -32,7 +32,7 @@ reuse by later groups.
    summarising the pattern (with the `patterns.md` group + citation), the
    state machine, the operators it pushes, the demo program, how to run it,
    and known behaviour. Each conceptual group directory (e.g.
-   `interpreters/1-iterative-refinement/`) **also ships a group-level
+   `interpreters/mas-papers/1-iterative-refinement/`) **also ships a group-level
    `README.md`** framing the family, listing variants with a short
    comparison table, and pointing at shared operators.
    **When a single implementation subsumes two or more named patterns
@@ -229,7 +229,7 @@ Still iterative refinement, but the critique step is *decomposed* into independe
 Phase 2 also introduces the **arguments-via-INSTRUCTIONS** shell convention (`## Push-Args` + `{{var}}` substitution) and retrofits the existing `a`/`b`/`c` operators onto it. The convention retires "prompt trust" as the isolation mechanism for `answer-independently.md` and cleanly separates per-frame arguments (INSTRUCTIONS) from the shared heap (MEMORY).
 
 **Deliverables:**
-- `interpreters/1-iterative-refinement/d-cove/`
+- `interpreters/mas-papers/1-iterative-refinement/d-cove/`
 - Shell extension to `applyPush` in `src/call-stack.ts`
 - Refactored `a`/`b`/`c` operators
 
@@ -263,7 +263,7 @@ Spec: `docs/specs/2026-04-23-agent-workflows-phase-2b-push-returns/`.
 ## Phase 3 — Planning & decomposition (patterns.md Group 2) — **shipped**
 
 Shipped per spec `docs/specs/2026-04-24-implement-phase-3-and-4/` as
-three sibling leaves under `interpreters/2-planning-decomposition/`
+three sibling leaves under `interpreters/mas-papers/2-planning-decomposition/`
 sharing byte-equal `INSTRUCTIONS.md` and `operators/`, distinguished
 only by their `PROGRAM.md` demo (the canonical framings that the
 original plan called "demos d1/d2/d3" became three separate leaves
@@ -284,7 +284,7 @@ cycle. Four named patterns, one implementation — violating "no speculative
 operators" would mean shipping four interpreters that do the same thing.
 The canonical framings live as distinct **demos** on the same strategy.
 
-### 3a. `interpreters/2-planning-decomposition/a-plan-execute/`, `.../b-orchestrator-workers/`, `.../c-deep-research/`
+### 3a. `interpreters/mas-papers/2-planning-decomposition/a-plan-execute/`, `.../b-orchestrator-workers/`, `.../c-deep-research/`
 
 Baseline decomposition: plan, execute steps sequentially, optionally
 synthesise. The three leaves share byte-equal `INSTRUCTIONS.md` and
@@ -320,7 +320,7 @@ synthesise. The three leaves share byte-equal `INSTRUCTIONS.md` and
     **Validation:** log shows at least one recursive re-push of
     `plan.md` from inside `execute-step.md`.
 
-### 3b. `interpreters/2-planning-decomposition/b-rewoo/` (optional)
+### 3b. `interpreters/mas-papers/2-planning-decomposition/b-rewoo/` (optional)
 
 Structurally distinct variant, worth a separate interpreter because the
 executor shape genuinely differs.
@@ -345,7 +345,7 @@ executor shape genuinely differs.
 Once the shell supports parallel stack frames (see Open questions
 below), genuine fan-out to generic workers in parallel becomes
 structurally distinct from sequential 3a d2. At that point, add
-`interpreters/2-planning-decomposition/c-orchestrator-workers/` with a
+`interpreters/mas-papers/2-planning-decomposition/c-orchestrator-workers/` with a
 new `worker.md` operator executed in concurrent frames, reusing `plan.md`
 (or replacing it with on-the-fly dispatch). Until then, sequential
 Orchestrator–Workers is demo d2 on 3a and is not a separate interpreter.
@@ -359,7 +359,7 @@ Two interpreters share a single demo `PROGRAM.md` so outputs are
 directly comparable. `interpreters/game-team/` was deleted as part
 of this phase.
 
-### 4a. `interpreters/5-fixed-sop-teams/a-metagpt/`
+### 4a. `interpreters/mas-papers/5-fixed-sop-teams/a-metagpt/`
 
 Document hand-off between roles (MetaGPT — Hong et al., ICLR 2024).
 
@@ -370,7 +370,7 @@ Document hand-off between roles (MetaGPT — Hong et al., ICLR 2024).
 - **Reuse:** QA role pushes `evaluate.md` from 1b.
 - Demo `PROGRAM.md`: build a small CLI tool. Shared with 4b.
 
-### 4b. `interpreters/5-fixed-sop-teams/b-chatdev/`
+### 4b. `interpreters/mas-papers/5-fixed-sop-teams/b-chatdev/`
 
 Phase-dialogue between role pairs (ChatDev — Qian et al., 2023).
 
@@ -401,7 +401,7 @@ Phase-dialogue between role pairs (ChatDev — Qian et al., 2023).
 First of two Group-4 interpreters. CAMEL is skipped (two-role conversation
 adds little over 4b's dialogue operator).
 
-**Deliverable:** `interpreters/4-peer-collaboration/a-debate/`.
+**Deliverable:** `interpreters/mas-papers/4-peer-collaboration/a-debate/`.
 
 - Strategy: round coordinator with **strict round isolation**. Runs R
   rounds; each round pushes `opine.md` once per persona; within a round,
@@ -497,7 +497,7 @@ Phase 7 also needs.
 
 ---
 
-## Phase 7 — Meta-frameworks: AFlow-lite (`interpreters/7-meta-framework/a-aflow-lite/`)
+## Phase 7 — Meta-frameworks: AFlow-lite (`interpreters/mas-papers/7-meta-framework/a-aflow-lite/`)
 
 A lightweight v1 of the AFlow meta-framework (Zhang et al. 2024, *AFlow: Automating Agentic Workflow Generation*, arXiv:2410.10762). aflow-lite runs MCTS over candidate workflows from a hardcoded five-operator library:
 

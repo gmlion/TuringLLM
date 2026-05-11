@@ -6,7 +6,7 @@ import { fileURLToPath } from "url";
 import { execSync } from "child_process";
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
-const AFLOW_LIB_DIR = "interpreters/7-meta-framework/a-aflow-lite/lib";
+const AFLOW_LIB_DIR = "interpreters/mas-papers/7-meta-framework/a-aflow-lite/lib";
 
 // Implementation surface: aflow-lite.md *plus* every lib/*.sh script. Most
 // behavioural assertions are about "the aflow-lite implementation declares X
@@ -15,7 +15,7 @@ const AFLOW_LIB_DIR = "interpreters/7-meta-framework/a-aflow-lite/lib";
 // "operator file does not include concurrency primitives") read the operator
 // file directly.
 function aflowLiteSurface(): string {
-  const opPath = resolve(REPO, "interpreters/7-meta-framework/a-aflow-lite/operators/aflow-lite.md");
+  const opPath = resolve(REPO, "interpreters/mas-papers/7-meta-framework/a-aflow-lite/operators/aflow-lite.md");
   let combined = readFileSync(opPath, "utf-8");
   const libDir = resolve(REPO, AFLOW_LIB_DIR);
   if (existsSync(libDir)) {
@@ -27,24 +27,24 @@ function aflowLiteSurface(): string {
 }
 
 describe("R1: aflow-lite directory layout", () => {
-  test("interpreters/7-meta-framework/a-aflow-lite/ exists", () => {
-    assert.ok(existsSync(resolve(REPO, "interpreters/7-meta-framework/a-aflow-lite")));
+  test("interpreters/mas-papers/7-meta-framework/a-aflow-lite/ exists", () => {
+    assert.ok(existsSync(resolve(REPO, "interpreters/mas-papers/7-meta-framework/a-aflow-lite")));
   });
   test("INSTRUCTIONS.md is a single-line marker", () => {
-    const inst = readFileSync(resolve(REPO, "interpreters/7-meta-framework/a-aflow-lite/INSTRUCTIONS.md"), "utf-8").trim();
+    const inst = readFileSync(resolve(REPO, "interpreters/mas-papers/7-meta-framework/a-aflow-lite/INSTRUCTIONS.md"), "utf-8").trim();
     assert.equal(inst, "operators/aflow-lite.md");
   });
   test("operators/ dir exists", () => {
-    assert.ok(existsSync(resolve(REPO, "interpreters/7-meta-framework/a-aflow-lite/operators")));
+    assert.ok(existsSync(resolve(REPO, "interpreters/mas-papers/7-meta-framework/a-aflow-lite/operators")));
   });
   test("PROGRAM.md exists", () => {
-    assert.ok(existsSync(resolve(REPO, "interpreters/7-meta-framework/a-aflow-lite/PROGRAM.md")));
+    assert.ok(existsSync(resolve(REPO, "interpreters/mas-papers/7-meta-framework/a-aflow-lite/PROGRAM.md")));
   });
 });
 
 describe("R2: group README exists", () => {
-  test("interpreters/7-meta-framework/README.md exists and mentions aflow-lite", () => {
-    const p = resolve(REPO, "interpreters/7-meta-framework/README.md");
+  test("interpreters/mas-papers/7-meta-framework/README.md exists and mentions aflow-lite", () => {
+    const p = resolve(REPO, "interpreters/mas-papers/7-meta-framework/README.md");
     assert.ok(existsSync(p));
     const content = readFileSync(p, "utf-8");
     assert.match(content, /aflow-lite/i);
@@ -52,8 +52,8 @@ describe("R2: group README exists", () => {
 });
 
 describe("R3: leaf README exists", () => {
-  test("interpreters/7-meta-framework/a-aflow-lite/README.md exists", () => {
-    assert.ok(existsSync(resolve(REPO, "interpreters/7-meta-framework/a-aflow-lite/README.md")));
+  test("interpreters/mas-papers/7-meta-framework/a-aflow-lite/README.md exists", () => {
+    assert.ok(existsSync(resolve(REPO, "interpreters/mas-papers/7-meta-framework/a-aflow-lite/README.md")));
   });
 });
 
@@ -78,7 +78,7 @@ describe("R10: no 'dynamics/' substring outside frozen spec dirs", () => {
 });
 
 describe("R48: workspace/gsm8k.jsonl fixture", () => {
-  const FIXTURE = "interpreters/7-meta-framework/a-aflow-lite/workspace/gsm8k.jsonl";
+  const FIXTURE = "interpreters/mas-papers/7-meta-framework/a-aflow-lite/workspace/gsm8k.jsonl";
   test("fixture exists", () => {
     assert.ok(existsSync(resolve(REPO, FIXTURE)));
   });
@@ -96,7 +96,7 @@ describe("R48: workspace/gsm8k.jsonl fixture", () => {
 });
 
 describe("R49: PROGRAM.md is short prose pointing at fixture", () => {
-  const PROG = "interpreters/7-meta-framework/a-aflow-lite/PROGRAM.md";
+  const PROG = "interpreters/mas-papers/7-meta-framework/a-aflow-lite/PROGRAM.md";
   test("PROGRAM.md exists and references workspace/gsm8k.jsonl", () => {
     const content = readFileSync(resolve(REPO, PROG), "utf-8");
     assert.match(content, /workspace\/gsm8k\.jsonl/);
@@ -105,7 +105,7 @@ describe("R49: PROGRAM.md is short prose pointing at fixture", () => {
 });
 
 describe("R28: aflow-lite.md is the canonical operator", () => {
-  const OP = "interpreters/7-meta-framework/a-aflow-lite/operators/aflow-lite.md";
+  const OP = "interpreters/mas-papers/7-meta-framework/a-aflow-lite/operators/aflow-lite.md";
   test("operators/aflow-lite.md exists", () => {
     assert.ok(existsSync(resolve(REPO, OP)));
   });
@@ -133,7 +133,7 @@ describe("R31: hardcoded operator library", () => {
 });
 
 describe("R28/R29/R30: scoped files schema and tree ledger setup", () => {
-  const OP = "interpreters/7-meta-framework/a-aflow-lite/operators/aflow-lite.md";
+  const OP = "interpreters/mas-papers/7-meta-framework/a-aflow-lite/operators/aflow-lite.md";
   test("preamble lists scoped files: tree.md, task.md, max_iterations.md, uct_c.md, iter_count.md, benchmark_items.md, state-<id>.md", () => {
     const content = readFileSync(resolve(REPO, OP), "utf-8");
     for (const f of ["tree.md", "task.md", "max_iterations.md", "uct_c.md", "iter_count.md", "benchmark_items.md", "state-"]) {
@@ -143,7 +143,7 @@ describe("R28/R29/R30: scoped files schema and tree ledger setup", () => {
 });
 
 describe("R36/R50: Initialize loads fixture and samples 3 items deterministically", () => {
-  const OP = "interpreters/7-meta-framework/a-aflow-lite/operators/aflow-lite.md";
+  const OP = "interpreters/mas-papers/7-meta-framework/a-aflow-lite/operators/aflow-lite.md";
   test("Initialize instruction matches state empty", () => {
     const content = readFileSync(resolve(REPO, OP), "utf-8");
     assert.match(content, /## Instruction: Initialize/);
@@ -204,20 +204,20 @@ describe("R29: aflow-lite has tree ledger primitives (Phase 6b reuse)", () => {
 
 describe("R26/R34: 12 operators copied byte-equal into aflow-lite", () => {
   const COPIES = [
-    ["refine.md",                "interpreters/1-iterative-refinement/b-evaluator-optimizer/operators/refine.md"],
-    ["reflexion.md",             "interpreters/1-iterative-refinement/c-reflexion/operators/reflexion.md"],
-    ["cove.md",                  "interpreters/1-iterative-refinement/d-cove/operators/cove.md"],
-    ["plan-execute.md",          "interpreters/2-planning-decomposition/a-plan-execute/operators/plan-execute.md"],
-    ["debate.md",                "interpreters/4-peer-collaboration/a-debate/operators/debate.md"],
-    ["evaluate.md",              "interpreters/1-iterative-refinement/b-evaluator-optimizer/operators/evaluate.md"],
-    ["reflect.md",               "interpreters/1-iterative-refinement/c-reflexion/operators/reflect.md"],
-    ["verify.md",                "interpreters/1-iterative-refinement/d-cove/operators/verify.md"],
-    ["answer-independently.md",  "interpreters/1-iterative-refinement/d-cove/operators/answer-independently.md"],
-    ["tackle.md",                "interpreters/2-planning-decomposition/a-plan-execute/operators/tackle.md"],
-    ["plan.md",                  "interpreters/2-planning-decomposition/a-plan-execute/operators/plan.md"],
-    ["opine.md",                 "interpreters/4-peer-collaboration/a-debate/operators/opine.md"],
+    ["refine.md",                "interpreters/mas-papers/1-iterative-refinement/b-evaluator-optimizer/operators/refine.md"],
+    ["reflexion.md",             "interpreters/mas-papers/1-iterative-refinement/c-reflexion/operators/reflexion.md"],
+    ["cove.md",                  "interpreters/mas-papers/1-iterative-refinement/d-cove/operators/cove.md"],
+    ["plan-execute.md",          "interpreters/mas-papers/2-planning-decomposition/a-plan-execute/operators/plan-execute.md"],
+    ["debate.md",                "interpreters/mas-papers/4-peer-collaboration/a-debate/operators/debate.md"],
+    ["evaluate.md",              "interpreters/mas-papers/1-iterative-refinement/b-evaluator-optimizer/operators/evaluate.md"],
+    ["reflect.md",               "interpreters/mas-papers/1-iterative-refinement/c-reflexion/operators/reflect.md"],
+    ["verify.md",                "interpreters/mas-papers/1-iterative-refinement/d-cove/operators/verify.md"],
+    ["answer-independently.md",  "interpreters/mas-papers/1-iterative-refinement/d-cove/operators/answer-independently.md"],
+    ["tackle.md",                "interpreters/mas-papers/2-planning-decomposition/a-plan-execute/operators/tackle.md"],
+    ["plan.md",                  "interpreters/mas-papers/2-planning-decomposition/a-plan-execute/operators/plan.md"],
+    ["opine.md",                 "interpreters/mas-papers/4-peer-collaboration/a-debate/operators/opine.md"],
   ];
-  const AFLOW_DIR = "interpreters/7-meta-framework/a-aflow-lite/operators";
+  const AFLOW_DIR = "interpreters/mas-papers/7-meta-framework/a-aflow-lite/operators";
   for (const [name, source] of COPIES) {
     test(`${name} exists in aflow-lite operators/`, () => {
       assert.ok(existsSync(resolve(REPO, AFLOW_DIR, name)), `missing: ${name}`);
@@ -240,7 +240,7 @@ describe("R32: aflow-lite has compose_partial_state helper", () => {
 });
 
 describe("R29: aflow-lite Select instruction (UCT descent)", () => {
-  const OP = "interpreters/7-meta-framework/a-aflow-lite/operators/aflow-lite.md";
+  const OP = "interpreters/mas-papers/7-meta-framework/a-aflow-lite/operators/aflow-lite.md";
   test("Select instruction matches state selecting", () => {
     const content = readFileSync(resolve(REPO, OP), "utf-8");
     assert.match(content, /## Instruction: Select/);
@@ -263,7 +263,7 @@ describe("R29: aflow-lite Select instruction (UCT descent)", () => {
 });
 
 describe("R32: aflow-lite Expand-push + Expand-absorb", () => {
-  const OP = "interpreters/7-meta-framework/a-aflow-lite/operators/aflow-lite.md";
+  const OP = "interpreters/mas-papers/7-meta-framework/a-aflow-lite/operators/aflow-lite.md";
   test("Expand-push instruction matches state expanding and pushes operators/expand-workflow.md", () => {
     const opContent = readFileSync(resolve(REPO, OP), "utf-8");
     assert.match(opContent, /## Instruction: Expand-push|## Instruction: Expand push/);
@@ -294,7 +294,7 @@ describe("R32: aflow-lite Expand-push + Expand-absorb", () => {
 });
 
 describe("R41/R42/R43/R44: expand-workflow.md operator", () => {
-  const OP = "interpreters/7-meta-framework/a-aflow-lite/operators/expand-workflow.md";
+  const OP = "interpreters/mas-papers/7-meta-framework/a-aflow-lite/operators/expand-workflow.md";
   test("file exists", () => {
     assert.ok(existsSync(resolve(REPO, OP)));
   });
@@ -332,7 +332,7 @@ describe("R41/R42/R43/R44: expand-workflow.md operator", () => {
 });
 
 describe("R33: aflow-lite Simulate phase pushes operators per-item with {{task}}+{{prior_answer}}", () => {
-  const OP = "interpreters/7-meta-framework/a-aflow-lite/operators/aflow-lite.md";
+  const OP = "interpreters/mas-papers/7-meta-framework/a-aflow-lite/operators/aflow-lite.md";
   test("Simulate-push instruction matches state simulating", () => {
     const content = readFileSync(resolve(REPO, OP), "utf-8");
     assert.match(content, /## Instruction: Simulate-push|## Instruction: Simulate push/);
@@ -360,7 +360,7 @@ describe("R33: aflow-lite Simulate phase pushes operators per-item with {{task}}
 });
 
 describe("R37/R38: aflow-lite Evaluate-absorb computes reward and back-props", () => {
-  const OP = "interpreters/7-meta-framework/a-aflow-lite/operators/aflow-lite.md";
+  const OP = "interpreters/mas-papers/7-meta-framework/a-aflow-lite/operators/aflow-lite.md";
   test("Evaluate-absorb instruction matches state evaluating", () => {
     const content = readFileSync(resolve(REPO, OP), "utf-8");
     assert.match(content, /## Instruction: Evaluate-absorb|## Instruction: Evaluate absorb/);
@@ -389,7 +389,7 @@ describe("R37/R38: aflow-lite Evaluate-absorb computes reward and back-props", (
 });
 
 describe("R39/R65: no meta-reflexion in aflow-lite", () => {
-  const OP = "interpreters/7-meta-framework/a-aflow-lite/operators/aflow-lite.md";
+  const OP = "interpreters/mas-papers/7-meta-framework/a-aflow-lite/operators/aflow-lite.md";
   test("aflow-lite.md does NOT push reflect.md", () => {
     const content = readFileSync(resolve(REPO, OP), "utf-8");
     assert.doesNotMatch(content, /## Push\s*\n\s*operators\/reflect\.md/);
@@ -398,7 +398,7 @@ describe("R39/R65: no meta-reflexion in aflow-lite", () => {
 });
 
 describe("R40/R66: no nested shell instances", () => {
-  const OP = "interpreters/7-meta-framework/a-aflow-lite/operators/aflow-lite.md";
+  const OP = "interpreters/mas-papers/7-meta-framework/a-aflow-lite/operators/aflow-lite.md";
   test("aflow-lite.md does not spawn child node processes", () => {
     const content = readFileSync(resolve(REPO, OP), "utf-8");
     // Check for shell invocations of node (e.g. "node script.js" or "node src/") — not the English word "node"
@@ -409,7 +409,7 @@ describe("R40/R66: no nested shell instances", () => {
 });
 
 describe("R72: no '## Aflow Answer' tag — uses canonical ## Return answer:", () => {
-  const OP = "interpreters/7-meta-framework/a-aflow-lite/operators/aflow-lite.md";
+  const OP = "interpreters/mas-papers/7-meta-framework/a-aflow-lite/operators/aflow-lite.md";
   test("no ## Aflow Answer tag", () => {
     const content = readFileSync(resolve(REPO, OP), "utf-8");
     assert.doesNotMatch(content, /## Aflow Answer/i);
@@ -417,7 +417,7 @@ describe("R72: no '## Aflow Answer' tag — uses canonical ## Return answer:", (
 });
 
 describe("R2: group README full content", () => {
-  const README = "interpreters/7-meta-framework/README.md";
+  const README = "interpreters/mas-papers/7-meta-framework/README.md";
   test("group README cites AFlow paper", () => {
     const content = readFileSync(resolve(REPO, README), "utf-8");
     assert.match(content, /Zhang et al/);
@@ -430,7 +430,7 @@ describe("R2: group README full content", () => {
 });
 
 describe("R3: leaf README full content", () => {
-  const README = "interpreters/7-meta-framework/a-aflow-lite/README.md";
+  const README = "interpreters/mas-papers/7-meta-framework/a-aflow-lite/README.md";
   test("leaf README cites AFlow paper", () => {
     const content = readFileSync(resolve(REPO, README), "utf-8");
     assert.match(content, /arXiv:2410\.10762/);
@@ -494,8 +494,8 @@ describe("R56: source-spec parent doc updates", () => {
 });
 
 describe("Negative pins R61–R72: aflow-lite is constrained as designed", () => {
-  const OP = "interpreters/7-meta-framework/a-aflow-lite/operators/aflow-lite.md";
-  const AFLOW_OPERATORS_DIR = "interpreters/7-meta-framework/a-aflow-lite/operators";
+  const OP = "interpreters/mas-papers/7-meta-framework/a-aflow-lite/operators/aflow-lite.md";
+  const AFLOW_OPERATORS_DIR = "interpreters/mas-papers/7-meta-framework/a-aflow-lite/operators";
 
   test("R31: library is exactly refine,reflexion,cove,plan-execute,debate", () => {
     assert.match(aflowLiteSurface(), /LIBRARY="refine,reflexion,cove,plan-execute,debate"/);
@@ -578,7 +578,7 @@ describe("R60: per-group READMEs use 'operators' terminology", () => {
   ];
   for (const g of GROUPS) {
     test(`${g} README uses operators terminology (no dynamics/ paths)`, () => {
-      const content = readFileSync(resolve(REPO, "interpreters", g, "README.md"), "utf-8");
+      const content = readFileSync(resolve(REPO, "interpreters/mas-papers", g, "README.md"), "utf-8");
       assert.doesNotMatch(content, new RegExp("dyn" + "amics/"), `${g}/README.md still has dynamics/`);
     });
   }
@@ -649,7 +649,7 @@ describe("R59: per-leaf READMEs mention the marker pattern", () => {
   ] as const;
   for (const [leaf, canonical] of LEAVES_WITH_CANONICALS) {
     test(`${leaf} README mentions marker + canonical operators/${canonical}.md`, () => {
-      const readmePath = resolve(REPO, "interpreters", leaf, "README.md");
+      const readmePath = resolve(REPO, "interpreters/mas-papers", leaf, "README.md");
       const content = readFileSync(readmePath, "utf-8");
       assert.match(content, /marker|canonical operator/i, `${leaf}/README.md missing marker pattern note`);
       assert.match(content, new RegExp(`operators/${canonical}\\.md`), `${leaf}/README.md missing canonical path operators/${canonical}.md`);
@@ -671,9 +671,7 @@ describe("R67/R68/R69: backwards-compat pins", () => {
   test("R67: src/main.ts requires .root-operator (canonical error message present)", () => {
     const content = readFileSync(resolve(REPO, "src/main.ts"), "utf-8");
     assert.match(content, /no \.root-operator configured for this instance/i);
-    // The message may be split across two string literals in source; match each fragment separately
-    assert.match(content, /pre-Phase-7 instances/i);
-    assert.match(content, /read-only artefacts/i);
+    assert.match(content, /create a new instance via new-instance\.sh/i);
   });
 
   test("R68: instances/ dir is gitignored or otherwise preserved (not deleted by anything in this spec)", () => {
@@ -732,7 +730,7 @@ describe("R27: cross-cutting marker-file pin for all migrated leaves", () => {
       "7-meta-framework/a-aflow-lite",
     ];
     for (const leaf of leaves) {
-      const inst = readFileSync(resolve(REPO, "interpreters", leaf, "INSTRUCTIONS.md"), "utf-8");
+      const inst = readFileSync(resolve(REPO, "interpreters/mas-papers", leaf, "INSTRUCTIONS.md"), "utf-8");
       assert.match(inst.trim(), /^operators\/[a-z0-9_-]+\.md$/, `${leaf}/INSTRUCTIONS.md is not a marker file: ${inst}`);
     }
   });
@@ -746,23 +744,23 @@ describe("F1: every bimodal operator's done transition writes ## Return inline",
   // Fix invariant: every instruction body that writes "## State\ndone" must
   // also contain "## Return" in the SAME instruction body.
   const BIMODAL_OPS = [
-    "interpreters/1-iterative-refinement/a-self-refine/operators/self-refine.md",
-    "interpreters/1-iterative-refinement/b-evaluator-optimizer/operators/refine.md",
-    "interpreters/1-iterative-refinement/c-reflexion/operators/reflexion.md",
-    "interpreters/1-iterative-refinement/d-cove/operators/cove.md",
-    "interpreters/2-planning-decomposition/a-plan-execute/operators/plan-execute.md",
-    "interpreters/2-planning-decomposition/b-orchestrator-workers/operators/plan-execute.md",
-    "interpreters/2-planning-decomposition/c-deep-research/operators/plan-execute.md",
-    "interpreters/3-search/a-tot/operators/tot.md",
-    "interpreters/3-search/b-lats/operators/lats.md",
-    "interpreters/4-peer-collaboration/a-debate/operators/debate.md",
-    "interpreters/5-fixed-sop-teams/a-metagpt/operators/metagpt.md",
-    "interpreters/5-fixed-sop-teams/b-chatdev/operators/chatdev.md",
-    "interpreters/7-meta-framework/a-aflow-lite/operators/refine.md",
-    "interpreters/7-meta-framework/a-aflow-lite/operators/reflexion.md",
-    "interpreters/7-meta-framework/a-aflow-lite/operators/cove.md",
-    "interpreters/7-meta-framework/a-aflow-lite/operators/plan-execute.md",
-    "interpreters/7-meta-framework/a-aflow-lite/operators/debate.md",
+    "interpreters/mas-papers/1-iterative-refinement/a-self-refine/operators/self-refine.md",
+    "interpreters/mas-papers/1-iterative-refinement/b-evaluator-optimizer/operators/refine.md",
+    "interpreters/mas-papers/1-iterative-refinement/c-reflexion/operators/reflexion.md",
+    "interpreters/mas-papers/1-iterative-refinement/d-cove/operators/cove.md",
+    "interpreters/mas-papers/2-planning-decomposition/a-plan-execute/operators/plan-execute.md",
+    "interpreters/mas-papers/2-planning-decomposition/b-orchestrator-workers/operators/plan-execute.md",
+    "interpreters/mas-papers/2-planning-decomposition/c-deep-research/operators/plan-execute.md",
+    "interpreters/mas-papers/3-search/a-tot/operators/tot.md",
+    "interpreters/mas-papers/3-search/b-lats/operators/lats.md",
+    "interpreters/mas-papers/4-peer-collaboration/a-debate/operators/debate.md",
+    "interpreters/mas-papers/5-fixed-sop-teams/a-metagpt/operators/metagpt.md",
+    "interpreters/mas-papers/5-fixed-sop-teams/b-chatdev/operators/chatdev.md",
+    "interpreters/mas-papers/7-meta-framework/a-aflow-lite/operators/refine.md",
+    "interpreters/mas-papers/7-meta-framework/a-aflow-lite/operators/reflexion.md",
+    "interpreters/mas-papers/7-meta-framework/a-aflow-lite/operators/cove.md",
+    "interpreters/mas-papers/7-meta-framework/a-aflow-lite/operators/plan-execute.md",
+    "interpreters/mas-papers/7-meta-framework/a-aflow-lite/operators/debate.md",
   ];
   for (const op of BIMODAL_OPS) {
     test(`${op}: no Finish-on-done dead instruction (would never fire at depth>=2)`, () => {
@@ -789,16 +787,16 @@ describe("F2: aflow-lite library operators have only the 3 bimodal placeholders 
   // saw as unresolved → applyPush silently failed when aflow-lite pushed plan-execute.
   // Library operators may only contain the 3 bimodal placeholders that aflow-lite passes.
   const LIBRARY_OPS = [
-    "interpreters/1-iterative-refinement/b-evaluator-optimizer/operators/refine.md",
-    "interpreters/1-iterative-refinement/c-reflexion/operators/reflexion.md",
-    "interpreters/1-iterative-refinement/d-cove/operators/cove.md",
-    "interpreters/2-planning-decomposition/a-plan-execute/operators/plan-execute.md",
-    "interpreters/4-peer-collaboration/a-debate/operators/debate.md",
-    "interpreters/7-meta-framework/a-aflow-lite/operators/refine.md",
-    "interpreters/7-meta-framework/a-aflow-lite/operators/reflexion.md",
-    "interpreters/7-meta-framework/a-aflow-lite/operators/cove.md",
-    "interpreters/7-meta-framework/a-aflow-lite/operators/plan-execute.md",
-    "interpreters/7-meta-framework/a-aflow-lite/operators/debate.md",
+    "interpreters/mas-papers/1-iterative-refinement/b-evaluator-optimizer/operators/refine.md",
+    "interpreters/mas-papers/1-iterative-refinement/c-reflexion/operators/reflexion.md",
+    "interpreters/mas-papers/1-iterative-refinement/d-cove/operators/cove.md",
+    "interpreters/mas-papers/2-planning-decomposition/a-plan-execute/operators/plan-execute.md",
+    "interpreters/mas-papers/4-peer-collaboration/a-debate/operators/debate.md",
+    "interpreters/mas-papers/7-meta-framework/a-aflow-lite/operators/refine.md",
+    "interpreters/mas-papers/7-meta-framework/a-aflow-lite/operators/reflexion.md",
+    "interpreters/mas-papers/7-meta-framework/a-aflow-lite/operators/cove.md",
+    "interpreters/mas-papers/7-meta-framework/a-aflow-lite/operators/plan-execute.md",
+    "interpreters/mas-papers/7-meta-framework/a-aflow-lite/operators/debate.md",
   ];
   const ALLOWED = new Set(["program", "task", "prior_answer"]);
   for (const op of LIBRARY_OPS) {

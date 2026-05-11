@@ -4,8 +4,7 @@ import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { initEvents, setCycleContext } from "../events.js";
-import { drainProviderEvents } from "../main.js";
-import type { ProviderEvent } from "../providers/shared.js";
+import { drainProviderEvents, type ProviderEvent } from "../providers/shared.js";
 
 describe("drainProviderEvents flushes a cycle's buffer to events.jsonl", () => {
   let dir: string;

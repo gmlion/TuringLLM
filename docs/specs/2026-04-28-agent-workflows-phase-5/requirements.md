@@ -8,7 +8,7 @@ The defining property of Multi-Agent Debate is **strict round isolation**: each 
 
 ## User stories
 
-- **US1**: As a developer studying agent patterns, I want a working Multi-Agent Debate interpreter at `interpreters/4-peer-collaboration/a-debate/`, so that I can run the canonical Du et al. 2023 protocol against open-ended questions and inspect the resulting transcript.
+- **US1**: As a developer studying agent patterns, I want a working Multi-Agent Debate interpreter at `interpreters/mas-papers/4-peer-collaboration/a-debate/`, so that I can run the canonical Du et al. 2023 protocol against open-ended questions and inspect the resulting transcript.
 - **US2**: As an author of the future Phase 5b (MoA) interpreter, I want Debate's demo PROGRAM.md to use a free-form question + named-persona structure that MoA can mirror, so that the two patterns can be compared on identical inputs.
 - **US3**: As a researcher running this interpreter, I want to author a debate by writing PROGRAM.md in natural prose (the question, the named personas, an optional round count), so that I do not need to learn a structured config schema.
 - **US4**: As a reader of a finished debate, I want a synthesised final position alongside the full transcript, so that ambiguous-answer questions yield an actual answer rather than only a record of the disagreement.

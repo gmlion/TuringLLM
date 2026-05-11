@@ -9,9 +9,9 @@ const __dirname = dirname(__filename);
 const REPO = resolve(__dirname, "../..");
 
 const LEAVES = [
-  "interpreters/2-planning-decomposition/a-plan-execute",
-  "interpreters/2-planning-decomposition/b-orchestrator-workers",
-  "interpreters/2-planning-decomposition/c-deep-research",
+  "interpreters/mas-papers/2-planning-decomposition/a-plan-execute",
+  "interpreters/mas-papers/2-planning-decomposition/b-orchestrator-workers",
+  "interpreters/mas-papers/2-planning-decomposition/c-deep-research",
 ];
 
 const FILES = [
@@ -35,15 +35,15 @@ describe("phase-3 operators identity", () => {
   }
 
   test("R26: operators/plan-execute.md is byte-equal across 2a, 2b, 2c", () => {
-    const A = readFileSync(resolve(REPO, "interpreters/2-planning-decomposition/a-plan-execute/operators/plan-execute.md"), "utf-8");
-    const B = readFileSync(resolve(REPO, "interpreters/2-planning-decomposition/b-orchestrator-workers/operators/plan-execute.md"), "utf-8");
-    const C = readFileSync(resolve(REPO, "interpreters/2-planning-decomposition/c-deep-research/operators/plan-execute.md"), "utf-8");
+    const A = readFileSync(resolve(REPO, "interpreters/mas-papers/2-planning-decomposition/a-plan-execute/operators/plan-execute.md"), "utf-8");
+    const B = readFileSync(resolve(REPO, "interpreters/mas-papers/2-planning-decomposition/b-orchestrator-workers/operators/plan-execute.md"), "utf-8");
+    const C = readFileSync(resolve(REPO, "interpreters/mas-papers/2-planning-decomposition/c-deep-research/operators/plan-execute.md"), "utf-8");
     assert.equal(A, B);
     assert.equal(A, C);
   });
 
   test("group-level README exists and names all four framings", () => {
-    const r = readFileSync(resolve(REPO, "interpreters/2-planning-decomposition/README.md"), "utf-8");
+    const r = readFileSync(resolve(REPO, "interpreters/mas-papers/2-planning-decomposition/README.md"), "utf-8");
     assert.match(r, /Plan-and-Execute/);
     assert.match(r, /Orchestrator.Workers/);
     assert.match(r, /Deep Research/);

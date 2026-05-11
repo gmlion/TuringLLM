@@ -706,12 +706,12 @@ into T5 / T6. The test scripts a MEMORY sequence (no LLM) through the
 six strategy instructions including one replan.
 
 **Files:**
-- Create: `interpreters/2-planning-decomposition/a-plan-execute/INSTRUCTIONS.md`
-- Create: `interpreters/2-planning-decomposition/a-plan-execute/PROGRAM.md`
-- Create: `interpreters/2-planning-decomposition/a-plan-execute/README.md`
-- Create: `interpreters/2-planning-decomposition/a-plan-execute/dynamics/plan.md`
-- Create: `interpreters/2-planning-decomposition/a-plan-execute/dynamics/execute-step.md`
-- Create: `interpreters/2-planning-decomposition/a-plan-execute/dynamics/synthesize.md`
+- Create: `interpreters/mas-papers/2-planning-decomposition/a-plan-execute/INSTRUCTIONS.md`
+- Create: `interpreters/mas-papers/2-planning-decomposition/a-plan-execute/PROGRAM.md`
+- Create: `interpreters/mas-papers/2-planning-decomposition/a-plan-execute/README.md`
+- Create: `interpreters/mas-papers/2-planning-decomposition/a-plan-execute/dynamics/plan.md`
+- Create: `interpreters/mas-papers/2-planning-decomposition/a-plan-execute/dynamics/execute-step.md`
+- Create: `interpreters/mas-papers/2-planning-decomposition/a-plan-execute/dynamics/synthesize.md`
 - Create: `src/test/phase-3-plan-execute.test.ts`
 
 - [ ] **Step 1: Write the failing integration test**
@@ -728,7 +728,7 @@ six strategy instructions including one replan.
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = dirname(__filename);
     const REPO = resolve(__dirname, "../..");
-    const INTERP = resolve(REPO, "interpreters/2-planning-decomposition/a-plan-execute");
+    const INTERP = resolve(REPO, "interpreters/mas-papers/2-planning-decomposition/a-plan-execute");
 
     describe("phase-3 a-plan-execute: file layout and content", () => {
       test("all required files exist", () => {
@@ -1063,7 +1063,7 @@ six strategy instructions including one replan.
     ## Collapsed framings
 
     The shared strategy under
-    `interpreters/2-planning-decomposition/` subsumes four published
+    `interpreters/mas-papers/2-planning-decomposition/` subsumes four published
     patterns (all of which reduce to the same state machine under the
     current sequential shell — see `patterns.md` Group 2 for the
     collapse rationale):
@@ -1118,7 +1118,7 @@ six strategy instructions including one replan.
     ## Run it
 
     ```bash
-    ./new-instance.sh my-a interpreters/2-planning-decomposition/a-plan-execute
+    ./new-instance.sh my-a interpreters/mas-papers/2-planning-decomposition/a-plan-execute
     instances/my-a/run.sh
     ```
 
@@ -1137,7 +1137,7 @@ six strategy instructions including one replan.
 - [ ] **Step 10: Commit**
 
     ```bash
-    git add interpreters/2-planning-decomposition/a-plan-execute/ \
+    git add interpreters/mas-papers/2-planning-decomposition/a-plan-execute/ \
             src/test/phase-3-plan-execute.test.ts
     git commit -m "feat(phase-3): a-plan-execute interpreter + plan/execute-step/synthesize dynamics + scripted test (satisfies: R1, R2, R3, R4, R6, R7, R8, R9, R10, R11, R12, R13, R16, R17, R40, R42, R45, R65)"
     ```
@@ -1150,8 +1150,8 @@ Byte-copy of INSTRUCTIONS + dynamics from T4; distinct PROGRAM + 5
 input files + distinct README.
 
 **Files:**
-- Create: `interpreters/2-planning-decomposition/b-orchestrator-workers/{INSTRUCTIONS.md,PROGRAM.md,README.md,dynamics/plan.md,dynamics/execute-step.md,dynamics/synthesize.md}`
-- Create: `interpreters/2-planning-decomposition/b-orchestrator-workers/workspace/inputs/input-{1..5}.md`
+- Create: `interpreters/mas-papers/2-planning-decomposition/b-orchestrator-workers/{INSTRUCTIONS.md,PROGRAM.md,README.md,dynamics/plan.md,dynamics/execute-step.md,dynamics/synthesize.md}`
+- Create: `interpreters/mas-papers/2-planning-decomposition/b-orchestrator-workers/workspace/inputs/input-{1..5}.md`
 - Create: `src/test/phase-3-orchestrator-workers.test.ts`
 
 - [ ] **Step 1: Write the failing integration test**
@@ -1168,7 +1168,7 @@ input files + distinct README.
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = dirname(__filename);
     const REPO = resolve(__dirname, "../..");
-    const INTERP = resolve(REPO, "interpreters/2-planning-decomposition/b-orchestrator-workers");
+    const INTERP = resolve(REPO, "interpreters/mas-papers/2-planning-decomposition/b-orchestrator-workers");
 
     describe("phase-3 b-orchestrator-workers: layout, PROGRAM, inputs, README", () => {
       test("required files exist", () => {
@@ -1228,21 +1228,21 @@ input files + distinct README.
     Run these exact commands:
 
     ```bash
-    mkdir -p interpreters/2-planning-decomposition/b-orchestrator-workers/dynamics
-    mkdir -p interpreters/2-planning-decomposition/b-orchestrator-workers/workspace/inputs
-    cp interpreters/2-planning-decomposition/a-plan-execute/INSTRUCTIONS.md \
-       interpreters/2-planning-decomposition/b-orchestrator-workers/INSTRUCTIONS.md
-    cp interpreters/2-planning-decomposition/a-plan-execute/dynamics/plan.md \
-       interpreters/2-planning-decomposition/b-orchestrator-workers/dynamics/plan.md
-    cp interpreters/2-planning-decomposition/a-plan-execute/dynamics/execute-step.md \
-       interpreters/2-planning-decomposition/b-orchestrator-workers/dynamics/execute-step.md
-    cp interpreters/2-planning-decomposition/a-plan-execute/dynamics/synthesize.md \
-       interpreters/2-planning-decomposition/b-orchestrator-workers/dynamics/synthesize.md
+    mkdir -p interpreters/mas-papers/2-planning-decomposition/b-orchestrator-workers/dynamics
+    mkdir -p interpreters/mas-papers/2-planning-decomposition/b-orchestrator-workers/workspace/inputs
+    cp interpreters/mas-papers/2-planning-decomposition/a-plan-execute/INSTRUCTIONS.md \
+       interpreters/mas-papers/2-planning-decomposition/b-orchestrator-workers/INSTRUCTIONS.md
+    cp interpreters/mas-papers/2-planning-decomposition/a-plan-execute/dynamics/plan.md \
+       interpreters/mas-papers/2-planning-decomposition/b-orchestrator-workers/dynamics/plan.md
+    cp interpreters/mas-papers/2-planning-decomposition/a-plan-execute/dynamics/execute-step.md \
+       interpreters/mas-papers/2-planning-decomposition/b-orchestrator-workers/dynamics/execute-step.md
+    cp interpreters/mas-papers/2-planning-decomposition/a-plan-execute/dynamics/synthesize.md \
+       interpreters/mas-papers/2-planning-decomposition/b-orchestrator-workers/dynamics/synthesize.md
     ```
 
 - [ ] **Step 4: Create five input files with exact content**
 
-    Create `interpreters/2-planning-decomposition/b-orchestrator-workers/workspace/inputs/input-1.md`:
+    Create `interpreters/mas-papers/2-planning-decomposition/b-orchestrator-workers/workspace/inputs/input-1.md`:
 
     ```markdown
     # CAP theorem
@@ -1354,7 +1354,7 @@ input files + distinct README.
     ## Run it
 
     ```bash
-    ./new-instance.sh my-b interpreters/2-planning-decomposition/b-orchestrator-workers
+    ./new-instance.sh my-b interpreters/mas-papers/2-planning-decomposition/b-orchestrator-workers
     instances/my-b/run.sh
     ```
 
@@ -1376,7 +1376,7 @@ input files + distinct README.
 - [ ] **Step 8: Commit**
 
     ```bash
-    git add interpreters/2-planning-decomposition/b-orchestrator-workers/ \
+    git add interpreters/mas-papers/2-planning-decomposition/b-orchestrator-workers/ \
             src/test/phase-3-orchestrator-workers.test.ts
     git commit -m "feat(phase-3): b-orchestrator-workers leaf (byte-copy + d2 PROGRAM + 5 inputs + README + test) (satisfies: R1, R2, R3, R4, R14, R16, R18, R42, R45, R65)"
     ```
@@ -1390,7 +1390,7 @@ distinct README. Test asserts stack depth 2 on recursive re-push of
 `plan.md` from inside `execute-step.md`.
 
 **Files:**
-- Create: `interpreters/2-planning-decomposition/c-deep-research/{INSTRUCTIONS.md,PROGRAM.md,README.md,dynamics/plan.md,dynamics/execute-step.md,dynamics/synthesize.md}`
+- Create: `interpreters/mas-papers/2-planning-decomposition/c-deep-research/{INSTRUCTIONS.md,PROGRAM.md,README.md,dynamics/plan.md,dynamics/execute-step.md,dynamics/synthesize.md}`
 - Create: `src/test/phase-3-deep-research.test.ts`
 
 - [ ] **Step 1: Write the failing integration test**
@@ -1407,7 +1407,7 @@ distinct README. Test asserts stack depth 2 on recursive re-push of
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = dirname(__filename);
     const REPO = resolve(__dirname, "../..");
-    const INTERP = resolve(REPO, "interpreters/2-planning-decomposition/c-deep-research");
+    const INTERP = resolve(REPO, "interpreters/mas-papers/2-planning-decomposition/c-deep-research");
 
     describe("phase-3 c-deep-research: layout, PROGRAM, recursion support", () => {
       test("required files exist", () => {
@@ -1464,15 +1464,15 @@ distinct README. Test asserts stack depth 2 on recursive re-push of
     Run these exact commands:
 
     ```bash
-    mkdir -p interpreters/2-planning-decomposition/c-deep-research/dynamics
-    cp interpreters/2-planning-decomposition/a-plan-execute/INSTRUCTIONS.md \
-       interpreters/2-planning-decomposition/c-deep-research/INSTRUCTIONS.md
-    cp interpreters/2-planning-decomposition/a-plan-execute/dynamics/plan.md \
-       interpreters/2-planning-decomposition/c-deep-research/dynamics/plan.md
-    cp interpreters/2-planning-decomposition/a-plan-execute/dynamics/execute-step.md \
-       interpreters/2-planning-decomposition/c-deep-research/dynamics/execute-step.md
-    cp interpreters/2-planning-decomposition/a-plan-execute/dynamics/synthesize.md \
-       interpreters/2-planning-decomposition/c-deep-research/dynamics/synthesize.md
+    mkdir -p interpreters/mas-papers/2-planning-decomposition/c-deep-research/dynamics
+    cp interpreters/mas-papers/2-planning-decomposition/a-plan-execute/INSTRUCTIONS.md \
+       interpreters/mas-papers/2-planning-decomposition/c-deep-research/INSTRUCTIONS.md
+    cp interpreters/mas-papers/2-planning-decomposition/a-plan-execute/dynamics/plan.md \
+       interpreters/mas-papers/2-planning-decomposition/c-deep-research/dynamics/plan.md
+    cp interpreters/mas-papers/2-planning-decomposition/a-plan-execute/dynamics/execute-step.md \
+       interpreters/mas-papers/2-planning-decomposition/c-deep-research/dynamics/execute-step.md
+    cp interpreters/mas-papers/2-planning-decomposition/a-plan-execute/dynamics/synthesize.md \
+       interpreters/mas-papers/2-planning-decomposition/c-deep-research/dynamics/synthesize.md
     ```
 
 - [ ] **Step 4: Create `PROGRAM.md` (d3) with exact content**
@@ -1549,7 +1549,7 @@ distinct README. Test asserts stack depth 2 on recursive re-push of
     ## Run it
 
     ```bash
-    ./new-instance.sh my-c interpreters/2-planning-decomposition/c-deep-research
+    ./new-instance.sh my-c interpreters/mas-papers/2-planning-decomposition/c-deep-research
     instances/my-c/run.sh
     ```
 
@@ -1571,7 +1571,7 @@ distinct README. Test asserts stack depth 2 on recursive re-push of
 - [ ] **Step 7: Commit**
 
     ```bash
-    git add interpreters/2-planning-decomposition/c-deep-research/ \
+    git add interpreters/mas-papers/2-planning-decomposition/c-deep-research/ \
             src/test/phase-3-deep-research.test.ts
     git commit -m "feat(phase-3): c-deep-research leaf (byte-copy + d3 PROGRAM + README with recursion notes + test) (satisfies: R1, R2, R3, R4, R15, R16, R19, R42, R43, R45, R65)"
     ```
@@ -1585,7 +1585,7 @@ README with the full collapse story (all four framings named + cited).
 
 **Files:**
 - Create: `src/test/phase-3-dynamics-identity.test.ts`
-- Create: `interpreters/2-planning-decomposition/README.md`
+- Create: `interpreters/mas-papers/2-planning-decomposition/README.md`
 
 - [ ] **Step 1: Write the failing identity test**
 
@@ -1603,9 +1603,9 @@ README with the full collapse story (all four framings named + cited).
     const REPO = resolve(__dirname, "../..");
 
     const LEAVES = [
-      "interpreters/2-planning-decomposition/a-plan-execute",
-      "interpreters/2-planning-decomposition/b-orchestrator-workers",
-      "interpreters/2-planning-decomposition/c-deep-research",
+      "interpreters/mas-papers/2-planning-decomposition/a-plan-execute",
+      "interpreters/mas-papers/2-planning-decomposition/b-orchestrator-workers",
+      "interpreters/mas-papers/2-planning-decomposition/c-deep-research",
     ];
 
     const FILES = [
@@ -1629,7 +1629,7 @@ README with the full collapse story (all four framings named + cited).
       }
 
       test("group-level README exists and names all four framings", () => {
-        const r = readFileSync(resolve(REPO, "interpreters/2-planning-decomposition/README.md"), "utf-8");
+        const r = readFileSync(resolve(REPO, "interpreters/mas-papers/2-planning-decomposition/README.md"), "utf-8");
         assert.match(r, /Plan-and-Execute/);
         assert.match(r, /Orchestrator.Workers/);
         assert.match(r, /Deep Research/);
@@ -1646,7 +1646,7 @@ README with the full collapse story (all four framings named + cited).
     file-equality assertion fails, the byte-copy in T5 or T6 drifted
     — fix there, not here.
 
-- [ ] **Step 3: Create `interpreters/2-planning-decomposition/README.md` with exact content**
+- [ ] **Step 3: Create `interpreters/mas-papers/2-planning-decomposition/README.md` with exact content**
 
     ````markdown
     # Planning & decomposition — Group 2
@@ -1712,7 +1712,7 @@ README with the full collapse story (all four framings named + cited).
     ## Run any of the three
 
     ```bash
-    ./new-instance.sh my-a interpreters/2-planning-decomposition/a-plan-execute
+    ./new-instance.sh my-a interpreters/mas-papers/2-planning-decomposition/a-plan-execute
     instances/my-a/run.sh
     ```
 
@@ -1734,7 +1734,7 @@ README with the full collapse story (all four framings named + cited).
 
     ```bash
     git add src/test/phase-3-dynamics-identity.test.ts \
-            interpreters/2-planning-decomposition/README.md
+            interpreters/mas-papers/2-planning-decomposition/README.md
     git commit -m "test(phase-3): byte-equality across three leaves + group README with collapse story (satisfies: R5, R46, R65)"
     ```
 
@@ -1746,7 +1746,7 @@ MetaGPT interpreter: linear role hand-off (PM → Architect → Engineer → QA)
 QA pushes `evaluate.md`; test asserts stack depth 2 at that moment.
 
 **Files:**
-- Create: `interpreters/5-fixed-sop-teams/a-metagpt/{INSTRUCTIONS.md,PROGRAM.md,README.md,dynamics/role-pm.md,dynamics/role-architect.md,dynamics/role-engineer.md,dynamics/role-qa.md,dynamics/evaluate.md}`
+- Create: `interpreters/mas-papers/5-fixed-sop-teams/a-metagpt/{INSTRUCTIONS.md,PROGRAM.md,README.md,dynamics/role-pm.md,dynamics/role-architect.md,dynamics/role-engineer.md,dynamics/role-qa.md,dynamics/evaluate.md}`
 - Create: `src/test/phase-4-metagpt.test.ts`
 
 - [ ] **Step 1: Write the failing integration test**
@@ -1763,7 +1763,7 @@ QA pushes `evaluate.md`; test asserts stack depth 2 at that moment.
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = dirname(__filename);
     const REPO = resolve(__dirname, "../..");
-    const INTERP = resolve(REPO, "interpreters/5-fixed-sop-teams/a-metagpt");
+    const INTERP = resolve(REPO, "interpreters/mas-papers/5-fixed-sop-teams/a-metagpt");
 
     describe("phase-4 a-metagpt: layout, roles, evaluate reuse", () => {
       test("required files exist", () => {
@@ -1803,7 +1803,7 @@ QA pushes `evaluate.md`; test asserts stack depth 2 at that moment.
 
       test("evaluate.md byte-equal to b-evaluator-optimizer copy", () => {
         const a = readFileSync(resolve(INTERP, "dynamics/evaluate.md"));
-        const b = readFileSync(resolve(REPO, "interpreters/1-iterative-refinement/b-evaluator-optimizer/dynamics/evaluate.md"));
+        const b = readFileSync(resolve(REPO, "interpreters/mas-papers/1-iterative-refinement/b-evaluator-optimizer/dynamics/evaluate.md"));
         assert.ok(a.equals(b), "evaluate.md in a-metagpt diverged from Phase 1b copy");
       });
 
@@ -1828,9 +1828,9 @@ QA pushes `evaluate.md`; test asserts stack depth 2 at that moment.
 - [ ] **Step 3: Byte-copy evaluate.md from Phase 1b**
 
     ```bash
-    mkdir -p interpreters/5-fixed-sop-teams/a-metagpt/dynamics
-    cp interpreters/1-iterative-refinement/b-evaluator-optimizer/dynamics/evaluate.md \
-       interpreters/5-fixed-sop-teams/a-metagpt/dynamics/evaluate.md
+    mkdir -p interpreters/mas-papers/5-fixed-sop-teams/a-metagpt/dynamics
+    cp interpreters/mas-papers/1-iterative-refinement/b-evaluator-optimizer/dynamics/evaluate.md \
+       interpreters/mas-papers/5-fixed-sop-teams/a-metagpt/dynamics/evaluate.md
     ```
 
 - [ ] **Step 4: Create `dynamics/role-pm.md` with exact content**
@@ -2096,7 +2096,7 @@ QA pushes `evaluate.md`; test asserts stack depth 2 at that moment.
     ## Run it
 
     ```bash
-    ./new-instance.sh my-metagpt interpreters/5-fixed-sop-teams/a-metagpt
+    ./new-instance.sh my-metagpt interpreters/mas-papers/5-fixed-sop-teams/a-metagpt
     instances/my-metagpt/run.sh
     ```
 
@@ -2117,7 +2117,7 @@ QA pushes `evaluate.md`; test asserts stack depth 2 at that moment.
 - [ ] **Step 12: Commit**
 
     ```bash
-    git add interpreters/5-fixed-sop-teams/a-metagpt/ \
+    git add interpreters/mas-papers/5-fixed-sop-teams/a-metagpt/ \
             src/test/phase-4-metagpt.test.ts
     git commit -m "feat(phase-4): a-metagpt interpreter + 4 role dynamics + evaluate.md copy + test (satisfies: R20, R22, R23, R24, R25, R29, R30, R32, R33, R42, R43, R47)"
     ```
@@ -2130,7 +2130,7 @@ ChatDev interpreter: phase dialogue between role pairs. Reviewer-pair
 dialogues push evaluate.md for acceptance gating.
 
 **Files:**
-- Create: `interpreters/5-fixed-sop-teams/b-chatdev/{INSTRUCTIONS.md,PROGRAM.md,README.md,dynamics/dialogue.md,dynamics/evaluate.md,roles/ceo.md,roles/cto.md,roles/coder.md,roles/reviewer.md,roles/tester.md,roles/writer.md}`
+- Create: `interpreters/mas-papers/5-fixed-sop-teams/b-chatdev/{INSTRUCTIONS.md,PROGRAM.md,README.md,dynamics/dialogue.md,dynamics/evaluate.md,roles/ceo.md,roles/cto.md,roles/coder.md,roles/reviewer.md,roles/tester.md,roles/writer.md}`
 - Create: `src/test/phase-4-chatdev.test.ts`
 
 - [ ] **Step 1: Write the failing integration test**
@@ -2147,7 +2147,7 @@ dialogues push evaluate.md for acceptance gating.
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = dirname(__filename);
     const REPO = resolve(__dirname, "../..");
-    const INTERP = resolve(REPO, "interpreters/5-fixed-sop-teams/b-chatdev");
+    const INTERP = resolve(REPO, "interpreters/mas-papers/5-fixed-sop-teams/b-chatdev");
 
     describe("phase-4 b-chatdev: layout, dialogue, PROGRAM parity", () => {
       test("required files exist (interpreter + roles/)", () => {
@@ -2169,7 +2169,7 @@ dialogues push evaluate.md for acceptance gating.
       });
 
       test("PROGRAM.md is byte-equal to a-metagpt/PROGRAM.md (R22)", () => {
-        const a = readFileSync(resolve(REPO, "interpreters/5-fixed-sop-teams/a-metagpt/PROGRAM.md"));
+        const a = readFileSync(resolve(REPO, "interpreters/mas-papers/5-fixed-sop-teams/a-metagpt/PROGRAM.md"));
         const b = readFileSync(resolve(INTERP, "PROGRAM.md"));
         assert.ok(a.equals(b), "PROGRAM.md diverged between a-metagpt and b-chatdev");
       });
@@ -2201,7 +2201,7 @@ dialogues push evaluate.md for acceptance gating.
 
       test("evaluate.md byte-equal to Phase 1b copy", () => {
         const a = readFileSync(resolve(INTERP, "dynamics/evaluate.md"));
-        const b = readFileSync(resolve(REPO, "interpreters/1-iterative-refinement/b-evaluator-optimizer/dynamics/evaluate.md"));
+        const b = readFileSync(resolve(REPO, "interpreters/mas-papers/1-iterative-refinement/b-evaluator-optimizer/dynamics/evaluate.md"));
         assert.ok(a.equals(b), "evaluate.md in b-chatdev diverged from Phase 1b copy");
       });
 
@@ -2220,7 +2220,7 @@ dialogues push evaluate.md for acceptance gating.
 
 - [ ] **Step 3: Create six role-description files with exact content**
 
-    `interpreters/5-fixed-sop-teams/b-chatdev/roles/ceo.md`:
+    `interpreters/mas-papers/5-fixed-sop-teams/b-chatdev/roles/ceo.md`:
 
     ```markdown
     # CEO
@@ -2362,16 +2362,16 @@ dialogues push evaluate.md for acceptance gating.
 - [ ] **Step 5: Byte-copy evaluate.md from Phase 1b**
 
     ```bash
-    mkdir -p interpreters/5-fixed-sop-teams/b-chatdev/dynamics
-    cp interpreters/1-iterative-refinement/b-evaluator-optimizer/dynamics/evaluate.md \
-       interpreters/5-fixed-sop-teams/b-chatdev/dynamics/evaluate.md
+    mkdir -p interpreters/mas-papers/5-fixed-sop-teams/b-chatdev/dynamics
+    cp interpreters/mas-papers/1-iterative-refinement/b-evaluator-optimizer/dynamics/evaluate.md \
+       interpreters/mas-papers/5-fixed-sop-teams/b-chatdev/dynamics/evaluate.md
     ```
 
 - [ ] **Step 6: Byte-copy PROGRAM from `a-metagpt` (R22)**
 
     ```bash
-    cp interpreters/5-fixed-sop-teams/a-metagpt/PROGRAM.md \
-       interpreters/5-fixed-sop-teams/b-chatdev/PROGRAM.md
+    cp interpreters/mas-papers/5-fixed-sop-teams/a-metagpt/PROGRAM.md \
+       interpreters/mas-papers/5-fixed-sop-teams/b-chatdev/PROGRAM.md
     ```
 
 - [ ] **Step 7: Create `INSTRUCTIONS.md` with exact content**
@@ -2514,7 +2514,7 @@ dialogues push evaluate.md for acceptance gating.
     ## Run it
 
     ```bash
-    ./new-instance.sh my-chatdev interpreters/5-fixed-sop-teams/b-chatdev
+    ./new-instance.sh my-chatdev interpreters/mas-papers/5-fixed-sop-teams/b-chatdev
     instances/my-chatdev/run.sh
     ```
 
@@ -2539,7 +2539,7 @@ dialogues push evaluate.md for acceptance gating.
 - [ ] **Step 10: Commit**
 
     ```bash
-    git add interpreters/5-fixed-sop-teams/b-chatdev/ \
+    git add interpreters/mas-papers/5-fixed-sop-teams/b-chatdev/ \
             src/test/phase-4-chatdev.test.ts
     git commit -m "feat(phase-4): b-chatdev interpreter + dialogue.md + 6 roles + evaluate.md copy + shared PROGRAM + test (satisfies: R21, R22, R26, R27, R28, R29, R31, R32, R33, R42, R47)"
     ```
@@ -2555,7 +2555,7 @@ R40 requires.
 **Files:**
 - Rename: `src/test/phase-1-dynamics-identity.test.ts` → `src/test/phase-operators-identity.test.ts`
 - Modify: the renamed file (extend to four-way)
-- Create: `interpreters/5-fixed-sop-teams/README.md`
+- Create: `interpreters/mas-papers/5-fixed-sop-teams/README.md`
 - Create: `src/test/phase-4-shell-features.test.ts`
 
 - [ ] **Step 1: Rename the Phase-1 identity test file**
@@ -2581,10 +2581,10 @@ R40 requires.
     const REPO = resolve(__dirname, "../..");
 
     const EVALUATE_PATHS = [
-      "interpreters/1-iterative-refinement/b-evaluator-optimizer/dynamics/evaluate.md",
-      "interpreters/1-iterative-refinement/c-reflexion/dynamics/evaluate.md",
-      "interpreters/5-fixed-sop-teams/a-metagpt/dynamics/evaluate.md",
-      "interpreters/5-fixed-sop-teams/b-chatdev/dynamics/evaluate.md",
+      "interpreters/mas-papers/1-iterative-refinement/b-evaluator-optimizer/dynamics/evaluate.md",
+      "interpreters/mas-papers/1-iterative-refinement/c-reflexion/dynamics/evaluate.md",
+      "interpreters/mas-papers/5-fixed-sop-teams/a-metagpt/dynamics/evaluate.md",
+      "interpreters/mas-papers/5-fixed-sop-teams/b-chatdev/dynamics/evaluate.md",
     ];
 
     describe("evaluate.md identity across phases", () => {
@@ -2624,9 +2624,9 @@ R40 requires.
     describe("R40: shell features re-homed from game-team", () => {
       test("R40 (a) fuzzy NL conditions used in at least one Phase-3/4 strategy", () => {
         const candidates = [
-          "interpreters/2-planning-decomposition/a-plan-execute/INSTRUCTIONS.md",
-          "interpreters/5-fixed-sop-teams/a-metagpt/INSTRUCTIONS.md",
-          "interpreters/5-fixed-sop-teams/b-chatdev/INSTRUCTIONS.md",
+          "interpreters/mas-papers/2-planning-decomposition/a-plan-execute/INSTRUCTIONS.md",
+          "interpreters/mas-papers/5-fixed-sop-teams/a-metagpt/INSTRUCTIONS.md",
+          "interpreters/mas-papers/5-fixed-sop-teams/b-chatdev/INSTRUCTIONS.md",
         ];
         const fuzzyRe = /suggests|indicates|appears|is successful|looks|signals|reads as/i;
         const hits = candidates.filter((c) => fuzzyRe.test(readFileSync(resolve(REPO, c), "utf-8")));
@@ -2635,8 +2635,8 @@ R40 requires.
 
       test("R40 (b) non-blocking Pending Questions used by at least one Phase-3/4 strategy", () => {
         const candidates = [
-          "interpreters/2-planning-decomposition/a-plan-execute/INSTRUCTIONS.md",
-          "interpreters/5-fixed-sop-teams/a-metagpt/INSTRUCTIONS.md",
+          "interpreters/mas-papers/2-planning-decomposition/a-plan-execute/INSTRUCTIONS.md",
+          "interpreters/mas-papers/5-fixed-sop-teams/a-metagpt/INSTRUCTIONS.md",
         ];
         const pqRe = /## Pending Questions/;
         const notWaitingRe = /DO NOT set state to "waiting_for_user"|non-blocking|do not.*waiting_for_user/i;
@@ -2650,9 +2650,9 @@ R40 requires.
 
       test("R40 (c) strategy-level push present in every new strategy", () => {
         const strategies = [
-          "interpreters/2-planning-decomposition/a-plan-execute/INSTRUCTIONS.md",
-          "interpreters/5-fixed-sop-teams/a-metagpt/INSTRUCTIONS.md",
-          "interpreters/5-fixed-sop-teams/b-chatdev/INSTRUCTIONS.md",
+          "interpreters/mas-papers/2-planning-decomposition/a-plan-execute/INSTRUCTIONS.md",
+          "interpreters/mas-papers/5-fixed-sop-teams/a-metagpt/INSTRUCTIONS.md",
+          "interpreters/mas-papers/5-fixed-sop-teams/b-chatdev/INSTRUCTIONS.md",
         ];
         for (const s of strategies) {
           const body = readFileSync(resolve(REPO, s), "utf-8");
@@ -2671,7 +2671,7 @@ R40 requires.
     malformed-branch has both `## Pending Questions` text and
     non-blocking language.
 
-- [ ] **Step 6: Create `interpreters/5-fixed-sop-teams/README.md` with exact content**
+- [ ] **Step 6: Create `interpreters/mas-papers/5-fixed-sop-teams/README.md` with exact content**
 
     ````markdown
     # Fixed-SOP Teams — Group 5
@@ -2712,8 +2712,8 @@ R40 requires.
     ## Run them side-by-side
 
     ```bash
-    ./new-instance.sh mg interpreters/5-fixed-sop-teams/a-metagpt
-    ./new-instance.sh cd interpreters/5-fixed-sop-teams/b-chatdev
+    ./new-instance.sh mg interpreters/mas-papers/5-fixed-sop-teams/a-metagpt
+    ./new-instance.sh cd interpreters/mas-papers/5-fixed-sop-teams/b-chatdev
     instances/mg/run.sh
     instances/cd/run.sh
     diff -u instances/mg/workspace/ instances/cd/workspace/
@@ -2736,7 +2736,7 @@ R40 requires.
     ```bash
     git add src/test/phase-operators-identity.test.ts \
             src/test/phase-4-shell-features.test.ts \
-            interpreters/5-fixed-sop-teams/README.md
+            interpreters/mas-papers/5-fixed-sop-teams/README.md
     git commit -m "test+doc(phase-4): 4-way evaluate identity + shell-feature rehoming + Phase-4 group README (satisfies: R29, R40, R48)"
     ```
 
@@ -2751,7 +2751,7 @@ Delete the directory and update all docs / prose references.
 - Modify: `CLAUDE.md`
 - Modify: `README.md` (repo root)
 - Modify: `docs/agent-workflows/requirements.md`
-- Modify: `interpreters/1-iterative-refinement/README.md` (if it mentions game-team)
+- Modify: `interpreters/mas-papers/1-iterative-refinement/README.md` (if it mentions game-team)
 
 - [ ] **Step 1: Write a failing regression test**
 
@@ -2793,11 +2793,11 @@ Delete the directory and update all docs / prose references.
     bullet. Add five new bullets (in this order):
 
     ```
-    - **`interpreters/2-planning-decomposition/a-plan-execute`** — Plan-and-Execute (patterns.md Group 2). Demo d1: minimal TypeScript Node.js project setup. INSTRUCTIONS + dynamics byte-equal across the three leaves in this group.
-    - **`interpreters/2-planning-decomposition/b-orchestrator-workers`** — Orchestrator–Workers (Anthropic, Building Effective Agents). Demo d2: summarise 5 technical notes.
-    - **`interpreters/2-planning-decomposition/c-deep-research`** — Deep Research (product pattern; Self-Ask ancestry). Demo d3: Raft/Paxos/Multi-Paxos comparison; exercises stack depth 2 via recursive plan.md push.
-    - **`interpreters/5-fixed-sop-teams/a-metagpt`** — MetaGPT (Hong et al., ICLR 2024). Document hand-off SOP (PM → Architect → Engineer → QA). Shared PROGRAM.md with b-chatdev for comparison.
-    - **`interpreters/5-fixed-sop-teams/b-chatdev`** — ChatDev (Qian et al., 2023). Phase-dialogue SOP (design → coding → testing → documenting). Shared PROGRAM.md with a-metagpt.
+    - **`interpreters/mas-papers/2-planning-decomposition/a-plan-execute`** — Plan-and-Execute (patterns.md Group 2). Demo d1: minimal TypeScript Node.js project setup. INSTRUCTIONS + dynamics byte-equal across the three leaves in this group.
+    - **`interpreters/mas-papers/2-planning-decomposition/b-orchestrator-workers`** — Orchestrator–Workers (Anthropic, Building Effective Agents). Demo d2: summarise 5 technical notes.
+    - **`interpreters/mas-papers/2-planning-decomposition/c-deep-research`** — Deep Research (product pattern; Self-Ask ancestry). Demo d3: Raft/Paxos/Multi-Paxos comparison; exercises stack depth 2 via recursive plan.md push.
+    - **`interpreters/mas-papers/5-fixed-sop-teams/a-metagpt`** — MetaGPT (Hong et al., ICLR 2024). Document hand-off SOP (PM → Architect → Engineer → QA). Shared PROGRAM.md with b-chatdev for comparison.
+    - **`interpreters/mas-papers/5-fixed-sop-teams/b-chatdev`** — ChatDev (Qian et al., 2023). Phase-dialogue SOP (design → coding → testing → documenting). Shared PROGRAM.md with a-metagpt.
     ```
 
     Anywhere in CLAUDE.md that mentions "game-team exempt" or
@@ -2810,7 +2810,7 @@ Delete the directory and update all docs / prose references.
     `interpreters/game-team`. Replace the example command with:
 
     ```bash
-    ./new-instance.sh foo interpreters/2-planning-decomposition/a-plan-execute
+    ./new-instance.sh foo interpreters/mas-papers/2-planning-decomposition/a-plan-execute
     ```
 
     and update any surrounding prose accordingly.
@@ -2821,10 +2821,10 @@ Delete the directory and update all docs / prose references.
     - **Guiding principle 3** ("Retire `interpreters/game-team` deliberately in Phase 4"): rewrite in the past tense ("Phase 4 retired `interpreters/game-team` per spec `docs/specs/2026-04-24-implement-phase-3-and-4/`") or remove entirely.
     - **Guiding principle 7** (directory-layout convention): remove the sentence exempting game-team.
     - **Group order table** (~line 91): the "Phase 4 (game-team retirement)" cell can remain as historical context; update to "Phase 4 (game-team retired; fixed-SOP teams delivered)".
-    - **Phase 3 section**: replace any placeholder paths with the final paths (`interpreters/2-planning-decomposition/a-plan-execute/`, `.../b-orchestrator-workers/`, `.../c-deep-research/`) and mark Phase 3 as shipped.
-    - **Phase 4 section**: replace placeholder paths with final paths (`interpreters/5-fixed-sop-teams/a-metagpt/`, `.../b-chatdev/`), mark the retirement complete, and mark Phase 4 as shipped.
+    - **Phase 3 section**: replace any placeholder paths with the final paths (`interpreters/mas-papers/2-planning-decomposition/a-plan-execute/`, `.../b-orchestrator-workers/`, `.../c-deep-research/`) and mark Phase 3 as shipped.
+    - **Phase 4 section**: replace placeholder paths with final paths (`interpreters/mas-papers/5-fixed-sop-teams/a-metagpt/`, `.../b-chatdev/`), mark the retirement complete, and mark Phase 4 as shipped.
 
-- [ ] **Step 7: Update `interpreters/1-iterative-refinement/README.md`**
+- [ ] **Step 7: Update `interpreters/mas-papers/1-iterative-refinement/README.md`**
 
     If this group README contains any "game-team is exempt" or
     "alongside game-team" language (Phase 1 added a hedge), remove
@@ -2866,7 +2866,7 @@ dynamics-table sync in the plan doc if any contract diverged.
     `c-deep-research`:
 
     ```bash
-    ./new-instance.sh demo-phase-3-<leaf> interpreters/2-planning-decomposition/<leaf>
+    ./new-instance.sh demo-phase-3-<leaf> interpreters/mas-papers/2-planning-decomposition/<leaf>
     instances/demo-phase-3-<leaf>/run.sh
     ```
 
@@ -2881,7 +2881,7 @@ dynamics-table sync in the plan doc if any contract diverged.
     For each `leaf` in `a-metagpt`, `b-chatdev`:
 
     ```bash
-    ./new-instance.sh demo-phase-4-<leaf> interpreters/5-fixed-sop-teams/<leaf>
+    ./new-instance.sh demo-phase-4-<leaf> interpreters/mas-papers/5-fixed-sop-teams/<leaf>
     instances/demo-phase-4-<leaf>/run.sh
     ```
 

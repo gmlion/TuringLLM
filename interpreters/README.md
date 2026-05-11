@@ -142,7 +142,7 @@ The asymmetry between strategy and dynamic is the point: **strategies own state 
 
 ### Root-operator bootstrap
 
-Every interpreter directory contains an `INSTRUCTIONS.md` that is a single-line marker pointing at the canonical operator file, e.g. `operators/refine.md`. When `new-instance.sh <name> <interpreter-dir>` creates an instance, it reads that marker and writes the resolved path to `instances/<name>/.root-operator`.
+Every interpreter directory contains an `INSTRUCTIONS.md` that is a single-line marker pointing at the canonical operator file, e.g. `operators/refine.md`. When `new-instance.sh <interpreter-dir> <name>` creates an instance, it reads that marker and writes the resolved path to `instances/<name>/.root-operator`.
 
 At startup (before the first cycle), the shell:
 
@@ -235,7 +235,7 @@ When Phase 7 (`aflow-lite/`) ships, it will reference the operator shortlist abo
 To run any shipped interpreter:
 
 ```bash
-./new-instance.sh my-instance interpreters/<group>/<leaf>
+./new-instance.sh interpreters/<group>/<leaf> my-instance
 instances/my-instance/run.sh
 ```
 

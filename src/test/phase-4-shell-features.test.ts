@@ -11,9 +11,9 @@ const REPO = resolve(__dirname, "../..");
 describe("R40: shell features re-homed from game-team", () => {
   test("R40 (a) fuzzy NL conditions used in at least one Phase-3/4 strategy", () => {
     const candidates = [
-      "interpreters/2-planning-decomposition/a-plan-execute/operators/plan-execute.md",
-      "interpreters/5-fixed-sop-teams/a-metagpt/operators/metagpt.md",
-      "interpreters/5-fixed-sop-teams/b-chatdev/operators/chatdev.md",
+      "interpreters/mas-papers/2-planning-decomposition/a-plan-execute/operators/plan-execute.md",
+      "interpreters/mas-papers/5-fixed-sop-teams/a-metagpt/operators/metagpt.md",
+      "interpreters/mas-papers/5-fixed-sop-teams/b-chatdev/operators/chatdev.md",
     ];
     const fuzzyRe = /suggests|indicates|appears|is successful|looks|signals|reads as/i;
     const hits = candidates.filter((c) => fuzzyRe.test(readFileSync(resolve(REPO, c), "utf-8")));
@@ -22,8 +22,8 @@ describe("R40: shell features re-homed from game-team", () => {
 
   test("R40 (b) non-blocking Pending Questions used by at least one Phase-3/4 strategy", () => {
     const candidates = [
-      "interpreters/2-planning-decomposition/a-plan-execute/operators/plan-execute.md",
-      "interpreters/5-fixed-sop-teams/a-metagpt/operators/metagpt.md",
+      "interpreters/mas-papers/2-planning-decomposition/a-plan-execute/operators/plan-execute.md",
+      "interpreters/mas-papers/5-fixed-sop-teams/a-metagpt/operators/metagpt.md",
     ];
     const pqRe = /## Pending Questions/;
     const notWaitingRe = /DO NOT set state to "waiting_for_user"|non-blocking|do not.*waiting_for_user/i;
@@ -38,9 +38,9 @@ describe("R40: shell features re-homed from game-team", () => {
   test("R40 (c) strategy-level push present in every new strategy", () => {
     // After Phase-7 migration, INSTRUCTIONS.md is a marker; the strategy lives in the operator file.
     const strategies = [
-      "interpreters/2-planning-decomposition/a-plan-execute/operators/plan-execute.md",
-      "interpreters/5-fixed-sop-teams/a-metagpt/operators/metagpt.md",
-      "interpreters/5-fixed-sop-teams/b-chatdev/operators/chatdev.md",
+      "interpreters/mas-papers/2-planning-decomposition/a-plan-execute/operators/plan-execute.md",
+      "interpreters/mas-papers/5-fixed-sop-teams/a-metagpt/operators/metagpt.md",
+      "interpreters/mas-papers/5-fixed-sop-teams/b-chatdev/operators/chatdev.md",
     ];
     for (const s of strategies) {
       const body = readFileSync(resolve(REPO, s), "utf-8");
