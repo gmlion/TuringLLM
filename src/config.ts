@@ -11,12 +11,25 @@ import type { CallStack } from "./call-stack.js";
 
 export const BASE_DIR = process.cwd();
 
-// Load .env: instance-level overrides project-level
-const projectRoot = resolve(BASE_DIR, "../..");
-const projectEnv = resolve(projectRoot, ".env");
-const instanceEnv = resolve(BASE_DIR, ".env");
-if (existsSync(projectEnv)) config({ path: projectEnv });
-if (existsSync(instanceEnv)) config({ path: instanceEnv, override: true });
+/**
+ * Initialize environment configuration by loading .env files.
+ * Loads .env: instance-level overrides project-level.
+ * Must be called before accessing process.env in main.ts.
+ */
+export function initializeConfig(): void {
+  function loadEnvFile(path: string, override?: boolean): void {
+    if (existsSync(path)) {
+      config({ path, override });
+    }
+  }
+
+  const projectRoot = resolve(BASE_DIR, "../..");
+  const projectEnv = resolve(projectRoot, ".env");
+  const instanceEnv = resolve(BASE_DIR, ".env");
+
+  loadEnvFile(projectEnv);
+  loadEnvFile(instanceEnv, true);
+}
 
 export const HISTORY_DIR = resolve(BASE_DIR, "history");
 export const SYSCALLS_PATH = resolve(BASE_DIR, "SYSCALLS.md");

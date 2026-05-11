@@ -30,7 +30,9 @@ export async function withBackoff<T>(
     try {
       return await fn();
     } catch (err) {
-      if (attempt >= maxRetries || (opts.shouldRetry && !opts.shouldRetry(err))) throw err;
+      const attemptExhausted = attempt >= maxRetries;
+      const isTerminalError = opts.shouldRetry && !opts.shouldRetry(err);
+      if (attemptExhausted || isTerminalError) throw err;
       log(`  [${opts.label}] ${err instanceof Error ? err.message : err}`);
       log(`  [${opts.label}] retrying in ${delay}s... (attempt ${attempt + 1}/${maxRetries})`);
       emitRetry(attempt + 1, opts.label);

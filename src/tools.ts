@@ -114,6 +114,97 @@ export function getTools(): Anthropic.Tool[] {
   ];
 }
 
+// Helper: Consolidate repeated coercion pattern for extracting string inputs
+function extractString(value: unknown, fallback: string = ""): string {
+  return typeof value === "string" ? value : String(value ?? fallback);
+}
+
+// Handler: Execute bash command with timeout and syntax-error detection
+function executeBash(command: string, cwd?: string): ToolResult {
+  if (!command) {
+    return { output: "Error: no command provided.", error: true };
+  }
+  try {
+    const timeout = process.env.BASH_TIMEOUT
+      ? parseInt(process.env.BASH_TIMEOUT, 10) * 1000
+      : 5 * 60 * 1000; // 5 minutes default
+    const stdout = execSync(command, {
+      encoding: "utf-8",
+      timeout,
+      maxBuffer: 1024 * 1024,
+      ...(cwd ? { cwd } : {}),
+    });
+    return { output: stdout || "(no output)", error: false };
+  } catch (err: unknown) {
+    const e = err as { stdout?: string; stderr?: string; status?: number };
+    const stderr = e.stderr ?? "";
+    const output = `exit code ${e.status ?? 1}\nstdout: ${e.stdout ?? ""}\nstderr: ${stderr}`;
+    const isSyntaxError = /syntax error|unexpected EOF|here-document|bad substitution/i.test(stderr);
+    return { output, error: isSyntaxError };
+  }
+}
+
+// Handler: Write file with recursive directory creation
+function executeWriteFile(path: string, content: string): ToolResult {
+  if (!path) {
+    return { output: "Error: no path provided", error: true };
+  }
+  try {
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileSync(path, content, "utf-8");
+    return { output: "OK", error: false };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { output: `Error: ${msg}`, error: true };
+  }
+}
+
+// Handler: Execute git command with whitelist validation
+function executeGit(args: string, workspacePath?: string): ToolResult {
+  if (!args) {
+    return { output: "Error: no git args provided.", error: true };
+  }
+  if (!workspacePath) {
+    return { output: "Error: workspace path not configured.", error: true };
+  }
+  // Whitelist: only allow known-safe git subcommands
+  const subcommand = args.trim().split(/\s+/)[0].toLowerCase();
+  if (!ALLOWED_GIT_COMMANDS.has(subcommand)) {
+    return {
+      output: `Error: "git ${subcommand}" is not allowed. Allowed: ${[...ALLOWED_GIT_COMMANDS].join(", ")}.`,
+      error: true,
+    };
+  }
+  try {
+    const stdout = execSync(`git ${args}`, {
+      encoding: "utf-8",
+      timeout: 0,
+      maxBuffer: 1024 * 1024,
+      cwd: workspacePath,
+    });
+    return { output: stdout || "(no output)", error: false };
+  } catch (err: unknown) {
+    const e = err as { stdout?: string; stderr?: string; status?: number };
+    const output = `exit code ${e.status ?? 1}\nstdout: ${e.stdout ?? ""}\nstderr: ${e.stderr ?? ""}`;
+    return { output, error: true };
+  }
+}
+
+// Handler: Execute web search (async)
+async function executeWebSearch(query: string): Promise<ToolResult> {
+  const { webSearch } = await import("./web-tools.js");
+  const out = await webSearch(extractString(query));
+  return { output: JSON.stringify(out), error: false };
+}
+
+// Handler: Execute web fetch (async)
+async function executeWebFetch(url: string): Promise<ToolResult> {
+  const { webFetch } = await import("./web-tools.js");
+  const out = await webFetch(extractString(url));
+  return { output: JSON.stringify(out), error: false };
+}
+
+// Dispatcher: Route tool calls to appropriate handlers
 export async function executeTool(
   name: string,
   input: Record<string, unknown>,
@@ -123,87 +214,30 @@ export async function executeTool(
 ): Promise<ToolResult> {
   switch (name) {
     case "bash": {
-      const command = typeof input.command === "string" ? input.command : String(input.command ?? "");
-      if (!command) {
-        return { output: "Error: no command provided.", error: true };
-      }
-      try {
-        const timeout = process.env.BASH_TIMEOUT
-          ? parseInt(process.env.BASH_TIMEOUT, 10) * 1000
-          : 5 * 60 * 1000; // 5 minutes default
-        const stdout = execSync(command, {
-          encoding: "utf-8",
-          timeout,
-          maxBuffer: 1024 * 1024,
-          ...(cwd ? { cwd } : {}),
-        });
-        return { output: stdout || "(no output)", error: false };
-      } catch (err: unknown) {
-        const e = err as { stdout?: string; stderr?: string; status?: number };
-        const stderr = e.stderr ?? "";
-        const output = `exit code ${e.status ?? 1}\nstdout: ${e.stdout ?? ""}\nstderr: ${stderr}`;
-        const isSyntaxError = /syntax error|unexpected EOF|here-document|bad substitution/i.test(stderr);
-        return { output, error: isSyntaxError };
-      }
+      const command = extractString(input.command);
+      return executeBash(command, cwd);
     }
     case "write_file": {
-      const path = String(input.path ?? "");
-      const content = String(input.content ?? "");
-      if (!path) {
-        return { output: "Error: no path provided", error: true };
-      }
-      try {
-        mkdirSync(dirname(path), { recursive: true });
-        writeFileSync(path, content, "utf-8");
-        return { output: "OK", error: false };
-      } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : String(err);
-        return { output: `Error: ${msg}`, error: true };
-      }
+      const path = extractString(input.path);
+      const content = extractString(input.content);
+      return executeWriteFile(path, content);
     }
     case "git": {
-      const args = typeof input.args === "string" ? input.args : String(input.args ?? "");
-      if (!args) {
-        return { output: "Error: no git args provided.", error: true };
-      }
-      if (!workspacePath) {
-        return { output: "Error: workspace path not configured.", error: true };
-      }
-      // Whitelist: only allow known-safe git subcommands
-      const subcommand = args.trim().split(/\s+/)[0].toLowerCase();
-      if (!ALLOWED_GIT_COMMANDS.has(subcommand)) {
-        return {
-          output: `Error: "git ${subcommand}" is not allowed. Allowed: ${[...ALLOWED_GIT_COMMANDS].join(", ")}.`,
-          error: true,
-        };
-      }
-      try {
-        const stdout = execSync(`git ${args}`, {
-          encoding: "utf-8",
-          timeout: 0,
-          maxBuffer: 1024 * 1024,
-          cwd: workspacePath,
-        });
-        return { output: stdout || "(no output)", error: false };
-      } catch (err: unknown) {
-        const e = err as { stdout?: string; stderr?: string; status?: number };
-        const output = `exit code ${e.status ?? 1}\nstdout: ${e.stdout ?? ""}\nstderr: ${e.stderr ?? ""}`;
-        return { output, error: true };
-      }
+      const args = extractString(input.args);
+      return executeGit(args, workspacePath);
     }
     case "update_instructions": {
-      writeFileSync(instructionsPath, String(input.content ?? ""), "utf-8");
+      const content = extractString(input.content);
+      writeFileSync(instructionsPath, content, "utf-8");
       return { output: "OK", error: false };
     }
     case "web_search": {
-      const { webSearch } = await import("./web-tools.js");
-      const out = await webSearch(String(input.query ?? ""));
-      return { output: JSON.stringify(out), error: false };
+      const query = extractString(input.query);
+      return await executeWebSearch(query);
     }
     case "web_fetch": {
-      const { webFetch } = await import("./web-tools.js");
-      const out = await webFetch(String(input.url ?? ""));
-      return { output: JSON.stringify(out), error: false };
+      const url = extractString(input.url);
+      return await executeWebFetch(url);
     }
     default:
       return { output: `Unknown tool: ${name}`, error: true };

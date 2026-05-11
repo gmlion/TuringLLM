@@ -7,11 +7,7 @@
  */
 
 import { PROVIDER } from "../config.js";
-import type { CycleResult } from "./shared.js";
-
-type ProviderModule = {
-  runCycle: (instructionsPath: string, memoryPath: string) => Promise<CycleResult>;
-};
+import type { CycleResult, ProviderModule } from "./shared.js";
 
 const PROVIDERS: Record<string, () => Promise<ProviderModule>> = {
   "claude-code": () => import("./claude-code.js"),

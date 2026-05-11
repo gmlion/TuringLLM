@@ -9,6 +9,9 @@
 
 export type PendingQuestion = { id: string; question: string };
 
+/** Block scalar key pattern: keys never allow hyphens (invariant across all parsers). */
+const BLOCK_SCALAR_KEY_PATTERN = /^([a-zA-Z_][a-zA-Z0-9_]*): \|$/;
+
 /** Extract the current state from MEMORY content. */
 export function parseState(memory: string): string {
   const match = memory.match(/^## State\n(.+)/m);
@@ -76,6 +79,27 @@ export function removePush(memory: string): string {
 }
 
 /**
+ * Extract block scalar value from lines, handling indentation and trimming.
+ * Returns the value and the next line index to continue parsing from.
+ * Block scalars must be indented by exactly 2 spaces; trailing blank lines are trimmed.
+ */
+function extractBlockScalarValue(
+  lines: string[],
+  startIndex: number,
+): { value: string; nextIndex: number } {
+  const valueLines: string[] = [];
+  let i = startIndex;
+  while (i < lines.length && (lines[i].startsWith("  ") || lines[i] === "")) {
+    valueLines.push(lines[i].startsWith("  ") ? lines[i].slice(2) : "");
+    i++;
+  }
+  while (valueLines.length > 0 && valueLines[valueLines.length - 1] === "") {
+    valueLines.pop();
+  }
+  return { value: valueLines.join("\n"), nextIndex: i };
+}
+
+/**
  * Internal helper: parse a `## <sectionName>` block into keyed entries.
  *
  * Grammar (same as Push-Args / Return):
@@ -131,19 +155,13 @@ function parseKeyedSection(
       continue;
     }
     // Block scalar: `key: |`  (keys never allow hyphens regardless of option)
-    const blockMatch = line.match(/^([a-zA-Z_][a-zA-Z0-9_]*): \|$/);
+    const blockMatch = line.match(BLOCK_SCALAR_KEY_PATTERN);
     if (blockMatch) {
       const key = blockMatch[1];
-      const valueLines: string[] = [];
       i++;
-      while (i < lines.length && (lines[i].startsWith("  ") || lines[i] === "")) {
-        valueLines.push(lines[i].startsWith("  ") ? lines[i].slice(2) : "");
-        i++;
-      }
-      while (valueLines.length > 0 && valueLines[valueLines.length - 1] === "") {
-        valueLines.pop();
-      }
-      entries[key] = valueLines.join("\n");
+      const { value, nextIndex } = extractBlockScalarValue(lines, i);
+      entries[key] = value;
+      i = nextIndex;
       continue;
     }
     // Single-line: `key: value`
@@ -214,6 +232,14 @@ export function removeReturn(memory: string): string {
 }
 
 /**
+ * Capitalize the first character of a key for use in section headers.
+ * Example: "answerId" → "AnswerId", "verdict" → "Verdict"
+ */
+function capitalizeKey(key: string): string {
+  return key.charAt(0).toUpperCase() + key.slice(1);
+}
+
+/**
  * Splice return entries into caller MEMORY as ## <CapitalizedKey> sections.
  * Upsert: replace an existing section's body if present, append a new
  * section at the end otherwise. First character of the key is uppercased;
@@ -225,8 +251,7 @@ export function spliceReturns(
 ): string {
   let out = callerMemory;
   for (const [key, value] of Object.entries(returns)) {
-    const capitalized = key.charAt(0).toUpperCase() + key.slice(1);
-    const sectionName = `## ${capitalized}`;
+    const sectionName = `## ${capitalizeKey(key)}`;
     const re = new RegExp(
       `(^|\\n)${sectionName}\\n[^\\n]*(\\n(?!## )[^\\n]*)*`,
       "m",

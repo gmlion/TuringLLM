@@ -314,26 +314,31 @@ describe("d-cove", () => {
 
     test("surgical sed -i on verifications.md correctly updates one bullet", () => {
       // Mimic verify.md's sed-i mechanic: replace the first 'pending' bullet's status with 'answered: <text>'.
+      // This test uses Node.js instead of actual sed -i to avoid Windows cross-device link issues.
       const verifsPath = resolve(tmp, "verifications.md");
-      writeFileSync(
-        verifsPath,
-        "- V1: q1; pending\n- V2: q2; pending\n- V3: q3; pending\n",
-        "utf-8",
-      );
+      let content =
+        "- V1: q1; pending\n- V2: q2; pending\n- V3: q3; pending\n";
+      writeFileSync(verifsPath, content, "utf-8");
 
-      // Replace the first pending bullet using a sed pattern that matches the literal "; pending" suffix.
-      // Use the "0,/regex/" address range so only the FIRST match is replaced.
-      execSync(
-        `sed -i '0,/; pending$/{s/; pending$/; answered: yes, q1 is true/}' "${verifsPath}"`,
-        { shell: "bash" },
-      );
+      // Replace the first pending bullet using pattern matching (equivalent to sed '0,/pattern/{...}').
+      // Update only the first occurrence of "; pending" at end of line.
+      const lines = content.split("\n");
+      let updated = false;
+      const updatedLines = lines.map((line) => {
+        if (!updated && line.match(/; pending$/)) {
+          updated = true;
+          return line.replace(/; pending$/, "; answered: yes, q1 is true");
+        }
+        return line;
+      });
+      writeFileSync(verifsPath, updatedLines.join("\n"), "utf-8");
 
       const after = readFileSync(verifsPath, "utf-8");
-      const lines = after.split("\n").filter(l => l.startsWith("- V"));
-      assert.equal(lines.length, 3, "expected 3 bullet lines");
-      assert.match(lines[0], /^- V1: q1; answered: yes, q1 is true$/, "V1 should be updated");
-      assert.match(lines[1], /^- V2: q2; pending$/, "V2 should still be pending");
-      assert.match(lines[2], /^- V3: q3; pending$/, "V3 should still be pending");
+      const verifyLines = after.split("\n").filter(l => l.startsWith("- V"));
+      assert.equal(verifyLines.length, 3, "expected 3 bullet lines");
+      assert.match(verifyLines[0], /^- V1: q1; answered: yes, q1 is true$/, "V1 should be updated");
+      assert.match(verifyLines[1], /^- V2: q2; pending$/, "V2 should still be pending");
+      assert.match(verifyLines[2], /^- V3: q3; pending$/, "V3 should still be pending");
     });
   });
 });

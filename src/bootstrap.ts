@@ -24,31 +24,81 @@ export interface BootstrapResult {
   instructionsPath: string;
 }
 
-export function startupBootstrap(baseDir: string): BootstrapResult {
-  const rootOpFile = join(baseDir, ".root-operator");
+/**
+ * Read and validate the root operator path from the .root-operator config file.
+ * Throws if the file is missing or empty.
+ */
+function readRootOperator(rootOpFile: string): string {
   const rootOpPath = existsSync(rootOpFile) ? readFileSync(rootOpFile, "utf-8").trim() : "";
   if (!rootOpPath) {
     throw new Error(
       "no .root-operator configured for this instance; create a new instance via new-instance.sh",
     );
   }
+  return rootOpPath;
+}
 
+/**
+ * Compute bootstrap data: frame directory, slug, call stack, and substituted content.
+ * Pure function—accepts file contents and roots as arguments; returns computed structures
+ * without I/O. Separates transformation logic from effects.
+ */
+function buildBootstrapData(
+  baseDir: string,
+  rootOpPath: string,
+  operatorContent: string,
+  programContent: string,
+): {
+  frameDirRelative: string;
+  slug: string;
+  callStack: CallStack;
+  substituted: string;
+} {
   const slug = slugFromTarget(rootOpPath);
   const frameDirRelative = formatFrameDir(0, slug);
 
-  const operatorContent = readFileSync(join(baseDir, rootOpPath), "utf-8");
-  const programPath = join(baseDir, "PROGRAM.md");
-  const programContent = existsSync(programPath) ? readFileSync(programPath, "utf-8") : "";
   const { result: substituted } = substitutePlaceholders(operatorContent, { program: programContent });
-
-  mkdirSync(join(baseDir, frameDirRelative, "scoped"), { recursive: true });
-  writeFileSync(join(baseDir, frameDirRelative, "INSTRUCTIONS.md"), substituted, "utf-8");
-  writeFileSync(join(baseDir, frameDirRelative, "MEMORY.md"), "## State\nempty\n", "utf-8");
 
   const callStack: CallStack = {
     nextCounter: 1,
     stack: [{ returnState: "<root>", frameDir: frameDirRelative }],
   };
+
+  return { frameDirRelative, slug, callStack, substituted };
+}
+
+export function startupBootstrap(baseDir: string): BootstrapResult {
+  const rootOpFile = join(baseDir, ".root-operator");
+  const rootOpPath = readRootOperator(rootOpFile);
+
+  const operatorContent = readFileSync(join(baseDir, rootOpPath), "utf-8");
+  const programPath = join(baseDir, "PROGRAM.md");
+  const programContent = existsSync(programPath) ? readFileSync(programPath, "utf-8") : "";
+
+  const { frameDirRelative, callStack, substituted } = buildBootstrapData(
+    baseDir,
+    rootOpPath,
+    operatorContent,
+    programContent,
+  );
+
+  // Validate substituted content before creating directories and writing files.
+  if (!substituted || substituted.trim().length === 0) {
+    throw new Error(
+      "substituted operator content is empty; check PROGRAM.md and {{program}} placeholder in operator template",
+    );
+  }
+
+  try {
+    mkdirSync(join(baseDir, frameDirRelative, "scoped"), { recursive: true });
+    writeFileSync(join(baseDir, frameDirRelative, "INSTRUCTIONS.md"), substituted, "utf-8");
+    writeFileSync(join(baseDir, frameDirRelative, "MEMORY.md"), "## State\nempty\n", "utf-8");
+  } catch (error) {
+    throw new Error(
+      `failed to initialize frame directory: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+
   writeFileSync(join(baseDir, ".call-stack.json"), JSON.stringify(callStack, null, 2), "utf-8");
 
   return {
@@ -56,6 +106,20 @@ export function startupBootstrap(baseDir: string): BootstrapResult {
     memoryPath: join(baseDir, frameDirRelative, "MEMORY.md"),
     instructionsPath: join(baseDir, frameDirRelative, "INSTRUCTIONS.md"),
   };
+}
+
+/**
+ * Format return entries into markdown sections: capitalize first letter of each key,
+ * format as "## SectionTitle\nvalue".
+ * Pure function—enables testing of formatting logic in isolation.
+ */
+function formatReturnEntries(entries: Record<string, string>): string {
+  let outputBody = "";
+  for (const [key, value] of Object.entries(entries)) {
+    const sectionTitle = key.charAt(0).toUpperCase() + key.slice(1);
+    outputBody += `## ${sectionTitle}\n${value}\n\n`;
+  }
+  return outputBody;
 }
 
 export function emitOutputMd(baseDir: string, rootMemory: string): void {
@@ -67,11 +131,7 @@ export function emitOutputMd(baseDir: string, rootMemory: string): void {
       "The root operator halted without a ## Return block. " +
       "Inspect frames/f000-<slug>/MEMORY.md for terminal state.\n";
   } else {
-    outputBody = "";
-    for (const [key, value] of Object.entries(entries)) {
-      const sectionTitle = key.charAt(0).toUpperCase() + key.slice(1);
-      outputBody += `## ${sectionTitle}\n${value}\n\n`;
-    }
+    outputBody = formatReturnEntries(entries);
   }
   writeFileSync(join(baseDir, "OUTPUT.md"), outputBody);
 }

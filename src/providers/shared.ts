@@ -16,6 +16,18 @@ export type ProviderEvent =
   | { type: "retry"; attempt: number; reason: string };
 
 /**
+ * Dispatch table for ProviderEvent types. Maps event types to their corresponding
+ * emit functions. Eliminates control flow and makes event handling declarative.
+ */
+const eventHandlers: Record<ProviderEvent['type'], (ev: ProviderEvent) => void> = {
+  llm_request: (ev) => emitLlmRequest((ev as any).provider, (ev as any).model, (ev as any).prompt),
+  llm_response: (ev) => emitLlmResponse((ev as any).output, (ev as any).durationMs, (ev as any).usage),
+  tool_call: (ev) => emitToolCall((ev as any).tool, (ev as any).input),
+  tool_result: (ev) => emitToolResult((ev as any).tool, (ev as any).output, (ev as any).isError),
+  retry: (ev) => emitRetry((ev as any).attempt, (ev as any).reason),
+};
+
+/**
  * Translate the buffered ProviderEvent list (returned by every provider's
  * runCycle) into the corresponding emit calls. Providers buffer rather
  * than emit directly so a provider can be unit-tested without an active
@@ -24,23 +36,7 @@ export type ProviderEvent =
  */
 export function drainProviderEvents(events: ProviderEvent[]): void {
   for (const ev of events) {
-    switch (ev.type) {
-      case "llm_request":
-        emitLlmRequest(ev.provider, ev.model, ev.prompt);
-        break;
-      case "llm_response":
-        emitLlmResponse(ev.output, ev.durationMs, ev.usage);
-        break;
-      case "tool_call":
-        emitToolCall(ev.tool, ev.input);
-        break;
-      case "tool_result":
-        emitToolResult(ev.tool, ev.output, ev.isError);
-        break;
-      case "retry":
-        emitRetry(ev.attempt, ev.reason);
-        break;
-    }
+    eventHandlers[ev.type](ev);
   }
 }
 
@@ -52,6 +48,10 @@ export type CycleResult = {
   events: ProviderEvent[];  // required (B-architecture: every provider must populate)
 };
 
+export type ProviderModule = {
+  runCycle: (instructionsPath: string, memoryPath: string) => Promise<CycleResult>;
+};
+
 export function readFile(path: string): string {
   try {
     return readFileSync(path, "utf-8");
@@ -60,16 +60,28 @@ export function readFile(path: string): string {
   }
 }
 
-export function logToolCall(name: string, input: Record<string, unknown>, result: ToolResult): void {
-  if (name === "bash") {
+/**
+ * Formatters for tool call logging. Maps tool names to formatting functions.
+ * Eliminates duplication and makes tool types extensible without modifying control flow.
+ */
+const toolFormatters: Record<string, (input: Record<string, unknown>, hasError: boolean) => string> = {
+  bash: (input, hasError) => {
     const cmd = typeof input.command === "string" ? input.command : "";
-    log(`  [bash] ${cmd}${result.error ? " (error)" : ""}`);
-  } else if (name === "write_file") {
-    log(`  [write_file] ${input.path}${result.error ? " (error)" : ""}`);
-  } else if (name === "git") {
-    log(`  [git] ${input.args}${result.error ? " (error)" : ""}`);
-  } else if (name === "update_instructions") {
-    log(`  [update_instructions]`);
+    return `  [bash] ${cmd}${hasError ? " (error)" : ""}`;
+  },
+  write_file: (input, hasError) => {
+    return `  [write_file] ${input.path}${hasError ? " (error)" : ""}`;
+  },
+  git: (input, hasError) => {
+    return `  [git] ${input.args}${hasError ? " (error)" : ""}`;
+  },
+  update_instructions: () => `  [update_instructions]`,
+};
+
+export function logToolCall(name: string, input: Record<string, unknown>, result: ToolResult): void {
+  const formatter = toolFormatters[name];
+  if (formatter) {
+    log(formatter(input, !!result.error));
   }
 }
 
@@ -82,6 +94,42 @@ export type CompletenessResult = {
   state: string;
 };
 
+/**
+ * Regex patterns for parsing MEMORY.md sections. Named constants clarify intent
+ * and support extraction of parsing logic into pure functions.
+ */
+const STATE_PATTERN = /^## State\n(.+)/m;
+const LAST_ACTION_PATTERN = /^## Last Action\n([\s\S]*?)(?=\n## |\n*$)/m;
+const MATCHED_INSTRUCTION_PATTERN = /^## Matched Instruction\n(.+)/m;
+
+/**
+ * Extract the state value from MEMORY.md content.
+ * Pure function: takes memory content, returns normalized state string.
+ */
+function parseState(memoryContent: string): string {
+  const match = memoryContent.match(STATE_PATTERN);
+  return match ? match[1].trim() : "";
+}
+
+/**
+ * Extract the matched instruction value from MEMORY.md content.
+ * Pure function: takes memory content, returns normalized matched instruction string.
+ */
+function parseMatchedInstruction(memoryContent: string): string {
+  const match = memoryContent.match(MATCHED_INSTRUCTION_PATTERN);
+  const value = match ? match[1].trim().toLowerCase() : "";
+  return value;
+}
+
+/**
+ * Extract the halt message (from Last Action section) from MEMORY.md content.
+ * Pure function: takes memory content, returns halt message string.
+ */
+function parseHaltMessage(memoryContent: string): string {
+  const match = memoryContent.match(LAST_ACTION_PATTERN);
+  return match ? match[1].trim() : "Program complete";
+}
+
 export function checkCycleCompleteness(
   memoryPath: string,
   instructionsPath: string,
@@ -92,17 +140,15 @@ export function checkCycleCompleteness(
   const memoryChanged = memoryAfter !== filesBefore[0];
   const instructionsChanged = instructionsAfter !== filesBefore[1];
 
-  const stateMatch = memoryAfter.match(/^## State\n(.+)/m);
-  const newState = stateMatch ? stateMatch[1].trim() : "";
+  const newState = parseState(memoryAfter);
 
   // All providers should detect "done" state consistently
   if (newState === "done") {
-    const lastAction = memoryAfter.match(/^## Last Action\n([\s\S]*?)(?=\n## |\n*$)/m);
     return {
       complete: true,
       problem: "",
       halt: true,
-      haltMessage: lastAction ? lastAction[1].trim() : "Program complete",
+      haltMessage: parseHaltMessage(memoryAfter),
       noMatch: false,
       state: newState,
     };
@@ -113,8 +159,7 @@ export function checkCycleCompleteness(
   }
 
   // Check if the LLM declared no matching instruction
-  const matchedMatch = memoryAfter.match(/^## Matched Instruction\n(.+)/m);
-  const matchedValue = matchedMatch ? matchedMatch[1].trim().toLowerCase() : "";
+  const matchedValue = parseMatchedInstruction(memoryAfter);
   const noMatch = matchedValue === "none";
 
   if (noMatch) {

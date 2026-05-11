@@ -56,8 +56,13 @@ export function executeSyscalls(instructionsPath: string, frameDir: string): voi
       }
     } else if (firstLine.startsWith("update_instructions:")) {
       log(`  [update_instructions]`);
-      writeFileSync(instructionsPath, rest, "utf-8");
-      results.push(`## Result ${i + 1}: update_instructions\nOK`);
+      try {
+        writeFileSync(instructionsPath, rest, "utf-8");
+        results.push(`## Result ${i + 1}: update_instructions\nOK`);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        results.push(`## Result ${i + 1}: update_instructions\nError: ${msg}`);
+      }
     } else if (firstLine.startsWith("git:")) {
       const args = firstLine.slice(4).trim() || rest;
       const workspacePath = getWorkspacePath(BASE_DIR);

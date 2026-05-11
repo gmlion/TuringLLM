@@ -26,17 +26,58 @@ export interface UserSession {
   getAnswers(): Map<string, string>;
 }
 
-class StdinSession implements UserSession {
+/**
+ * Pure state machine layer: tracks question presentation and answer collection.
+ * No I/O side-effects; separate from readline mechanics.
+ */
+class StdinStateManager {
   private presented = new Set<string>();
   private answers = new Map<string, string>();
   private pendingQueue: string[] = [];
   private previouslyCollected = new Set<string>();
+
+  presentQuestion(id: string): void {
+    this.presented.add(id);
+    this.pendingQueue.push(id);
+  }
+
+  wasPresented(id: string): boolean {
+    return this.presented.has(id);
+  }
+
+  // Find next unanswered question without side-effects.
+  nextUnanswered(): string | undefined {
+    return this.pendingQueue.find((id) => !this.answers.has(id));
+  }
+
+  recordAnswer(id: string, answer: string): void {
+    this.answers.set(id, answer);
+  }
+
+  collectNewReplies(): string[] {
+    const newIds = [...this.presented].filter(
+      (id) => this.answers.has(id) && !this.previouslyCollected.has(id)
+    );
+    for (const id of newIds) this.previouslyCollected.add(id);
+    return newIds;
+  }
+
+  getAnswers(): Map<string, string> {
+    return new Map(this.answers);
+  }
+}
+
+/**
+ * Thin I/O handler: readline interface and user interaction.
+ * Delegates state management to the pure state machine layer.
+ */
+class StdinSession implements UserSession {
+  private state = new StdinStateManager();
   private rl = createInterface({ input: process.stdin, output: process.stdout, terminal: false });
   private listening = false;
 
   async presentQuestion(id: string, question: string): Promise<void> {
-    this.presented.add(id);
-    this.pendingQueue.push(id);
+    this.state.presentQuestion(id);
     log("");
     log(`┌─ ${id} ${"─".repeat(Math.max(0, 50 - id.length))}┐`);
     for (const line of question.split("\n")) log(`│ ${line}`);
@@ -45,26 +86,32 @@ class StdinSession implements UserSession {
   }
 
   wasPresented(id: string, _question: string): boolean {
-    return this.presented.has(id);
+    return this.state.wasPresented(id);
   }
 
   private promptNext(): void {
-    const nextId = this.pendingQueue.find((id) => !this.answers.has(id));
-    if (!nextId) { this.listening = false; return; }
+    this.drainQueue();
+  }
+
+  private drainQueue(): void {
+    const nextId = this.state.nextUnanswered();
+    if (!nextId) {
+      this.listening = false;
+      return;
+    }
     if (this.listening) return;
     this.listening = true;
     process.stdout.write(`  ${nextId} > `);
     this.rl.once("line", (answer) => {
       this.listening = false;
-      this.answers.set(nextId, answer);
-      this.promptNext();
+      this.state.recordAnswer(nextId, answer);
+      // I/O handler invokes state machine again to drain next item.
+      setImmediate(() => this.drainQueue());
     });
   }
 
   async collectReplies(): Promise<string[]> {
-    const newIds = [...this.presented].filter((id) => this.answers.has(id) && !this.previouslyCollected.has(id));
-    for (const id of newIds) this.previouslyCollected.add(id);
-    return newIds;
+    return this.state.collectNewReplies();
   }
 
   async waitForAny(): Promise<string[]> {
@@ -76,7 +123,9 @@ class StdinSession implements UserSession {
     }
   }
 
-  getAnswers(): Map<string, string> { return new Map(this.answers); }
+  getAnswers(): Map<string, string> {
+    return this.state.getAnswers();
+  }
 }
 
 export class RoutedSession implements UserSession {
@@ -106,10 +155,22 @@ export class RoutedSession implements UserSession {
   waitForAny(p?: number): Promise<string[]> { return this.active().waitForAny(p); }
 
   getAnswers(): Map<string, string> {
-    const merged = new Map<string, string>();
-    if (this.telegram) for (const [k, v] of this.telegram.getAnswers()) merged.set(k, v);
-    if (this.stdin) for (const [k, v] of this.stdin.getAnswers()) merged.set(k, v);
-    return merged;
+    // Merge answers from all active sessions using reduce/fold.
+    // Sessions are merged in order: telegram first, then stdin.
+    // On key collision, later sessions' values override earlier ones (stdin wins over telegram).
+    // This fold makes the merge semantics and precedence testable and explicit.
+    const sessions = [
+      ...(this.telegram ? [this.telegram.getAnswers()] : []),
+      ...(this.stdin ? [this.stdin.getAnswers()] : []),
+    ];
+
+    return sessions.reduce(
+      (merged, sessionAnswers) => {
+        for (const [k, v] of sessionAnswers) merged.set(k, v);
+        return merged;
+      },
+      new Map<string, string>()
+    );
   }
 
   // Telegram-specific side-channel notification: sends a fire-and-forget
