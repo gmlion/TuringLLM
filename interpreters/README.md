@@ -7,8 +7,8 @@ executes via push/pop on the call stack.
 
 If you've never run TuringLLM before, picking an example here is the
 fastest way to see the shell in action. If you're authoring your own
-strategy, the leaves here are the closest thing to a reference
-implementation — copy one, gut it, and reshape.
+strategy, the runnable interpreters here are the closest thing to a
+reference implementation — copy one, gut it, and reshape.
 
 The shell itself is documented at the [repository
 README](../README.md) and in [`CLAUDE.md`](../CLAUDE.md). Read those
@@ -20,7 +20,9 @@ The two example families currently shipped:
 - [`mas-papers/`](./mas-papers/) — implementations of agent-design
   patterns from the multi-agent systems literature. Iterative
   refinement, planning & decomposition, search, peer collaboration,
-  fixed-SOP teams, meta-frameworks.
+  fixed-SOP teams (i.e. teams that follow a fixed standard
+  operating procedure — a predetermined phase sequence),
+  meta-frameworks.
 - [`coding-harnesses/`](./coding-harnesses/) — coding-oriented
   harnesses. Currently ships `recursive-reviewer`, a per-file
   code-review walk with verification and a fix loop.
@@ -38,7 +40,7 @@ single prompt. The numbering follows the taxonomy in
 
 > *Write something. Look at it. Decide it's not good enough. Rewrite. Repeat until it is.*
 
-You write a draft, then either you (the same model) or someone else (a separate critic) judges it, and you iterate until the judge accepts the draft. The four leaves differ in **who critiques**, **what's remembered between iterations**, and **how the critique is structured**:
+You write a draft, then either you (the same model) or someone else (a separate critic) judges it, and you iterate until the judge accepts the draft. The four interpreters in this group differ in **who critiques**, **what's remembered between iterations**, and **how the critique is structured**:
 
 - **`a-self-refine/`** — same model judges its own draft in plain prose.
 - **`b-evaluator-optimizer/`** — a separate "evaluator" judges the draft against an explicit pass/fail criterion.
@@ -49,7 +51,7 @@ You write a draft, then either you (the same model) or someone else (a separate 
 
 > *If the task is small, just do it. If it's big, break it into pieces and do each piece the same way.*
 
-Given a goal, the agent decides whether the goal is small enough to do with one tool call. If yes, it does it. If no, it calls a planner to break the goal into 3–7 sub-goals, then recursively tackles each sub-goal the same way. When all sub-goals are done, it synthesizes a final answer. The recursion *is* the architecture: the same dynamic handles a goal at every level of the tree. The three leaves are byte-identical interpreters distinguished only by their demo PROGRAM:
+Given a goal, the agent decides whether the goal is small enough to do with one tool call. If yes, it does it. If no, it calls a planner to break the goal into 3–7 sub-goals, then recursively tackles each sub-goal the same way. When all sub-goals are done, it synthesizes a final answer. The recursion *is* the architecture: the same dynamic handles a goal at every level of the tree. The three interpreters here are byte-identical, distinguished only by their demo PROGRAM:
 
 - **`a-plan-execute/`** — minimal TypeScript project setup (shallow tree, ≤ 2 levels).
 - **`b-orchestrator-workers/`** — summarise 5 input files (1 level fan-out).
@@ -59,7 +61,7 @@ Given a goal, the agent decides whether the goal is small enough to do with one 
 
 > *Don't commit to one path. Branch. Score the branches. Keep the good ones. Repeat.*
 
-The agent maintains a tree of partial solutions. At each step it picks where to grow next, generates several alternatives, scores them, and prunes the weak ones. Two leaves with materially different scheduling:
+The agent maintains a tree of partial solutions. At each step it picks where to grow next, generates several alternatives, scores them, and prunes the weak ones. Two interpreters here, with materially different scheduling:
 
 - **`a-tot/`** — Tree of Thoughts. Breadth-first: at each depth, expand every live node into k=5 candidates, score each 3 times against a `sure/likely/impossible` rubric, keep the top 5. Exhaustive, deterministic.
 - **`b-lats/`** — Language Agent Tree Search. MCTS-driven: descend via UCT, expand one leaf, play forward to a terminal state, score the result, back-propagate visit counts, harvest a verbal lesson on failure (reflexion-style). Selective, non-deterministic, memory-augmented.
@@ -78,7 +80,7 @@ Multiple agents work the *same* task from different angles. The task isn't decom
 
 > *A simulated software team running through a hardcoded process: design → code → test → ship.*
 
-A small simulated team with hard-coded phases. The strategy walks through the phases in order, spawning a child context per phase. The two leaves differ in **what runs inside each phase**:
+A small simulated team with hard-coded phases. The strategy walks through the phases in order, spawning a child context per phase. The two interpreters here differ in **what runs inside each phase**:
 
 - **`a-metagpt/`** — *Document hand-off.* One specialist role per phase (PM → Architect → Engineer → QA), acting alone. Each phase produces a typed document (PRD, Design, Tasks, Code Review) consumed by the next.
 - **`b-chatdev/`** — *Phase dialogue.* Each phase is a dialogue between two roles (CEO↔CTO, coder↔reviewer, etc.). The phase output is the dialogue's distilled consensus.
@@ -106,7 +108,7 @@ against the actual code and a cross-file refactor log), applies the
 survivors, runs a configurable verification command, and iterates a
 targeted fix loop if verification breaks. The refactor log
 accumulates cross-cutting decisions across files; per-file failure
-output stays ephemeral. See the leaf README for full mechanics.
+output stays ephemeral. See the interpreter's README for full mechanics.
 
 This family is the natural home for future harnesses that aren't
 mirroring a published MAS pattern — internal coding workflows,
@@ -229,7 +231,7 @@ These six are the recommended seed for a meta-framework's operator library. Each
 | 1 | **`mas-papers/1-iterative-refinement/b-evaluator-optimizer/`** | Externally-judged refinement loop with explicit pass/fail criterion. | Preferred over `a-self-refine` because the **judge interface is explicit** (`evaluate.md`'s push-args are `attempt` + `criterion`, return is `verdict` + `feedback`) and the same `evaluate.md` is reused across many other interpreters (1c, 4a/MetaGPT-QA, 4b/ChatDev-reviewer, 3a/ToT-goal-check, 3b/LATS-rollout-judge). Adopting `1b` makes the meta-framework's "judge" interface uniform with the rest of the codebase. `1a`'s self-critique is squishier (free-prose, same role both writes and judges) — fine for standalone use, weaker as a composable operator. |
 | 2 | **`mas-papers/1-iterative-refinement/c-reflexion/`** | Cross-iteration verbal memory. Failed attempts produce one-line lessons that condition future attempts. | The only operator that brings *episodic memory across iterations*. No other operator can replicate this through composition. |
 | 3 | **`mas-papers/1-iterative-refinement/d-cove/`** | Within-iteration **independent fact-checking** of decomposed atomic claims. | The only operator that does post-hoc verification by re-asking each claim in a clean prompt that doesn't see the original draft — defeats sycophantic self-confirmation that wrappers like self-refine cannot defeat. Particularly valuable on knowledge-heavy or high-precision tasks. |
-| 4 | **`mas-papers/2-planning-decomposition/a-plan-execute/`** (or any of the 2x leaves; they're byte-identical) | Recursive goal decomposition. | The only operator that turns a goal into a tree of sub-goals and synthesizes the leaves' results. |
+| 4 | **`mas-papers/2-planning-decomposition/a-plan-execute/`** (or any of the three interpreters in this group; they're byte-identical) | Recursive goal decomposition. | The only operator that turns a goal into a tree of sub-goals and synthesizes the results of the recursion's leaves. |
 | 5 | **`mas-papers/4-peer-collaboration/a-debate/`** | Adversarial multi-persona consensus with round isolation. | The only operator that does cross-perspective debate: agents shape each other's answers across rounds. Distinct from MoA's blend (no cross-visibility) and from self-refine's self-judgment (single perspective). |
 | 6 | **MoA** *(future)* | Independent ensembling: N proposers under different system prompts, an aggregator blends. | Distinct from debate: in MoA proposers don't see siblings within a layer. The diversity comes from differing system prompts/models, not argumentation. Pending a per-prompt model-selection feature in the shell. |
 
@@ -238,7 +240,7 @@ These six are the recommended seed for a meta-framework's operator library. Each
 | Interpreter | Excluded because |
 |---|---|
 | **`mas-papers/1-iterative-refinement/a-self-refine/`** | Same architectural shape as `1b` (draft → judge → revise) but with a less explicit judge interface. `1b` is the cleaner candidate; including both would consume two operator slots for one capability. |
-| **Group 2 leaves `b-orchestrator-workers/` and `c-deep-research/`** | Byte-identical to `a-plan-execute/`, distinguished only by demo PROGRAM. Not separate operators — they're the same operator showcased on different inputs. |
+| **Group 2 siblings `b-orchestrator-workers/` and `c-deep-research/`** | Byte-identical to `a-plan-execute/`, distinguished only by demo PROGRAM. Not separate operators — they're the same operator showcased on different inputs. |
 | **`mas-papers/3-search/a-tot/`** and **`mas-papers/3-search/b-lats/`** | Group 7 *is* a search (MCTS over candidate workflows). Including search interpreters as operators in its library would create searches-over-searches. The meta-framework strategy *imports* MCTS helper code from `b-lats/INSTRUCTIONS.md`; it does not include `b-lats` as a building block. |
 | **`mas-papers/5-fixed-sop-teams/a-metagpt/`** and **`b-chatdev/`** | End-to-end pipelines tied to "build a software project". Their internal SOPs (PM/Architect/Engineer/QA, design/coding/testing/documenting) are hard-coded for software construction; you cannot easily slot them into "solve a math word problem" or "answer a factual question". They're valuable as runnable artefacts that exercise shell features (typed hand-off, dialogue, file-aware evaluation), but they're not composable building blocks. |
 | **`coding-harnesses/recursive-reviewer/`** | End-to-end coding harness with its own per-file BFS + verification + fix loop. Self-contained workflow, not a composable building block. |
@@ -261,12 +263,12 @@ The Group 7 meta-frameworks (`aflow-lite/`, `adas-lite/`) reference the operator
 |---|---|
 | Understand the shell itself (cycle loop, push/pop, well-known sections) | [Root `README.md`](../README.md) |
 | Understand a specific group's family-level architecture | `mas-papers/<group>/README.md` |
-| Run a specific example interpreter and inspect its mechanics | `mas-papers/<group>/<leaf>/README.md` or `coding-harnesses/<leaf>/README.md` |
+| Run a specific example interpreter and inspect its mechanics | `mas-papers/<group>/<interpreter>/README.md` or `coding-harnesses/<interpreter>/README.md` |
 
 To run any shipped example:
 
 ```bash
-./new-instance.sh interpreters/<family>/<...>/<leaf> my-instance
+./new-instance.sh interpreters/<family>/<...>/<interpreter> my-instance
 instances/my-instance/run.sh
 ```
 

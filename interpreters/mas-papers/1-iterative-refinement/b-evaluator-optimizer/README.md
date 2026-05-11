@@ -63,7 +63,7 @@ There are no workspace files in this interpreter — the artefact
 
 | File | Receives (push-args) | Returns | Stack depth from caller |
 | --- | --- | --- | --- |
-| `operators/evaluate.md` | `attempt`, `criterion` | `verdict`, `feedback` | leaf |
+| `operators/evaluate.md` | `attempt`, `criterion` | `verdict`, `feedback` | 1 (no further push) |
 
 `operators/evaluate.md` is the **canonical** copy. Other consumers
 in the repo (c-reflexion, a-metagpt, b-chatdev) ship a byte-equal

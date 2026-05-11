@@ -25,15 +25,15 @@ the same recursive state machine. The differences between them
 are in the demo PROGRAM and in how naturally the recursion
 unfolds (depth 1 for orchestrator-workers; 2–3+ for deep
 research) — not in the dynamics themselves. So this group ships
-**one strategy** exposed through **three leaves**, each with a
-different `PROGRAM.md` to elicit the distinguishing trace.
+**one strategy** exposed through **three interpreters**, each with
+a different `PROGRAM.md` to elicit the distinguishing trace.
 
-| Leaf                         | Framing                 | Source                                                                         |
+| Interpreter                  | Framing                 | Source                                                                         |
 | ---------------------------- | ----------------------- | ------------------------------------------------------------------------------ |
 | [`a-plan-execute/`](./a-plan-execute/)            | Plan-and-Execute        | Wang et al., 2023 — "Plan-and-Solve", arXiv:2305.04091.                        |
 | [`b-orchestrator-workers/`](./b-orchestrator-workers/)    | Orchestrator–Workers    | Anthropic, 2024 — "Building Effective Agents".                                 |
 | [`c-deep-research/`](./c-deep-research/)           | Deep Research           | Product pattern (OpenAI Deep Research, Anthropic Research, Perplexity Pro); academically Self-Ask — Press et al., arXiv:2210.03350. |
-| *(no dedicated leaf)*        | XAgent                  | OpenBMB / Tsinghua, tech report 2023. Collapses to Plan-and-Execute with a more aggressive recursion prompt; no structural distinction under sequential execution. |
+| *(no dedicated interpreter)* | XAgent                  | OpenBMB / Tsinghua, tech report 2023. Collapses to Plan-and-Execute with a more aggressive recursion prompt; no structural distinction under sequential execution. |
 
 The collapses, briefly:
 
@@ -56,8 +56,9 @@ The collapses, briefly:
   outputs at one level) and you want the trace to make that
   visible.
 - **c deep-research** — when the question is open enough that
-  multi-level recursion is expected; this is the only leaf
-  where deep nesting is the point rather than an edge case.
+  multi-level recursion is expected; this is the only interpreter
+  in the group where deep nesting is the point rather than an edge
+  case.
 
 ## Single-responsibility split between dynamics
 
@@ -74,7 +75,7 @@ planner's structural bias toward over-decomposition.
 
 ## Shared dynamics
 
-Both dynamics are byte-identical across the three leaves:
+Both dynamics are byte-identical across the three interpreters:
 
 | File                   | Receives (push-args) | Returns                                       |
 | ---------------------- | -------------------- | --------------------------------------------- |
@@ -85,7 +86,7 @@ Identity is pinned by an identity test under `src/test/`.
 
 ## Demos at a glance
 
-| Leaf                         | Demo                                     | Typical recursion depth |
+| Interpreter                  | Demo                                     | Typical recursion depth |
 | ---------------------------- | ---------------------------------------- | ----------------------- |
 | `a-plan-execute/`            | Minimal TypeScript project (tsconfig, test, CI) | 1–2 levels |
 | `b-orchestrator-workers/`    | Summarise 5 files in `workspace/inputs/` | 1 level (5-fan-out) |
@@ -101,10 +102,10 @@ instances/my-a/run.sh
 (substitute `b-orchestrator-workers` or `c-deep-research` as
 needed).
 
-## What each leaf README explains
+## What each interpreter's README explains
 
-Every leaf README in this group describes (1) the framing in
-plain terms, (2) the orchestrator-by-orchestrator view, (3) the
+Every interpreter's README in this group describes (1) the framing
+in plain terms, (2) the orchestrator-by-orchestrator view, (3) the
 per-tackle trace at one level + the recursion pattern, (4) where
 state lives across cycles, (5) the dynamics' push-arg/return
 contract.

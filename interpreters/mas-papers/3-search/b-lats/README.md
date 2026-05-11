@@ -74,7 +74,7 @@ Contrast the resulting trees: ToT grows breadth-first to fixed `max_depth = N �
 - **Per-node ancestor-walk lesson scope.** A failed rollout from chosen_child C produces a `## Lesson` that is appended to `./scoped/lessons-<C>.md`. Future expansions of any descendant of C see the lesson concatenated into `partial_state` via the Compose-partial-state primitive (root-to-cursor order). Siblings of C don't inherit; this is paper-faithful per-subtree reflexion.
 - **Record-A: failed rollouts do NOT materialise into the tree.** The tree only grows by deliberate UCT expansions (k=5 children per iteration). Winning rollouts are recorded only in MEMORY's `## Solution` section (and in `history/` snapshots). This matches the LATS paper's distinction between deliberate tree growth and throwaway rollouts.
 - **Malformed dynamic outputs are non-blocking.** Bad `expand-node` children, missing `rollout` terminal state, unexpected `evaluate` verdicts, missing `reflect` lessons all append `## Pending Questions` and progress (treated as fail / fall-through). The strategy never transitions to `waiting_for_user`.
-- **ToT dynamics generalisation landed alongside this interpreter.** `expand-node.md` and `score.md` are domain-agnostic — same `partial_state` / `task` push-arg shape that LATS uses. The LATS leaf adopts the canonical (post-refactor) `expand-node.md` byte-equal.
+- **ToT dynamics generalisation landed alongside this interpreter.** `expand-node.md` and `score.md` are domain-agnostic — same `partial_state` / `task` push-arg shape that LATS uses. This interpreter adopts the canonical (post-refactor) `expand-node.md` byte-equal.
 
 ## Layout note
 

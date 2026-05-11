@@ -155,7 +155,7 @@ gets overwritten by the new dialogue.
 | File | Receives (push-args) | Returns | Stack depth from caller |
 | --- | --- | --- | --- |
 | `operators/dialogue.md` | `participants`, `topic`, `input`, `output_path`, `acceptance` | `dialogue` (path marker), and on gated phases also `verdict` + `feedback` | 1 (2 when `acceptance=true` and the dialogue pushes `evaluate.md`) |
-| `operators/evaluate.md` | `attempt`, `criterion`, `output_path` | `verdict`, `feedback` | leaf (byte-equal copy of the shared evaluator) |
+| `operators/evaluate.md` | `attempt`, `criterion`, `output_path` | `verdict`, `feedback` | 1 (no further push; byte-equal copy of the shared evaluator) |
 
 Role descriptions live under `./roles/` (`ceo.md`, `cto.md`,
 `coder.md`, `reviewer.md`, `tester.md`, `writer.md`).

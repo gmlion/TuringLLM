@@ -32,9 +32,9 @@ That separation is the point of the family.
 | [`c-reflexion/`](./c-reflexion/) | same as b, plus a reflection step that distills each failure into a verbal rule | accumulating list of "lessons" the next attempt reads | verdict + feedback + a one-line directive | 2 |
 | [`d-cove/`](./d-cove/) | the producer pushes a verifier, which decomposes the draft into atomic claims and pushes an *independent* answerer per claim | none | per-claim Q&A reconciled into a corrected draft | 3 |
 
-The leaf-letter prefix (`a`, `b`, `c`, `d`) suggests an
+The letter prefix (`a`, `b`, `c`, `d`) suggests an
 **exploration order** — `a` is the minimal case, each subsequent
-leaf adds one structural element — but each leaf is fully
+interpreter adds one structural element — but each one is fully
 self-contained.
 
 ## When to reach for which one
@@ -63,14 +63,14 @@ copy of the evaluator. `c-reflexion`, plus `a-metagpt` and
 pinned by `src/test/phase-dynamics-identity.test.ts`. Don't
 hand-edit a copy; update the canonical and `cp` again.
 
-## What each leaf README explains
+## What each interpreter's README explains
 
-Every leaf README in this group describes (1) the situation
-modeled, (2) the orchestrator-by-orchestrator view of which
-context is driving each LLM cycle, (3) the per-iteration trace
-end to end, (4) where state lives across cycles, (5) the
-dynamics' push-arg/return contract. Open the leaf you're
-interested in.
+Every interpreter's README in this group describes (1) the
+situation modeled, (2) the orchestrator-by-orchestrator view of
+which context is driving each LLM cycle, (3) the per-iteration
+trace end to end, (4) where state lives across cycles, (5) the
+dynamics' push-arg/return contract. Open the one you're interested
+in.
 
 ## Coming next in this group
 

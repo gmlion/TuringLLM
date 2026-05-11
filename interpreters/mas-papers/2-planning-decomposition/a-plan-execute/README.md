@@ -28,14 +28,14 @@ rationale):
 
 | Framing                 | Source                                                                           |
 | ----------------------- | -------------------------------------------------------------------------------- |
-| Plan-and-Execute        | Wang et al., 2023 — "Plan-and-Solve", arXiv:2305.04091. **(this leaf)**          |
+| Plan-and-Execute        | Wang et al., 2023 — "Plan-and-Solve", arXiv:2305.04091. **(this interpreter)**   |
 | Orchestrator–Workers    | Anthropic, 2024 — "Building Effective Agents". See `../b-orchestrator-workers/`. |
 | Deep Research           | Product pattern; academically Self-Ask — Press et al., arXiv:2210.03350. See `../c-deep-research/`. |
-| XAgent                  | OpenBMB / Tsinghua, tech report 2023. *(no dedicated leaf — prompting-level variant.)* |
+| XAgent                  | OpenBMB / Tsinghua, tech report 2023. *(no dedicated interpreter — prompting-level variant.)* |
 
-Each leaf ships a different `PROGRAM.md` to elicit the framing's
-characteristic execution trace; the strategy and dynamics are
-byte-equal across the three leaves.
+Each interpreter ships a different `PROGRAM.md` to elicit the
+framing's characteristic execution trace; the strategy and dynamics
+are byte-equal across the three.
 
 ## Three orchestrators, three context types
 
@@ -106,9 +106,9 @@ The atomic Try path is just steps 1: one tool call, one pop.
 | File | Receives (push-args) | Returns | Stack depth from caller |
 | --- | --- | --- | --- |
 | `operators/tackle.md` | `goal` | `result` | 1 (atomic Try); recursive (composite path pushes `plan.md` momentarily, then pushes `tackle.md` per sub-goal) |
-| `operators/plan.md` | `goal` | `plan` | leaf — pure one-shot decomposer |
+| `operators/plan.md` | `goal` | `plan` | no further push — pure one-shot decomposer |
 
-Both files are byte-identical across this leaf,
+Both files are byte-identical across this interpreter,
 `../b-orchestrator-workers/`, and `../c-deep-research/`, pinned
 by an identity test under `src/test/`.
 

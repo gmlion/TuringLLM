@@ -17,8 +17,8 @@ frames, with the root tackle covering the whole PROGRAM and each
 internal node covering one sub-question.
 
 The Deep Research framing is what justifies the recursive
-sub-tackling that's optional in the other two leaves of this
-group: here it's expected on most goals.
+sub-tackling that's optional in the other two interpreters in
+this group: here it's expected on most goals.
 
 ## Collapsed framings
 
@@ -30,8 +30,8 @@ patterns; see `../README.md` for the rationale.
 | ----------------------- | -------------------------------------------------------------------------------- |
 | Plan-and-Execute        | Wang et al., 2023 — "Plan-and-Solve", arXiv:2305.04091. See `../a-plan-execute/`. |
 | Orchestrator–Workers    | Anthropic, 2024 — "Building Effective Agents". See `../b-orchestrator-workers/`. |
-| Deep Research           | Product pattern; Self-Ask — Press et al., arXiv:2210.03350. **(this leaf)**      |
-| XAgent                  | OpenBMB / Tsinghua, tech report 2023. *(no dedicated leaf — prompting-level variant.)* |
+| Deep Research           | Product pattern; Self-Ask — Press et al., arXiv:2210.03350. **(this interpreter)** |
+| XAgent                  | OpenBMB / Tsinghua, tech report 2023. *(no dedicated interpreter — prompting-level variant.)* |
 
 ## Three orchestrators, three context types
 
@@ -80,8 +80,8 @@ instructions; only the input goal differs.
 
 ## How a single-level tackle works
 
-Same as the other two leaves of this group (the dynamics are
-byte-equal). For a composite tackle:
+Same as the other two interpreters in this group (the dynamics
+are byte-equal). For a composite tackle:
 
 1. **Try** — assess the goal: single tool call possible? If yes,
    execute and pop with `result`. If no, push `plan.md`.
@@ -113,9 +113,9 @@ For an atomic tackle, only step 1 runs.
 | File | Receives (push-args) | Returns | Stack depth from caller |
 | --- | --- | --- | --- |
 | `operators/tackle.md` | `goal` | `result` | recursive — composite pushes `plan.md` momentarily, then `tackle.md` per sub-goal |
-| `operators/plan.md` | `goal` | `plan` | leaf — pure one-shot decomposer |
+| `operators/plan.md` | `goal` | `plan` | no further push — pure one-shot decomposer |
 
-Both files are byte-identical across this leaf,
+Both files are byte-identical across this interpreter,
 `../a-plan-execute/`, and `../b-orchestrator-workers/`, pinned
 by an identity test under `src/test/`. Recursion is not a
 runtime mode of one specific dynamic — it's the natural
@@ -141,9 +141,9 @@ instances/my-c/run.sh
 
 ## Notable behaviour
 
-- **Recursion is the distinguishing feature.** Every other leaf
-  of this group can run flat; this one is expected to nest
-  multiple levels deep on most goals.
+- **Recursion is the distinguishing feature.** Every other
+  interpreter in this group can run flat; this one is expected
+  to nest multiple levels deep on most goals.
 - **Each level's planner sees only its parent's goal.** The
   planner at depth 3 doesn't know anything about its
   great-grandparent's other branches — it just decomposes the

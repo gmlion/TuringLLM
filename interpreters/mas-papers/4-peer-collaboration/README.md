@@ -73,13 +73,13 @@ instances/debate-demo/run.sh
 Inspect `instances/debate-demo/frames/f000-strategy/scoped/transcript.md` for the full debate, and the final
 cycle's `MEMORY.md` for the synthesised `## Final Position`.
 
-## What the leaf README explains
+## What the interpreter's README explains
 
-The `a-debate/` leaf README describes (1) the scenario, (2)
-the orchestrator-by-orchestrator view of which context is
-driving each LLM cycle, (3) the per-round trace end to end,
-(4) where state lives across cycles, (5) the operator's
-push-arg/return contract.
+The `a-debate/` README describes (1) the scenario, (2) the
+orchestrator-by-orchestrator view of which context is driving
+each LLM cycle, (3) the per-round trace end to end, (4) where
+state lives across cycles, (5) the operator's push-arg/return
+contract.
 
 ## Future directions in this group
 

@@ -42,7 +42,7 @@ accumulates in its own MEMORY (the typed sections) and what the
 Engineer writes to `workspace/`.
 
 Stack depth reaches 2 only inside the QA role (when it pushes
-`evaluate.md`); every other role is a leaf at depth 1.
+`evaluate.md`); every other role pushes no further (depth 1).
 
 ## How a run works
 
@@ -96,11 +96,11 @@ internally.
 
 | File | Receives (push-args) | Returns | Stack depth from caller |
 | --- | --- | --- | --- |
-| `operators/role-pm.md` | `program` | `prd` | leaf |
-| `operators/role-architect.md` | `prd` | `design` | leaf |
-| `operators/role-engineer.md` | `design` | `tasks` (+ side effect: source files in `workspace/`) | leaf |
+| `operators/role-pm.md` | `program` | `prd` | 1 (no further push) |
+| `operators/role-architect.md` | `prd` | `design` | 1 (no further push) |
+| `operators/role-engineer.md` | `design` | `tasks` (+ side effect: source files in `workspace/`) | 1 (no further push) |
 | `operators/role-qa.md` | `tasks`, `code_location` | `review` (= verdict + feedback) | 2 (pushes `evaluate.md`) |
-| `operators/evaluate.md` | `attempt`, `criterion` | `verdict`, `feedback` | leaf (byte-equal copy of the shared evaluator) |
+| `operators/evaluate.md` | `attempt`, `criterion` | `verdict`, `feedback` | 1 (no further push; byte-equal copy of the shared evaluator) |
 
 ## Demo `PROGRAM.md`
 
@@ -125,8 +125,8 @@ instances/my-metagpt/run.sh
   does loop on `fail`.
 - **No iteration cap is meaningful** — the SOP is a fixed
   sequence of four role pushes.
-- **Stack depth 2 only inside QA.** Every other role is a leaf
-  push at depth 1.
+- **Stack depth 2 only inside QA.** Every other role's push goes
+  to depth 1 and doesn't push further.
 
 ## Layout note
 

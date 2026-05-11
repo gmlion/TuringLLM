@@ -15,7 +15,7 @@ runs inside a phase** — that's the axis of variation.
 
 ## The variants
 
-| Leaf | Framing | Source | What happens inside a phase |
+| Interpreter | Framing | Source | What happens inside a phase |
 | --- | --- | --- | --- |
 | [`a-metagpt/`](./a-metagpt/) | MetaGPT | Hong et al., ICLR 2024 | **Document hand-off.** One specialist role per phase, acting alone. The phase produces a typed document (PRD, Design, Tasks, Code Review) which is the input to the next phase. No back-and-forth. |
 | [`b-chatdev/`](./b-chatdev/) | ChatDev | Qian et al., 2023 | **Phase dialogue.** Two specialists per phase (CEO↔CTO, coder↔reviewer, …) take turns negotiating the phase's artefact. Coding/testing/documenting are gated by an independent evaluator that inspects what's actually on disk. |
@@ -45,7 +45,7 @@ the comparison this group exists to enable.
 
 ## Shared `PROGRAM.md`
 
-Both leaves ship byte-identical `PROGRAM.md` — the `wc-plus`
+Both interpreters ship byte-identical `PROGRAM.md` — the `wc-plus`
 CLI tool task (see `a-metagpt/PROGRAM.md`). Identity is pinned
 by `src/test/phase-4-chatdev.test.ts`. Run both interpreters and
 diff their outputs:
@@ -60,7 +60,7 @@ diff -u instances/mg/workspace/ instances/cd/workspace/
 
 ## Shared dynamic: `evaluate.md`
 
-Both leaves ship a byte-equal copy of `operators/evaluate.md` (the
+Both interpreters ship a byte-equal copy of `operators/evaluate.md` (the
 canonical copy lives at
 `../1-iterative-refinement/b-evaluator-optimizer/operators/evaluate.md`).
 The four-way identity across `b-evaluator-optimizer`,
@@ -71,12 +71,12 @@ inspects what's actually on disk before issuing a verdict, so
 agents that *describe* having written files without actually
 writing them get caught.
 
-## What each leaf README explains
+## What each interpreter's README explains
 
-Every leaf README in this group describes (1) the SOP and the
-role pairs in plain terms, (2) the orchestrator-by-orchestrator
+Every interpreter's README in this group describes (1) the SOP and
+the role pairs in plain terms, (2) the orchestrator-by-orchestrator
 view of which context is driving each LLM cycle (strategy / role
 contexts / dialogue / evaluator), (3) the per-phase trace end to
-end, (4) what's shared across role contexts vs. what's
-isolated, (5) where artefacts live (in `workspace/.chatdev/` for
-chatdev, in strategy MEMORY for metagpt).
+end, (4) what's shared across role contexts vs. what's isolated,
+(5) where artefacts live (in `workspace/.chatdev/` for chatdev, in
+strategy MEMORY for metagpt).

@@ -27,16 +27,16 @@ distinction.
 
 The shared strategy under
 `interpreters/mas-papers/2-planning-decomposition/` subsumes four published
-patterns; see `../README.md` for the rationale. Each leaf ships
-a different `PROGRAM.md` to elicit the framing's characteristic
-trace.
+patterns; see `../README.md` for the rationale. Each interpreter
+ships a different `PROGRAM.md` to elicit the framing's
+characteristic trace.
 
 | Framing                 | Source                                                                           |
 | ----------------------- | -------------------------------------------------------------------------------- |
 | Plan-and-Execute        | Wang et al., 2023 — "Plan-and-Solve", arXiv:2305.04091. See `../a-plan-execute/`. |
-| Orchestrator–Workers    | Anthropic, 2024 — "Building Effective Agents". **(this leaf)**                   |
+| Orchestrator–Workers    | Anthropic, 2024 — "Building Effective Agents". **(this interpreter)**            |
 | Deep Research           | Product pattern; Self-Ask — Press et al., arXiv:2210.03350. See `../c-deep-research/`. |
-| XAgent                  | OpenBMB / Tsinghua, tech report 2023. *(no dedicated leaf — prompting-level variant.)* |
+| XAgent                  | OpenBMB / Tsinghua, tech report 2023. *(no dedicated interpreter — prompting-level variant.)* |
 
 ## Three orchestrators, three context types
 
@@ -95,9 +95,9 @@ strategy → root tackle → worker tackle. Walk-through:
 | File | Receives (push-args) | Returns | Stack depth from caller |
 | --- | --- | --- | --- |
 | `operators/tackle.md` | `goal` | `result` | 1 (atomic Try); recursive (composite pushes `plan.md` then `tackle.md` per sub-goal) |
-| `operators/plan.md` | `goal` | `plan` | leaf |
+| `operators/plan.md` | `goal` | `plan` | no further push |
 
-Both files are byte-identical across this leaf,
+Both files are byte-identical across this interpreter,
 `../a-plan-execute/`, and `../c-deep-research/`, pinned by an
 identity test under `src/test/`.
 

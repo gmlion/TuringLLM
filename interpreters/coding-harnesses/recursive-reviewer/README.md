@@ -115,8 +115,8 @@ Per the surgical-edit rule (`CLAUDE.md`), `refactor_log.md` and `summary.md` MUS
 
 | File | Receives (push-args) | Returns | Stack depth from caller |
 | --- | --- | --- | --- |
-| `operators/reviewer.md` | `file_path`, `refactor_log` | `suggestions` | leaf |
-| `operators/refiner.md` | `file_path`, `suggestions`, `refactor_log` | `refined`, `log_entry` | leaf |
+| `operators/reviewer.md` | `file_path`, `refactor_log` | `suggestions` | 1 (no further push) |
+| `operators/refiner.md` | `file_path`, `suggestions`, `refactor_log` | `refined`, `log_entry` | 1 (no further push) |
 
 ## Demo `PROGRAM.md`
 

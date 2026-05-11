@@ -71,7 +71,7 @@ There are no workspace files in this interpreter — the artefact
 
 | File | Receives (push-args) | Returns | Stack depth from caller |
 | --- | --- | --- | --- |
-| `operators/self-critique.md` | `draft` | `critique`, `refined` | leaf |
+| `operators/self-critique.md` | `draft` | `critique`, `refined` | 1 (no further push) |
 
 ## Demo `PROGRAM.md`
 

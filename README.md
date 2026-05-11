@@ -1,20 +1,48 @@
 # TuringLLM
 
-An LLM-powered universal Turing machine. A cycle loop invokes an LLM
-once per cycle. The LLM reads its state (`MEMORY.md`) and program
-(`INSTRUCTIONS.md`), matches the first instruction whose condition
-fits, acts, and is destroyed. The cycle repeats until halt.
+An LLM-powered universal Turing machine.
+
+**Treat an LLM as the step function of a Turing machine.** Everything
+else falls out: state lives on disk, the program is markdown, runs
+are resumable and observable, and "agents" are just user-authored
+state machines.
+
+A cycle loop invokes the LLM once per cycle. The LLM reads its state
+(`MEMORY.md`) and program (`INSTRUCTIONS.md`), matches the first
+instruction whose condition fits, acts (typically by rewriting
+`MEMORY.md`), and is destroyed. The cycle repeats until halt. There
+is no hidden conversational state — what the next cycle sees is
+exactly what the previous one left on disk.
 
 TuringLLM is, before anything else, **the shell**: a thin universal
 executor that turns a sequence of one-shot LLM calls into a stateful,
-resumable, observable machine. Everything in `src/` and the
-top-level scripts is part of the shell.
+resumable, observable machine. It ships a call-stack primitive
+(push/pop frames with arg substitution and return-value splicing),
+two git repos per instance (one auto-committing every cycle, one
+LLM-controlled), and a small set of well-known MEMORY sections the
+shell intercepts. Everything in `src/` and the top-level scripts is
+part of the shell.
 
 Anything that decides *what the LLM is supposed to do on each cycle*
-lives outside the shell, in user-authored markdown. Examples ship in
-[`interpreters/`](interpreters/) — they're useful starting points,
-but the shell itself doesn't know about them, and you can run
-TuringLLM perfectly well without them.
+lives outside the shell, in user-authored markdown.
+[`interpreters/`](interpreters/) ships a catalogue of examples —
+including runnable implementations of patterns from the multi-agent
+systems literature (Self-Refine, Reflexion, Chain-of-Verification,
+Plan-and-Execute, Tree of Thoughts, LATS, Multi-Agent Debate,
+MetaGPT, ChatDev, AFlow, ADAS) — but the shell itself doesn't know
+about them. You can run TuringLLM perfectly well without them.
+
+The pattern catalogue is designed for direct A/B comparison. Some
+demos hold the task constant and vary the strategy (ToT vs LATS on
+the same Game-of-24 puzzle; MetaGPT vs ChatDev on the same
+`wc-plus` build task); others hold the strategy constant and vary
+the task (the three planning-decomposition demos run byte-equal
+strategy code on three different PROGRAMs to show three published
+patterns collapse to one recursion). See [How the catalogue is laid
+out for A/B comparison](#how-the-catalogue-is-laid-out-for-ab-comparison)
+for the full breakdown. If you're a MAS researcher, the catalogue
+is a substrate for comparing patterns without re-implementing the
+surrounding scaffolding each time.
 
 ## Architecture
 
@@ -240,20 +268,57 @@ Two families ship today:
   implementations of agent-design patterns from the multi-agent
   systems literature: iterative refinement, planning &
   decomposition, search (ToT, LATS), peer collaboration (debate),
-  fixed-SOP teams (MetaGPT, ChatDev), meta-frameworks
-  (AFlow-lite, ADAS-lite).
+  fixed-SOP teams — i.e. teams running a fixed standard operating
+  procedure, a predetermined phase sequence — (MetaGPT, ChatDev),
+  meta-frameworks (AFlow-lite, ADAS-lite).
 - [`interpreters/coding-harnesses/`](interpreters/coding-harnesses/)
   — coding-oriented harnesses. Currently ships
   `recursive-reviewer`: a per-file code-review walk with
   verification and a fix loop.
 
-Each leaf has its own `README.md` describing what it models and how
-to run it.
+Each interpreter has its own `README.md` describing what it models
+and how to run it.
 
 Picking an example interpreter is the canonical way to run
 TuringLLM, but **not required** — you can also point `new-instance.sh`
 at any directory you've authored yourself, or omit it entirely to
 get a minimal scaffold.
+
+### How the catalogue is laid out for A/B comparison
+
+There are two questions you might want to ask of a pattern
+catalogue:
+
+1. *Given a fixed task, how do two strategies behave differently?*
+   → hold `PROGRAM.md` constant; vary the interpreter.
+2. *Given a fixed strategy, what range of tasks does it cover?*
+   → hold the interpreter constant; vary `PROGRAM.md`.
+
+The catalogue does both, depending on the comparison. Tests in
+`src/test/` pin the byte-equality on whichever side is meant to be
+held constant, so a refactor can't silently break the comparison.
+
+**Same task, different strategy.** Two interpreters share a
+byte-equal `PROGRAM.md`; their strategy code differs. Comparing
+the traces tells you what the strategy difference actually *did*.
+
+| Comparison | Shared task | What you see in the diff |
+|---|---|---|
+| `5-fixed-sop-teams/a-metagpt` vs `b-chatdev` | Build the `wc-plus` CLI tool | MetaGPT's document hand-off (PM → Architect → Engineer → QA) vs ChatDev's phase dialogues (CEO↔CTO, coder↔reviewer, …), running on the same goal |
+| `3-search/a-tot` vs `3-search/b-lats` | Solve `(?,?,?,?) = 24` with `{4,5,6,10}` | ToT's breadth-first BFS with 3-sample scoring vs LATS's MCTS with UCT + rollouts, growing different-shaped search trees on the same puzzle |
+
+**Same strategy, different task.** Multiple sibling directories
+ship byte-equal strategy code (`INSTRUCTIONS.md` + `operators/`)
+and differ only in `PROGRAM.md`. Useful when the *claim* is that
+one strategy subsumes several published patterns.
+
+| Comparison | Shared strategy | What the three PROGRAMs reveal |
+|---|---|---|
+| `2-planning-decomposition/{a-plan-execute, b-orchestrator-workers, c-deep-research}` | One recursive `tackle.md` + `plan.md` | The literature names three patterns; running all three demos against the same strategy shows they collapse to one recursive state machine, distinguished only by the *shape* of the task (sequential setup vs fan-out vs deep recursion) |
+
+The first axis is the more common one in MAS literature
+comparisons. The second axis is what makes the planning-decomposition
+group's "these are all the same pattern" claim auditable.
 
 ## Usage
 
