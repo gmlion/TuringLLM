@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/assets/three-stones.jpg" alt="Three concentric carved stone rings around a central diorama — an Atlantean dial" width="600">
+</p>
+
 # TuringLLM
 
 An LLM-powered universal Turing machine.
@@ -129,7 +133,7 @@ Each cycle the shell:
    **Action**, which typically rewrites `MEMORY.md`.
 4. The shell reads the new MEMORY, processes any well-known sections
    it intercepts (see below), commits to git, snapshots history,
-   and loops.
+   and loops. ↻
 
 No conversational continuity is implied across cycles — the LLM
 sees exactly what the previous cycle wrote to `MEMORY.md` (and any
