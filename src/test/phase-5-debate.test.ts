@@ -334,17 +334,17 @@ describe("phase-7 a-debate: canonical operator migration (R20, R21, R22, R23, R2
     assert.ok(existsSync(resolve(INTERP, "operators/debate.md")), "operators/debate.md missing");
   });
 
-  test("operators/debate.md has bimodal push-args: {{program}} and {{task}} + {{prior_answer}} (R47)", () => {
+  test("operators/debate.md uses canonical placeholders {{task}} + {{prior_answer}}; no {{program}} (R47)", () => {
     const s = readFileSync(resolve(INTERP, "operators/debate.md"), "utf-8");
-    assert.match(s, /\{\{program\}\}/);
     assert.match(s, /\{\{task\}\}/);
     assert.match(s, /\{\{prior_answer\}\}/);
+    assert.doesNotMatch(s, /\{\{program\}\}/);
   });
 
-  test("operators/debate.md Initialize detects mode via {{task}} grep (R47)", () => {
+  test("operators/debate.md Initialize has no dual-mode detect block (R47)", () => {
     const s = readFileSync(resolve(INTERP, "operators/debate.md"), "utf-8");
     const init = extractInstructionBody(s, "Initialize");
-    assert.match(init, /grep.*\{\{task\}\}/);
+    assert.doesNotMatch(init, /grep.*\{\{task\}\}/);
   });
 
   test("operators/debate.md Initialize does NOT hardcode cat ../../PROGRAM.md (R23)", () => {
@@ -370,9 +370,9 @@ describe("phase-7 a-debate: canonical operator migration (R20, R21, R22, R23, R2
     assert.match(s, /^# Operator:/m);
   });
 
-  test("operators/debate.md describes both standalone and aflow-lite invocation modes (R27)", () => {
+  test("operators/debate.md documents both bootstrap and library-call usage (R27)", () => {
     const s = readFileSync(resolve(INTERP, "operators/debate.md"), "utf-8");
-    assert.match(s, /mode 1.*standalone|standalone.*mode 1/i);
-    assert.match(s, /mode 2.*aflow|aflow.*mode 2/i);
+    assert.match(s, /bootstrap/i);
+    assert.match(s, /meta-framework|aflow|library operator/i);
   });
 });

@@ -2,19 +2,16 @@
 
 IMPORTANT: This operator file is the canonical strategy. Do not modify it via update_instructions; it is only loaded at push-time.
 
-Receives push-args (mode 1: standalone via root-operator bootstrap):
-  - `{{program}}` — the user's PROGRAM.md content.
-
-Receives push-args (mode 2: invoked by aflow-lite as part of a workflow):
-  - `{{task}}` — the task description.
-  - `{{prior_answer}}` — the previous operator's `## Answer`, or empty for the first operator.
+Receives push-args:
+  - `{{task}}` — the task body. PROGRAM.md content when bootstrap-loaded; the per-item task text when invoked as a library operator by a meta-framework.
+  - `{{prior_answer}}` — a prior operator's answer to prepend as context, or empty if none.
 
 Produces: `## State done` + `## Return` block with key `answer`. The `## Review` section is also written for human inspection.
 
 This operator implements the MetaGPT pattern (patterns.md Group 5): a fixed SOP walking PM → Architect → Engineer → QA, with document hand-off as the contract between roles (one role per phase, each produces a typed document consumed by the next).
 
 Typed hand-off contract (per role, via `## Push-Args` and `## Return`). Section names follow the project convention: Title Case, no underscores. Return keys are single English words so the shell's splice (`key:` → `## Key`) yields clean section names:
-- `role-pm.md` consumes `{{program}}` (or `{{task}}`), returns key `prd` → splices as `## Prd`.
+- `role-pm.md` consumes `{{task}}`, returns key `prd` → splices as `## Prd`.
 - `role-architect.md` consumes `{{prd}}`, returns key `design` → splices as `## Design`.
 - `role-engineer.md` consumes `{{design}}`, returns key `tasks` → splices as `## Tasks`.
 - `role-qa.md` consumes `{{tasks}}` and `{{code_location}}`, returns key `review` → splices as `## Review`.
@@ -25,37 +22,22 @@ The typed hand-off sections (`## Prd`, `## Design`, `## Tasks`, `## Review`) **a
 
 ## Instruction: Initialize
 **Condition:** MEMORY state is "empty"
-**Action:** Detect which mode this operator was invoked in, then read the task/program content and push role-pm.md.
-
-    # Detect mode (R47): if {{task}} is still a literal token, we are in standalone mode.
-    # substitutePlaceholders only replaces what was passed in ## Push-Args, so
-    # an unsubstituted {{task}} token remains verbatim in INSTRUCTIONS.md.
-    if grep -qF '{{task}}' ./INSTRUCTIONS.md; then
-      # Mode 1 — standalone: {{program}} was substituted with PROGRAM.md content.
-      PROGRAM_CONTENT="<verbatim {{program}} content, every line indented two spaces>"
-    else
-      # Mode 2 — AFlow-lite: {{task}} was substituted with the item's question text.
-      # If {{prior_answer}} is non-empty, prepend it as context.
-      PROGRAM_CONTENT="<verbatim {{task}} content, with {{prior_answer}} prepended as context if non-empty, every line indented two spaces>"
-    fi
+**Action:** Push role-pm.md with the task body. If `{{prior_answer}}` is non-empty, prepend it as context to the task body before passing it on.
 
 Append to `./MEMORY.md`:
 
     ## Push
     operators/role-pm.md
     ## Push-Args
-    program: |
-      <verbatim program/task content as determined above, every line indented two spaces>
+    task: |
+      <verbatim {{task}} content (with {{prior_answer}} prepended as context if non-empty), every line indented two spaces>
 
 **Set state to "pm_active"** (the post-pop state will be "pm_active_completed", which Dispatch Architect matches).
 
-Program (mode 1 — substituted at push-time):
-{{program}}
-
-Task (mode 2 — substituted at push-time):
+Task (substituted at push-time):
 {{task}}
 
-Prior answer (mode 2 — substituted at push-time, may be empty):
+Prior answer (substituted at push-time, may be empty):
 {{prior_answer}}
 
 ## Instruction: Dispatch Architect

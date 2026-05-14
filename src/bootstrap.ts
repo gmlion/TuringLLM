@@ -2,8 +2,13 @@
  * bootstrap.ts — Instance lifecycle endpoints.
  *
  * `startupBootstrap` materialises a fresh instance from its `.root-operator`
- * declaration: substitutes `{{program}}` from PROGRAM.md into the operator
- * template, writes the root frame directory, and seeds `.call-stack.json`.
+ * declaration: substitutes `{{task}}` (from PROGRAM.md) and `{{prior_answer}}`
+ * (always empty at bootstrap) into the operator template, writes the root
+ * frame directory, and seeds `.call-stack.json`. Bootstrap matches the
+ * push path's strictness: any unresolved `{{...}}` placeholder in the
+ * operator template after substitution is a hard error — the same contract
+ * `applyPush` enforces. This keeps a single shape for operator templates:
+ * declare what you receive, and you receive exactly that.
  *
  * `emitOutputMd` is the dual: when the root frame halts, it converts the
  * root memory's `## Return` block into `OUTPUT.md`, one section per key,
@@ -57,7 +62,15 @@ function buildBootstrapData(
   const slug = slugFromTarget(rootOpPath);
   const frameDirRelative = formatFrameDir(0, slug);
 
-  const { result: substituted } = substitutePlaceholders(operatorContent, { program: programContent });
+  const { result: substituted, unresolved } = substitutePlaceholders(operatorContent, {
+    task: programContent,
+    prior_answer: "",
+  });
+  if (unresolved.length > 0) {
+    throw new Error(
+      `root operator '${rootOpPath}' has unresolved placeholders after bootstrap: ${unresolved.map((p) => `{{${p}}}`).join(", ")}. Bootstrap only provides {{task}} and {{prior_answer}}.`,
+    );
+  }
 
   const callStack: CallStack = {
     nextCounter: 1,
@@ -85,7 +98,7 @@ export function startupBootstrap(baseDir: string): BootstrapResult {
   // Validate substituted content before creating directories and writing files.
   if (!substituted || substituted.trim().length === 0) {
     throw new Error(
-      "substituted operator content is empty; check PROGRAM.md and {{program}} placeholder in operator template",
+      "substituted operator content is empty; check PROGRAM.md and {{task}} placeholder in operator template",
     );
   }
 

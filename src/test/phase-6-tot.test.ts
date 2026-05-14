@@ -95,8 +95,12 @@ describe("phase-6 a-tot: Initialize post-refactor (R17, R18, R19)", () => {
   const s = readFileSync(path, "utf-8");
   const init = extractInstructionBody(s, "Initialize");
 
-  test("Initialize copies PROGRAM.md to ./scoped/task.md (R17)", () => {
-    assert.match(init, /cp\s+\.\.\/\.\.\/PROGRAM\.md\s+\.\/scoped\/task\.md/);
+  test("Initialize materialises {{task}} into ./scoped/task.md (R17)", () => {
+    // Post-bootstrap-refactor: the operator no longer cp's PROGRAM.md; the
+    // shell substitutes {{task}} (= PROGRAM.md content) directly into a
+    // heredoc that writes ./scoped/task.md.
+    assert.match(init, /cat\s*>\s*\.\/scoped\/task\.md/);
+    assert.match(init, /\{\{task\}\}/);
   });
 
   test("Initialize root node block has only post-refactor schema fields (R18)", () => {
@@ -927,26 +931,22 @@ describe("R20-R27 Phase-7 migration: marker INSTRUCTIONS.md + canonical operator
     assert.match(op, /^# Operator:.*Tree of Thoughts/im);
   });
 
-  test("R46: bimodal header declares both {{program}} and {{task}} push-args", () => {
-    assert.match(op, /\{\{program\}\}/);
+  test("R46: header declares canonical {{task}} + {{prior_answer}} push-args; no {{program}}", () => {
     assert.match(op, /\{\{task\}\}/);
     assert.match(op, /\{\{prior_answer\}\}/);
+    assert.doesNotMatch(op, /\{\{program\}\}/);
   });
 
-  test("R47: bimodal Initialize detects mode via grep -qF '{{task}}' ./INSTRUCTIONS.md", () => {
+  test("R47: Initialize has no dual-mode detect block", () => {
     const init = extractInstructionBody(op, "Initialize");
-    assert.match(init, /grep.*-qF.*'\{\{task\}\}'.*\.\/INSTRUCTIONS\.md/);
+    assert.doesNotMatch(init, /grep.*-qF.*'\{\{task\}\}'.*\.\/INSTRUCTIONS\.md/);
   });
 
-  test("R47: standalone mode copies ../../PROGRAM.md to ./scoped/task.md", () => {
-    const init = extractInstructionBody(op, "Initialize");
-    assert.match(init, /cp\s+\.\.\/\.\.\/PROGRAM\.md\s+\.\/scoped\/task\.md/);
-  });
-
-  test("R47: AFlow-lite mode writes {{task}} content to ./scoped/task.md", () => {
+  test("R47: Initialize writes {{task}} content to ./scoped/task.md (single path; PROGRAM.md is loaded via the placeholder, not by cp)", () => {
     const init = extractInstructionBody(op, "Initialize");
     assert.match(init, /cat\s*>\s*\.\/scoped\/task\.md/);
     assert.match(init, /\{\{task\}\}/);
+    assert.doesNotMatch(init, /cp\s+\.\.\/\.\.\/PROGRAM\.md\s+\.\/scoped\/task\.md/);
   });
 
   test("R22: Solved terminal cycle emits ## Return with answer: key", () => {

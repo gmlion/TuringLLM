@@ -2,10 +2,11 @@
 
 A lightweight meta-framework following Hu et al. (arXiv:2408.08435) that searches over candidate **operator files** rather than over compositions of fixed operators. Each iteration: an LLM proposer reads an archive of past candidates (with scores and failure notes) and writes a new operator markdown file; the shell tests it on the 30-item GSM8K **search set** by pushing it once per item; the result is appended to the archive. The archive is pre-seeded with the 5 base operators (`refine`, `reflexion`, `cove`, `plan-execute`, `debate`) so the proposer has concrete scaffolds to imitate, mutate, and hybridise. After `max_iterations` proposer iterations the search ends and the winner is evaluated against a separate 30-item **held-out set** the proposer never saw — that holdout score is the headline metric.
 
-Receives push-args (mode 1: standalone via root-operator bootstrap):
-  - `{{program}}` — the user's PROGRAM.md content.
+Receives push-args:
+  - `{{task}}` — the task body (PROGRAM.md content when bootstrap-loaded). ADAS-lite reads PROGRAM.md from disk inside its lib scripts rather than using the substituted placeholder directly.
+  - `{{prior_answer}}` — present in the shell's bootstrap dict but unused; ADAS-lite has no upstream operator.
 
-(ADAS-lite is invoked only standalone in v1 — never as a sub-operator. The operator file does not contain `{{task}}` or `{{prior_answer}}` placeholders since ADAS-lite is not part of any other workflow.)
+(ADAS-lite is invoked only standalone in v1 — never as a sub-operator.)
 
 Produces: `## State done` + `## Return` block with key `answer` containing the winner's held-out score (headline), search score, per-entry archive summary, and the winner's operator content.
 

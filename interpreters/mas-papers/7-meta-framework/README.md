@@ -4,7 +4,7 @@ Meta-frameworks treat the operator library itself as a search space — they sea
 
 ## What's here
 
-A meta-framework operator (such as `aflow-lite.md`) at the canonical position is invoked the same way as any other operator (push it, pass `{{program}}`). Internally it pushes other operators from the library to materialise candidate workflows.
+A meta-framework operator (such as `aflow-lite.md`) at the canonical position is invoked the same way as any other operator (push it, pass `{{task}}`). Internally it pushes other operators from the library to materialise candidate workflows.
 
 ## Members
 

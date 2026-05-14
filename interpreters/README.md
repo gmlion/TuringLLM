@@ -180,13 +180,13 @@ Every interpreter directory contains an `INSTRUCTIONS.md` that is a single-line 
 At startup (before the first cycle), the shell:
 
 1. Reads `.root-operator` and the canonical operator file at the named path.
-2. Substitutes `{{program}}` (the content of `instances/<name>/PROGRAM.md`) into the operator text.
+2. Substitutes `{{task}}` (the content of `instances/<name>/PROGRAM.md`) and `{{prior_answer}}` (always empty at bootstrap) into the operator text.
 3. Writes the substituted operator to `frames/f000-<slug>/INSTRUCTIONS.md` and initialises the call stack with one root frame.
 4. Enters the cycle loop.
 
 When the root frame transitions to `state == done`, the shell parses the `## Return` block from that frame's MEMORY and writes one section per key to `instances/<name>/OUTPUT.md` (e.g. `## Answer`). If the operator halts without a `## Return`, OUTPUT.md receives a diagnostic.
 
-This unification means a meta-framework operator like `aflow-lite.md` is invoked the same way as any other operator — pass `{{program}}`, enter at `state == empty` — but internally it pushes operators from the library to materialise and evaluate candidate workflows.
+This unification means a meta-framework operator like `aflow-lite.md` is invoked the same way as any other operator — pass `{{task}}`, enter at `state == empty` — but internally it pushes operators from the library to materialise and evaluate candidate workflows.
 
 ### Per-group execution-context highlights
 

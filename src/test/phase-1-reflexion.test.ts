@@ -498,11 +498,11 @@ describe("R20-R27 Phase 7 migration: marker + canonical operator", () => {
     assert.match(content, /# (Operator|Strategy):.*Reflexion/i);
   });
 
-  test("R47: bimodal Initialize detects standalone vs AFlow-lite mode", () => {
+  test("R47: canonical placeholder is {{task}}; no dual-mode detect block remains", () => {
     const op = readFileSync(resolve(REPO, LEAF, "operators/reflexion.md"), "utf-8");
-    assert.match(op, /\{\{program\}\}/, "operators/reflexion.md must contain {{program}} placeholder");
     assert.match(op, /\{\{task\}\}/, "operators/reflexion.md must contain {{task}} placeholder");
-    assert.match(op, /grep.*-qF.*\{\{task\}\}/, "bimodal detect must use grep -qF '{{task}}'");
+    assert.doesNotMatch(op, /\{\{program\}\}/, "operators/reflexion.md must no longer reference {{program}}");
+    assert.doesNotMatch(op, /grep.*-qF.*\{\{task\}\}/, "operators/reflexion.md must not retain the dual-mode detect block");
   });
 
   test("R45/R46: terminal cycle emits ## Return\\nanswer: and ## Refined + ## Lessons", () => {

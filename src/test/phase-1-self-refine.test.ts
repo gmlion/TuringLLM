@@ -238,13 +238,11 @@ describe("R20-R27 Phase 7 migration: marker + canonical operator", () => {
     assert.match(content, /# (Operator|Strategy):.*Self-Refine/i);
   });
 
-  test("R47: bimodal Initialize detects {{program}} vs {{task}}", () => {
+  test("R47: canonical placeholder is {{task}}; no dual-mode detect block remains", () => {
     const op = readFileSync(resolve(REPO, LEAF, "operators/self-refine.md"), "utf-8");
-    // Both literal tokens must be present somewhere in the file
-    assert.match(op, /\{\{program\}\}/);
     assert.match(op, /\{\{task\}\}/);
-    // Detection mechanism: grep -qF '{{task}}' or similar literal-token check
-    assert.match(op, /grep.*-qF.*\{\{task\}\}/);
+    assert.doesNotMatch(op, /\{\{program\}\}/);
+    assert.doesNotMatch(op, /grep.*-qF.*\{\{task\}\}/);
   });
 
   test("R23: terminal cycle emits ## Return\\nanswer:", () => {

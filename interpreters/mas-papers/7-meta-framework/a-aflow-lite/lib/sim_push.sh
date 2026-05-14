@@ -45,8 +45,6 @@ Push queued.
 ## Push
 operators/${OP_NAME}.md
 ## Push-Args
-program: |
-
 task: |
 ${TASK_INDENTED}
 prior_answer: |

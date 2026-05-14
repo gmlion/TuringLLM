@@ -2,12 +2,9 @@
 
 IMPORTANT: This operator file is the canonical strategy. Do not modify it via update_instructions; it is only loaded at push-time.
 
-Receives push-args (mode 1: standalone via root-operator bootstrap):
-  - `{{program}}` — the user's PROGRAM.md content.
-
-Receives push-args (mode 2: invoked by aflow-lite as part of a workflow):
-  - `{{task}}` — the question to debate (e.g. one GSM8K item's question text).
-  - `{{prior_answer}}` — the previous operator's `## Answer`, or empty for the first operator (unused — debate starts fresh each invocation).
+Receives push-args:
+  - `{{task}}` — the task body containing the question (and optionally personas / round count). PROGRAM.md content when bootstrap-loaded; the per-item task text when invoked as a library operator by a meta-framework.
+  - `{{prior_answer}}` — a prior operator's answer, or empty if none (unused by debate — debate starts fresh each invocation).
 
 Produces: `## State done` + `## Return` block with key `answer`. The existing `## Final Position` section is also written for human inspection.
 
@@ -27,25 +24,9 @@ Scoped files (in this strategy frame's `./scoped/`):
 
 ## Instruction: Initialize
 **Condition:** MEMORY state is "empty"
-**Action:** Detect which mode this operator was invoked in, then parse the question and personas.
+**Action:** Parse the question and personas from the `{{task}}` section below. If the task body is a full PROGRAM.md-style document with `### <persona>` headers and an explicit round count, use those values directly. If it's a bare question (e.g. a per-item task from a meta-framework), default to 1 round and two default personas ("Proponent: argues in favour of the proposition" and "Critic: argues against or identifies weaknesses").
 
-    # Detect mode (R47): if {{task}} is still a literal token, we are in standalone mode.
-    # substitutePlaceholders only replaces what was passed in ## Push-Args, so
-    # an unsubstituted {{task}} token remains verbatim in INSTRUCTIONS.md.
-    if grep -qF '{{task}}' ./INSTRUCTIONS.md; then
-      # Mode 1 — standalone: {{program}} was substituted with PROGRAM.md content.
-      MODE="standalone"
-    else
-      # Mode 2 — AFlow-lite: {{task}} was substituted with the item's question text
-      # and {{prior_answer}} was substituted (unused for debate — debate starts fresh).
-      MODE="aflow"
-    fi
-
-**In standalone mode:** Read the question, personas, and optional round count from the `{{program}}` section below (the substituted content of PROGRAM.md).
-
-**In AFlow-lite mode:** The question is in the `{{task}}` section below. Default to 1 round and two default personas ("Proponent: argues in favour of the proposition" and "Critic: argues against or identifies weaknesses") when PROGRAM.md-style persona blocks are absent.
-
-In both modes, extract three things:
+Extract three things:
 
 1. **The question** — the prose stating what is being debated.
 2. **The round count R** — if the input mentions an explicit number of rounds, use that. Otherwise default to R = 3.
@@ -105,13 +86,10 @@ Then wholesale-rewrite MEMORY:
     Initialization complete; ready to dispatch round 1, agent 0.
     INIT_OK_EOF
 
-Program (mode 1 — substituted at push-time):
-{{program}}
-
-Task (mode 2 — substituted at push-time):
+Task (substituted at push-time):
 {{task}}
 
-Prior answer (mode 2 — substituted at push-time, may be empty; unused by debate):
+Prior answer (substituted at push-time, may be empty; unused by debate):
 {{prior_answer}}
 
 ## Instruction: Stage

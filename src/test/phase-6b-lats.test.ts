@@ -144,8 +144,12 @@ describe("phase-6b b-lats: Initialize (R34, R35, R36)", () => {
   const s = readFileSync(resolve(INTERP, "operators/lats.md"), "utf-8");
   const init = extractInstructionBody(s, "Initialize");
 
-  test("Initialize copies PROGRAM.md to ./scoped/task.md (R34)", () => {
-    assert.match(init, /cp\s+\.\.\/\.\.\/PROGRAM\.md\s+\.\/scoped\/task\.md/);
+  test("Initialize materialises {{task}} into ./scoped/task.md (R34)", () => {
+    // Post-bootstrap-refactor: the operator no longer cp's PROGRAM.md; the
+    // shell substitutes {{task}} (= PROGRAM.md content) directly into a
+    // heredoc that writes ./scoped/task.md.
+    assert.match(init, /cat\s*>\s*\.\/scoped\/task\.md/);
+    assert.match(init, /\{\{task\}\}/);
   });
 
   test("Initialize writes max_iterations=30, uct_c=1.41421356, iter_count=0 (R34)", () => {
@@ -690,26 +694,22 @@ describe("R20-R27 Phase-7 migration: marker INSTRUCTIONS.md + canonical operator
     assert.match(op, /^# Operator:.*Language Agent Tree Search/im);
   });
 
-  test("R46: bimodal header declares both {{program}} and {{task}} push-args", () => {
-    assert.match(op, /\{\{program\}\}/);
+  test("R46: header declares canonical {{task}} + {{prior_answer}} push-args; no {{program}}", () => {
     assert.match(op, /\{\{task\}\}/);
     assert.match(op, /\{\{prior_answer\}\}/);
+    assert.doesNotMatch(op, /\{\{program\}\}/);
   });
 
-  test("R47: bimodal Initialize detects mode via grep -qF '{{task}}' ./INSTRUCTIONS.md", () => {
+  test("R47: Initialize has no dual-mode detect block", () => {
     const init = extractInstructionBody(op, "Initialize");
-    assert.match(init, /grep.*-qF.*'\{\{task\}\}'.*\.\/INSTRUCTIONS\.md/);
+    assert.doesNotMatch(init, /grep.*-qF.*'\{\{task\}\}'.*\.\/INSTRUCTIONS\.md/);
   });
 
-  test("R47: standalone mode copies ../../PROGRAM.md to ./scoped/task.md", () => {
-    const init = extractInstructionBody(op, "Initialize");
-    assert.match(init, /cp\s+\.\.\/\.\.\/PROGRAM\.md\s+\.\/scoped\/task\.md/);
-  });
-
-  test("R47: AFlow-lite mode writes {{task}} content to ./scoped/task.md", () => {
+  test("R47: Initialize writes {{task}} content to ./scoped/task.md (single path; PROGRAM.md is loaded via the placeholder, not by cp)", () => {
     const init = extractInstructionBody(op, "Initialize");
     assert.match(init, /cat\s*>\s*\.\/scoped\/task\.md/);
     assert.match(init, /\{\{task\}\}/);
+    assert.doesNotMatch(init, /cp\s+\.\.\/\.\.\/PROGRAM\.md\s+\.\/scoped\/task\.md/);
   });
 
   test("R22/R23: Evaluate-absorb (solved) terminal cycle emits ## Return with answer: key", () => {

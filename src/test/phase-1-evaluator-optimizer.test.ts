@@ -245,11 +245,11 @@ describe("R20-R27 Phase 7 migration: marker + canonical operator", () => {
     assert.match(content, /# (Operator|Strategy):.*Evaluator|# (Operator|Strategy):.*Refine/i);
   });
 
-  test("R47: bimodal Initialize", () => {
+  test("R47: canonical placeholder is {{task}}; no dual-mode detect block remains", () => {
     const op = readFileSync(resolve(REPO, LEAF, "operators/refine.md"), "utf-8");
-    assert.match(op, /\{\{program\}\}/);
     assert.match(op, /\{\{task\}\}/);
-    assert.match(op, /grep.*-qF.*\{\{task\}\}/);
+    assert.doesNotMatch(op, /\{\{program\}\}/);
+    assert.doesNotMatch(op, /grep.*-qF.*\{\{task\}\}/);
   });
 
   test("R23: terminal cycle emits ## Return\\nanswer:", () => {

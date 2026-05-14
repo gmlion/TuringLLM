@@ -2,12 +2,9 @@
 
 IMPORTANT: This operator file is the canonical strategy. Do not modify it via update_instructions; it is only loaded at push-time.
 
-Receives push-args (mode 1: standalone via root-operator bootstrap):
-  - `{{program}}` — the user's PROGRAM.md content.
-
-Receives push-args (mode 2: invoked by aflow-lite as part of a workflow):
-  - `{{task}}` — the task description (e.g. one GSM8K item's question text).
-  - `{{prior_answer}}` — the previous operator's `## Answer`, or empty for the first operator.
+Receives push-args:
+  - `{{task}}` — the task body, treated as the goal. PROGRAM.md content when bootstrap-loaded; the per-item task text when invoked as a library operator by a meta-framework.
+  - `{{prior_answer}}` — a prior operator's answer to use as context, or empty if none.
 
 Produces: `## State done` + `## Return` block with key `answer`. The existing `## Result` section is also written for human inspection.
 
@@ -22,22 +19,9 @@ The recursive split between operators (single-responsibility):
 
 ## Instruction: Initialize
 **Condition:** MEMORY state is "empty"
-**Action:** Detect which mode this operator was invoked in, then identify the producer role and push tackle.md.
+**Action:** Identify the producer role and push tackle.md.
 
-    # Detect mode (R47): if {{task}} is still a literal token, we are in standalone mode.
-    # substitutePlaceholders only replaces what was passed in ## Push-Args, so
-    # an unsubstituted {{task}} token remains verbatim in INSTRUCTIONS.md.
-    if grep -qF '{{task}}' ./INSTRUCTIONS.md; then
-      # Mode 1 — standalone: {{program}} was substituted with PROGRAM.md content.
-      # The task is the full program text (visible inline below in this file).
-      MODE="standalone"
-    else
-      # Mode 2 — AFlow-lite: {{task}} was substituted with the item's question text
-      # and {{prior_answer}} was substituted with the previous operator's answer.
-      MODE="aflow"
-    fi
-
-Identify the producer role implicit in the goal (a short one-line description of who would naturally produce this artefact, e.g. "a developer setting up a minimal TypeScript project", "a researcher producing a structured comparison of distributed consensus algorithms", "an analyst writing one-paragraph summaries of five technical notes"). In AFlow-lite mode, if `{{prior_answer}}` is non-empty, prepend it as context for the role. Then wholesale-rewrite MEMORY to push `tackle.md` (single heredoc — the `## Push` block MUST be in the same write as the state change):
+Identify the producer role implicit in the `{{task}}` (a short one-line description of who would naturally produce this artefact, e.g. "a developer setting up a minimal TypeScript project", "a researcher producing a structured comparison of distributed consensus algorithms", "an analyst writing one-paragraph summaries of five technical notes"). If `{{prior_answer}}` is non-empty, prepend it as context for the role. Then wholesale-rewrite MEMORY to push `tackle.md` (single heredoc — the `## Push` block MUST be in the same write as the state change):
 
 ```
 cat > ./MEMORY.md << 'MEMEOF'
@@ -65,13 +49,10 @@ MEMEOF
 
 The state value `tackling` is what the shell stores as the returnState; on pop it becomes `tackling_completed`, which "Finish" matches.
 
-Program (mode 1 — substituted at push-time):
-{{program}}
-
-Task (mode 2 — substituted at push-time):
+Task (substituted at push-time):
 {{task}}
 
-Prior answer (mode 2 — substituted at push-time, may be empty):
+Prior answer (substituted at push-time, may be empty):
 {{prior_answer}}
 
 ## Instruction: Finish

@@ -2,12 +2,9 @@
 
 IMPORTANT: This operator file is the canonical strategy. Do not modify it via update_instructions; it is only loaded at push-time.
 
-Receives push-args (mode 1: standalone via root-operator bootstrap):
-  - `{{program}}` — the user's PROGRAM.md content.
-
-Receives push-args (mode 2: invoked by aflow-lite as part of a workflow):
-  - `{{task}}` — the task description (e.g. one GSM8K item's question text).
-  - `{{prior_answer}}` — the previous operator's `## Answer`, or empty for the first operator.
+Receives push-args:
+  - `{{task}}` — the task body. PROGRAM.md content when bootstrap-loaded; the per-item task text when invoked as a library operator by a meta-framework.
+  - `{{prior_answer}}` — a prior operator's answer to use as a starting draft, or empty if none.
 
 Produces: `## State done` + `## Return` block with key `answer`. The existing `## Refined` section is also written for human inspection.
 
@@ -15,30 +12,14 @@ This operator implements the Self-Refine pattern (patterns.md Group 1). A single
 
 ## Instruction: Initialize
 **Condition:** MEMORY state is "empty"
-**Action:** Detect which mode this operator was invoked in, then produce an initial draft.
+**Action:** Produce an initial draft.
 
-    # Detect mode (R47): if {{task}} is still a literal token, we are in standalone mode.
-    # substitutePlaceholders only replaces what was passed in ## Push-Args, so
-    # an unsubstituted {{task}} token remains verbatim in INSTRUCTIONS.md.
-    if grep -qF '{{task}}' ./INSTRUCTIONS.md; then
-      # Mode 1 — standalone: {{program}} was substituted with PROGRAM.md content.
-      # The task is the full program text (visible inline below in this file).
-      MODE="standalone"
-    else
-      # Mode 2 — AFlow-lite: {{task}} was substituted with the item's question text
-      # and {{prior_answer}} was substituted with the previous operator's answer.
-      MODE="aflow"
-    fi
+Read the task from the `{{task}}` section below. If `{{prior_answer}}` is non-empty, use it as a starting-point draft. Otherwise produce an initial draft addressing the task. Write the draft to `./scoped/draft.md` (wholesale `cat > ./scoped/draft.md << 'DRAFTEOF' ... DRAFTEOF` is fine — a draft is a single blob, not a list). Set MEMORY state to "drafted".
 
-Read the task content from this operator file (the substituted content of `{{program}}` or `{{task}}` is visible inline in INSTRUCTIONS.md after substitution). If invoked in AFlow-lite mode and `{{prior_answer}}` is non-empty, use it as a starting-point draft. Produce an initial draft addressing the task and write it to `./scoped/draft.md` (wholesale `cat > ./scoped/draft.md << 'DRAFTEOF' ... DRAFTEOF` is fine — a draft is a single blob, not a list). Set MEMORY state to "drafted".
-
-Program (mode 1 — substituted at push-time):
-{{program}}
-
-Task (mode 2 — substituted at push-time):
+Task (substituted at push-time):
 {{task}}
 
-Prior answer (mode 2 — substituted at push-time, may be empty):
+Prior answer (substituted at push-time, may be empty):
 {{prior_answer}}
 
 ## Instruction: Request critique

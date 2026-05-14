@@ -2,10 +2,11 @@
 
 A lightweight meta-framework following Zhang et al. (arXiv:2410.10762) that runs Monte Carlo Tree Search over candidate workflows composed from a fixed library of five operators. Each tree node represents a candidate workflow (a comma-separated list of operator names); the root n0 is the empty workflow. Each MCTS iteration: Select a leaf via UCT, Expand it via `operators/expand-workflow.md` (k=5 children), Simulate each candidate by running its operators on 3 GSM8K items, Evaluate via mean fraction passing, Back-propagate the reward up the chosen-child path. Halts on the first 1.0 reward, or after `max_iterations`.
 
-Receives push-args (mode 1: standalone via root-operator bootstrap):
-  - `{{program}}` — the user's PROGRAM.md content.
+Receives push-args:
+  - `{{task}}` — the task body (PROGRAM.md content when bootstrap-loaded). AFlow-lite reads PROGRAM.md from disk inside its `lib/initialize.sh` rather than using the substituted placeholder directly.
+  - `{{prior_answer}}` — present in the shell's bootstrap dict but unused; AFlow-lite has no upstream operator.
 
-(AFlow-lite is invoked only standalone in v1 — never as a sub-operator. The operator file does not contain `{{task}}` or `{{prior_answer}}` placeholders since AFlow-lite is not part of any other workflow.)
+(AFlow-lite is invoked only standalone in v1 — never as a sub-operator.)
 
 Produces: `## State done` + `## Return` block with key `answer` (the best workflow found and its score), alongside `## Solution` (winner) or `## No Solution Found` for human inspection.
 

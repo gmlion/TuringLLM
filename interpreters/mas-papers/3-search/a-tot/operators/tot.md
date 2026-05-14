@@ -2,12 +2,9 @@
 
 IMPORTANT: This operator file is the canonical strategy. Do not modify it via update_instructions; it is only loaded at push-time.
 
-Receives push-args (mode 1: standalone via root-operator bootstrap):
-  - `{{program}}` — the user's PROGRAM.md content.
-
-Receives push-args (mode 2: invoked by aflow-lite as part of a workflow):
-  - `{{task}}` — the search task description (e.g. a Game-of-24 puzzle question).
-  - `{{prior_answer}}` — the previous operator's `## Answer`, or empty for the first operator (unused — search starts from scratch).
+Receives push-args:
+  - `{{task}}` — the task body containing the search puzzle. PROGRAM.md content when bootstrap-loaded; the per-item task text when invoked as a library operator by a meta-framework.
+  - `{{prior_answer}}` — a prior operator's answer, or empty if none (unused by ToT — search starts from scratch).
 
 Produces: `## State done` + `## Return` block with key `answer`. The existing `## Solution` / `## No Solution Found` sections are also written for human inspection.
 
@@ -62,24 +59,12 @@ Every instruction below uses these bash idioms when reading or writing `./scoped
 
 ## Instruction: Initialize
 **Condition:** MEMORY state is "empty"
-**Action:** Detect which mode this operator was invoked in, then parse the puzzle from the task content, validate, and bootstrap the BFS tree.
+**Action:** Materialise the task to a scoped file, parse the puzzle, validate, and bootstrap the BFS tree.
 
-    # Detect mode: if {{task}} is still a literal token, we are in standalone mode.
-    # substitutePlaceholders only replaces what was passed in ## Push-Args, so
-    # an unsubstituted {{task}} token remains verbatim in INSTRUCTIONS.md.
-    if grep -qF '{{task}}' ./INSTRUCTIONS.md; then
-      # Mode 1 — standalone: {{program}} was substituted with PROGRAM.md content.
-      # The task content is embedded below in this file; copy PROGRAM.md as task.
-      MODE="standalone"
-      cp ../../PROGRAM.md ./scoped/task.md
-    else
-      # Mode 2 — AFlow-lite: {{task}} was substituted with the puzzle question text.
-      # Write the task text to ./scoped/task.md for use throughout.
-      MODE="aflow"
-      cat > ./scoped/task.md << 'TASKEOF'
+    # Write the task body to ./scoped/task.md for use throughout.
+    cat > ./scoped/task.md << 'TASKEOF'
 {{task}}
 TASKEOF
-    fi
 
     mkdir -p ./scoped/staged
 
@@ -140,13 +125,10 @@ Then wholesale-rewrite MEMORY (R9):
     Initialization complete; current_depth=0; ready to expand the root.
     INIT_OK_EOF
 
-Program (mode 1 — substituted at push-time):
-{{program}}
-
-Task (mode 2 — substituted at push-time):
+Task (substituted at push-time):
 {{task}}
 
-Prior answer (mode 2 — substituted at push-time, may be empty; unused — search starts from scratch):
+Prior answer (substituted at push-time, may be empty; unused — search starts from scratch):
 {{prior_answer}}
 
 ## Instruction: Expand-push

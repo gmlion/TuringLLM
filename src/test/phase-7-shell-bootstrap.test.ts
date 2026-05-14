@@ -19,18 +19,18 @@ function makeTmpInstance(rootOperatorContent: string, programContent: string, op
 }
 
 describe("R11/R12/R17: shell bootstrap reads .root-operator and creates frame f000-<slug>", () => {
-  test("instance with .root-operator gets frames/f000-<slug>/INSTRUCTIONS.md created with {{program}} substituted", async () => {
+  test("instance with .root-operator gets frames/f000-<slug>/INSTRUCTIONS.md created with {{task}} substituted", async () => {
     const dir = makeTmpInstance(
       "operators/test-op.md\n",
       "Hello world.",
-      "# Operator\nProgram is: {{program}}\n## Instruction: Halt\n**Condition:** state empty\n**Action:** halt\n",
+      "# Operator\nTask is: {{task}}\n## Instruction: Halt\n**Condition:** state empty\n**Action:** halt\n",
     );
     try {
       const { startupBootstrap } = await import(pathToFileURL(resolve(REPO, "dist/bootstrap.js")).href);
       startupBootstrap(dir);
       assert.ok(existsSync(join(dir, "frames/f000-test-op/INSTRUCTIONS.md")), "frame INSTRUCTIONS.md missing");
       const inst = readFileSync(join(dir, "frames/f000-test-op/INSTRUCTIONS.md"), "utf-8");
-      assert.match(inst, /Program is: Hello world\./);
+      assert.match(inst, /Task is: Hello world\./);
       assert.ok(existsSync(join(dir, "frames/f000-test-op/MEMORY.md")));
       const mem = readFileSync(join(dir, "frames/f000-test-op/MEMORY.md"), "utf-8");
       assert.match(mem, /## State\nempty/);
@@ -46,12 +46,12 @@ describe("R11/R12/R17: shell bootstrap reads .root-operator and creates frame f0
   });
 });
 
-describe("R12: {{program}} substitution at bootstrap — edge cases", () => {
+describe("R12: {{task}} substitution at bootstrap — edge cases", () => {
   test("multi-line PROGRAM.md substitutes correctly", async () => {
     const dir = makeTmpInstance(
       "operators/test-op.md\n",
       "Line one\nLine two\nLine three",
-      "# Op\nThe program is:\n{{program}}\n",
+      "# Op\nThe task is:\n{{task}}\n",
     );
     try {
       const { startupBootstrap } = await import(pathToFileURL(resolve(REPO, "dist/bootstrap.js")).href);
@@ -62,7 +62,7 @@ describe("R12: {{program}} substitution at bootstrap — edge cases", () => {
       rmSync(dir, { recursive: true, force: true });
     }
   });
-  test("operator file with no {{program}} placeholder is left intact", async () => {
+  test("operator file with no placeholders is left intact", async () => {
     const dir = makeTmpInstance(
       "operators/test-op.md\n",
       "anything",
@@ -73,7 +73,38 @@ describe("R12: {{program}} substitution at bootstrap — edge cases", () => {
       startupBootstrap(dir);
       const inst = readFileSync(join(dir, "frames/f000-test-op/INSTRUCTIONS.md"), "utf-8");
       assert.match(inst, /No placeholder here\./);
-      assert.doesNotMatch(inst, /\{\{program\}\}/);
+      assert.doesNotMatch(inst, /\{\{task\}\}/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+  test("strict bootstrap: unresolved {{...}} placeholder fails the bootstrap", async () => {
+    const dir = makeTmpInstance(
+      "operators/test-op.md\n",
+      "anything",
+      "# Op\nDangling {{stray_placeholder}} here.\n",
+    );
+    try {
+      const { startupBootstrap } = await import(pathToFileURL(resolve(REPO, "dist/bootstrap.js")).href);
+      assert.throws(
+        () => startupBootstrap(dir),
+        (err: Error) => /unresolved placeholders/i.test(err.message) && /stray_placeholder/.test(err.message),
+      );
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+  test("{{prior_answer}} placeholder substitutes to empty string at bootstrap", async () => {
+    const dir = makeTmpInstance(
+      "operators/test-op.md\n",
+      "P",
+      "# Op\nTask=[{{task}}] Prior=[{{prior_answer}}]\n",
+    );
+    try {
+      const { startupBootstrap } = await import(pathToFileURL(resolve(REPO, "dist/bootstrap.js")).href);
+      startupBootstrap(dir);
+      const inst = readFileSync(join(dir, "frames/f000-test-op/INSTRUCTIONS.md"), "utf-8");
+      assert.match(inst, /Task=\[P\] Prior=\[\]/);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

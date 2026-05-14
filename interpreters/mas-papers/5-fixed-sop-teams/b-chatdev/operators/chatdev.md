@@ -2,12 +2,9 @@
 
 IMPORTANT: This operator file is the canonical strategy. Do not modify it via update_instructions; it is only loaded at push-time.
 
-Receives push-args (mode 1: standalone via root-operator bootstrap):
-  - `{{program}}` — the user's PROGRAM.md content.
-
-Receives push-args (mode 2: invoked by aflow-lite as part of a workflow):
-  - `{{task}}` — the task description.
-  - `{{prior_answer}}` — the previous operator's `## Answer`, or empty for the first operator.
+Receives push-args:
+  - `{{task}}` — the task body. PROGRAM.md content when bootstrap-loaded; the per-item task text when invoked as a library operator by a meta-framework.
+  - `{{prior_answer}}` — a prior operator's answer to prepend as context, or empty if none.
 
 Produces: `## State done` + `## Return` block with key `answer`. The workspace artefacts (design.md, code.md, test_report.md, documentation.md) are always written under `../../workspace/.chatdev/`.
 
@@ -32,24 +29,12 @@ Each transition sets the caller's state to a phase-active label (`design_active`
 
 ## Instruction: Initialize
 **Condition:** MEMORY state is "empty"
-**Action:** Detect which mode this operator was invoked in, stage the program where every role agent can find it by a fixed path, then start the design dialogue.
+**Action:** Stage the task body where every role agent can find it by a fixed path, then start the design dialogue.
 
-    # Detect mode (R47): if {{task}} is still a literal token, we are in standalone mode.
-    # substitutePlaceholders only replaces what was passed in ## Push-Args, so
-    # an unsubstituted {{task}} token remains verbatim in INSTRUCTIONS.md.
-    if grep -qF '{{task}}' ./INSTRUCTIONS.md; then
-      # Mode 1 — standalone: {{program}} was substituted with PROGRAM.md content.
-      PROGRAM_CONTENT="<verbatim {{program}} content, every line indented two spaces>"
-    else
-      # Mode 2 — AFlow-lite: {{task}} was substituted with the item's question text.
-      # If {{prior_answer}} is non-empty, prepend it as context.
-      PROGRAM_CONTENT="<verbatim {{task}} content, with {{prior_answer}} prepended as context if non-empty, every line indented two spaces>"
-    fi
-
-Stage program content to the shared workspace path, then start the design dialogue (single-cycle: this is a clean-slate emission, no prior MEMORY content to merge with):
+Write `{{task}}` (with `{{prior_answer}}` prepended as context if non-empty) to `../../workspace/.chatdev/program.md`. Then start the design dialogue (single-cycle: this is a clean-slate emission, no prior MEMORY content to merge with):
 
     mkdir -p ../../workspace/.chatdev
-    # Write the detected program content to ../../workspace/.chatdev/program.md
+    # Write the {{task}} content (with prior_answer prepended if non-empty) to ../../workspace/.chatdev/program.md
     echo design > ./scoped/phase.md
 
 Then wholesale-rewrite MEMORY:
@@ -80,13 +65,10 @@ Then wholesale-rewrite MEMORY:
 
 (Post-pop state will be "design_active_completed".)
 
-Program (mode 1 — substituted at push-time):
-{{program}}
-
-Task (mode 2 — substituted at push-time):
+Task (substituted at push-time):
 {{task}}
 
-Prior answer (mode 2 — substituted at push-time, may be empty):
+Prior answer (substituted at push-time, may be empty):
 {{prior_answer}}
 
 ## Instruction: Design done — prune (stage)

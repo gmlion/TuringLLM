@@ -27,7 +27,7 @@ artefact of its own.
 | Driver | When it's active | What it can see | What it produces |
 | --- | --- | --- | --- |
 | **Strategy** (`f000-strategy`) | Initial dispatch, after each role's pop, final | Its own MEMORY (which **accumulates** the typed sections `## Prd`, `## Design`, `## Tasks`, `## Review` as the SOP progresses), the user program | A push of the next role, or `done` |
-| **PM role** (`fNNN-role-pm`) | One PRD draft | Only the user program (`{{program}}`) handed in via push-args | A `prd` (≤ 400 words: user stories, acceptance criteria, non-goals) |
+| **PM role** (`fNNN-role-pm`) | One PRD draft | Only the user program (`{{task}}`) handed in via push-args | A `prd` (≤ 400 words: user stories, acceptance criteria, non-goals) |
 | **Architect role** (`fNNN-role-architect`) | One design pass | Only the PRD (`{{prd}}`) handed in via push-args | A `design` |
 | **Engineer role** (`fNNN-role-engineer`) | One implementation pass | Only the design (`{{design}}`) handed in via push-args; uses the toolset (bash, write) to write source files into `workspace/` | A `tasks` document describing what was implemented; **the actual source files live in `workspace/`** as the side effect |
 | **QA role** (`fNNN-role-qa`) | One review pass; pushes `evaluate.md` for the verdict | The Tasks (`{{tasks}}`) and the code location (`{{code_location}}`) handed in via push-args; reads the engineered code via `bash cat` from `workspace/` | A `review` (= verdict + feedback), passing through the evaluator |

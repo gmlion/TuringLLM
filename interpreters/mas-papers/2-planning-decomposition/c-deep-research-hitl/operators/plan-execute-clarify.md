@@ -3,7 +3,8 @@
 IMPORTANT: This operator file is the canonical strategy. Do not modify it via update_instructions; it is only loaded at push-time.
 
 Receives push-args:
-  - `{{program}}` — the user's PROGRAM.md content.
+  - `{{task}}` — the task body (PROGRAM.md content when bootstrap-loaded).
+  - `{{prior_answer}}` — present in the shell's bootstrap dict but unused.
 
 Produces: `## State done` + `## Return` block with key `answer`. The existing `## Result` section is also written for human inspection.
 
@@ -17,9 +18,9 @@ Scoped files:
 
 ## Instruction: Initialize
 **Condition:** MEMORY state is "empty"
-**Action:** Read the user's program (substituted at push-time):
+**Action:** Read the task body (substituted at push-time):
 
-{{program}}
+{{task}}
 
 Identify 2–4 *specific* ambiguities or scope decisions whose resolution would materially change the final report — things like team size, latency budget, deployment target, whether self-hosted or managed offerings are in scope, language/runtime version constraints. Frame each as a concrete clarifying question (e.g. "What's the team size that will own this service?", "Are managed/serverless options in scope, or self-hosted only?"). Avoid open-ended questions like "What do you want to know?".
 

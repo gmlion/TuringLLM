@@ -2,12 +2,9 @@
 
 IMPORTANT: This operator file is the canonical strategy. Do not modify it via update_instructions; it is only loaded at push-time.
 
-Receives push-args (mode 1: standalone via root-operator bootstrap):
-  - `{{program}}` — the user's PROGRAM.md content.
-
-Receives push-args (mode 2: invoked by aflow-lite as part of a workflow):
-  - `{{task}}` — the task description (e.g. one GSM8K item's question text).
-  - `{{prior_answer}}` — the previous operator's `## Answer`, or empty for the first operator.
+Receives push-args:
+  - `{{task}}` — the task body. PROGRAM.md content when bootstrap-loaded; the per-item task text when invoked as a library operator by a meta-framework.
+  - `{{prior_answer}}` — a prior operator's answer to use as a starting attempt, or empty if none.
 
 Produces: `## State done` + `## Return` block with key `answer`. The existing `## Refined`, `## Verdict`, and `## Feedback` sections are also written for human inspection.
 
@@ -15,32 +12,14 @@ This operator implements the Evaluator–Optimizer pattern (patterns.md Group 1)
 
 ## Instruction: Initialize
 **Condition:** MEMORY state is "empty"
-**Action:** Detect which mode this operator was invoked in, then produce an initial attempt.
+**Action:** Produce an initial attempt.
 
-    # Detect mode (R47): if {{task}} is still a literal token, we are in standalone mode.
-    # substitutePlaceholders only replaces what was passed in ## Push-Args, so
-    # an unsubstituted {{task}} token remains verbatim in INSTRUCTIONS.md.
-    if grep -qF '{{task}}' ./INSTRUCTIONS.md; then
-      # Mode 1 — standalone: {{program}} was substituted with PROGRAM.md content.
-      # The task is the full program text (visible inline below in this file).
-      MODE="standalone"
-    else
-      # Mode 2 — AFlow-lite: {{task}} was substituted with the item's question text
-      # and {{prior_answer}} was substituted with the previous operator's answer.
-      MODE="aflow"
-    fi
+Read the task from the `{{task}}` section below. If the task body contains an explicit `## Acceptance Criterion` section, extract it and write it to `./scoped/criterion.md`; otherwise default the criterion to "produce a correct answer to: {{task}}". Either way write `./scoped/criterion.md` wholesale (a single heredoc is fine — `cat > ./scoped/criterion.md << EOF ... EOF`). If `{{prior_answer}}` is non-empty, use it as the initial attempt; otherwise draft a fresh attempt from scratch. Write the attempt to `./scoped/attempt.md` (wholesale heredoc is fine). Set MEMORY state to "attempted".
 
-**In standalone mode:** Read the task from the `{{program}}` section below. Extract the `## Acceptance Criterion` section from the program and write it to `./scoped/criterion.md` (wholesale `cat > ./scoped/criterion.md << EOF ... EOF` is fine). Produce an initial attempt addressing the task and write it to `./scoped/attempt.md` (wholesale `cat > ./scoped/attempt.md << EOF ... EOF` is fine). Set MEMORY state to "attempted".
-
-**In AFlow-lite mode:** The task is in the `{{task}}` section below; the criterion defaults to "produce a correct answer to: {{task}}". Write the criterion to `./scoped/criterion.md`. If `{{prior_answer}}` is non-empty, use it as the initial attempt; otherwise draft a fresh attempt from scratch. Write the attempt to `./scoped/attempt.md`. Set MEMORY state to "attempted".
-
-Program (mode 1 — substituted at push-time):
-{{program}}
-
-Task (mode 2 — substituted at push-time):
+Task (substituted at push-time):
 {{task}}
 
-Prior answer (mode 2 — substituted at push-time, may be empty):
+Prior answer (substituted at push-time, may be empty):
 {{prior_answer}}
 
 ## Instruction: Request evaluation

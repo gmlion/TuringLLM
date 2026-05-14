@@ -358,13 +358,11 @@ describe("R20-R27 Phase 7 migration: marker + canonical operator", () => {
     assert.match(content, /# (Operator|Strategy):.*Chain-of-Verification/i);
   });
 
-  test("R47: bimodal Initialize detects {{program}} vs {{task}}", () => {
+  test("R47: canonical placeholder is {{task}}; no dual-mode detect block remains", () => {
     const op = readFileSync(resolve(REPO, LEAF, "operators/cove.md"), "utf-8");
-    // Both literal tokens must be present somewhere in the file
-    assert.match(op, /\{\{program\}\}/, "operators/cove.md must contain {{program}} placeholder");
     assert.match(op, /\{\{task\}\}/, "operators/cove.md must contain {{task}} placeholder");
-    // Detection mechanism: grep -qF '{{task}}' or similar literal-token check
-    assert.match(op, /grep.*-qF.*\{\{task\}\}/, "bimodal detect must use grep -qF '{{task}}'");
+    assert.doesNotMatch(op, /\{\{program\}\}/, "operators/cove.md must no longer reference {{program}}");
+    assert.doesNotMatch(op, /grep.*-qF.*\{\{task\}\}/, "operators/cove.md must not retain the dual-mode detect block");
   });
 
   test("R23/R45: terminal cycle emits ## Return\\nanswer: and ## Revised preserved", () => {
@@ -382,11 +380,11 @@ describe("R20-R27 Phase 7 migration: marker + canonical operator", () => {
     assert.match(op, /operators\/verify\.md/);
   });
 
-  test("R27: AFlow-lite {{prior_answer}} non-empty treats it as draft to verify", () => {
+  test("R27: non-empty {{prior_answer}} is used as the draft to verify", () => {
     const op = readFileSync(resolve(REPO, LEAF, "operators/cove.md"), "utf-8");
     // prior_answer placeholder must exist
     assert.match(op, /\{\{prior_answer\}\}/, "operators/cove.md must contain {{prior_answer}} placeholder");
-    // In AFlow-lite mode, if prior_answer is non-empty, it is used as the draft
+    // When prior_answer is non-empty, it is used as the draft directly
     assert.match(op, /prior_answer.*non-empty|non-empty.*prior_answer/i,
       "operators/cove.md must mention using prior_answer as draft when non-empty");
   });

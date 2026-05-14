@@ -518,7 +518,7 @@ The MCTS controller is reused verbatim from Phase 6b LATS (UCT, back-prop, tree 
 
 **Structural changes shipped alongside aflow-lite:**
 - Project-wide rename: pushable instruction subdirectories are now called `operators/` everywhere (file paths, source identifiers, prose). The old name was `dynamics` (prior phases).
-- New shell `.root-operator` bootstrap: `instances/<name>/.root-operator` configures the canonical operator the shell pushes at startup; PROGRAM.md content is substituted as `{{program}}`. At halt, the operator's `## Return` block is written to `instances/<name>/OUTPUT.md`.
+- New shell `.root-operator` bootstrap: `instances/<name>/.root-operator` configures the canonical operator the shell pushes at startup; PROGRAM.md content is substituted as `{{task}}` (with `{{prior_answer}}` substituted as the empty string). At halt, the operator's `## Return` block is written to `instances/<name>/OUTPUT.md`. _(Note: this originally shipped as `{{program}}`; renamed to `{{task}}` post-Phase 7 to unify the canonical placeholder across bootstrap and library-call sites.)_
 - Per-interpreter migration: every existing interpreter's strategy moved from `INSTRUCTIONS.md` (now a single-line marker file like `operators/refine.md`) into `operators/<canonical>.md`. The same canonical operator is then referenced standalone (via the marker pattern) AND reused by aflow-lite's library — no duplication.
 
 ---

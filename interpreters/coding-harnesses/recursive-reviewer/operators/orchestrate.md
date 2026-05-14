@@ -2,8 +2,9 @@
 
 IMPORTANT: This operator file is the canonical strategy. Do not modify it via update_instructions; it is only loaded at push-time.
 
-Receives push-args (root-operator bootstrap):
-- `{{program}}` — the user's PROGRAM.md content (substituted in the **Program** section below).
+Receives push-args:
+- `{{task}}` — the task body (PROGRAM.md content when bootstrap-loaded). Substituted into the **Task** section below.
+- `{{prior_answer}}` — present in the shell's bootstrap dict but unused.
 
 Produces: `## State done` + `## Return` block with key `summary`.
 
@@ -18,7 +19,7 @@ Drives a breadth-first review of every source file reachable from a chosen entry
 
 Test output never enters the long-term refactor log — the log is curated structural memory, not a transcript. The verify command's output is held in an ephemeral `./scoped/_verify_tail.md` (overwritten each attempt) for the fix step to read; the per-attempt summaries the fix step appends to `./scoped/_fix_history.md` give the next fix iteration a digest of what's been tried. Both are discarded once the file is finalised.
 
-Configuration (source root, entry file, file extension, verification command) is parsed from the **Program** section below at bootstrap.
+Configuration (source root, entry file, file extension, verification command) is parsed from the **Task** section below at bootstrap.
 
 ## Scoped files
 
@@ -37,12 +38,12 @@ Configuration (source root, entry file, file extension, verification command) is
 - `./scoped/_verify_tail.md` — last verification command output (≤50 lines), written by verify and read by fix; ephemeral, overwritten each attempt
 - `./scoped/_fix_history.md` — per-file accumulated trajectory of fix attempts: one short entry per attempt summarizing the error observed and the change tried. Initialised empty at apply, appended by the fix step (not verify), read by the next fix step so the LLM doesn't repeat itself. Ephemeral; never written to the long-term log
 
-Program (substituted at push-time):
-{{program}}
+Task (substituted at push-time):
+{{task}}
 
 ## Instruction: Bootstrap
 **Condition:** MEMORY state is "empty"
-**Action:** Parse the Program block above to extract `Source root`, `Entry file`, `File extension`, and `Verification command`. Initialize the scoped files (including an empty `refactor_log.md`) and seed the queue with the entry file. Set state to `select`.
+**Action:** Parse the Task block above to extract `Source root`, `Entry file`, `File extension`, and `Verification command`. Initialize the scoped files (including an empty `refactor_log.md`) and seed the queue with the entry file. Set state to `select`.
 
 ```
 mkdir -p ./scoped

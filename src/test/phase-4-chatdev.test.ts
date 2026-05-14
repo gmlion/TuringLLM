@@ -89,18 +89,18 @@ describe("phase-7 b-chatdev: canonical operator migration (R20, R21, R22, R23, R
     assert.match(s, /^# Sub-instructions/m);
   });
 
-  test("operators/chatdev.md has bimodal push-args: {{program}} and {{task}} + {{prior_answer}} (R47)", () => {
+  test("operators/chatdev.md uses canonical placeholders {{task}} + {{prior_answer}}; no {{program}} (R47)", () => {
     const s = readFileSync(resolve(INTERP, "operators/chatdev.md"), "utf-8");
-    assert.match(s, /\{\{program\}\}/);
     assert.match(s, /\{\{task\}\}/);
     assert.match(s, /\{\{prior_answer\}\}/);
+    assert.doesNotMatch(s, /\{\{program\}\}/);
   });
 
-  test("operators/chatdev.md Initialize detects mode via {{task}} grep (R47)", () => {
+  test("operators/chatdev.md Initialize has no dual-mode detect block (R47)", () => {
     const s = readFileSync(resolve(INTERP, "operators/chatdev.md"), "utf-8");
     const initM = s.match(/^## Instruction:\s*Initialize\b([\s\S]*?)(?=^## Instruction:|^# Sub-instructions)/m);
     const init = initM ? initM[1] : "";
-    assert.match(init, /grep.*\{\{task\}\}/);
+    assert.doesNotMatch(init, /grep.*\{\{task\}\}/);
   });
 
   test("operators/chatdev.md Initialize does NOT hardcode cat ../../PROGRAM.md (R23)", () => {
@@ -122,10 +122,14 @@ describe("phase-7 b-chatdev: canonical operator migration (R20, R21, R22, R23, R
     assert.match(s, /## Push\s*\n\s*operators\/dialogue\.md/);
   });
 
-  test("operators/chatdev.md describes both standalone and aflow-lite invocation modes (R27)", () => {
+  test("operators/chatdev.md documents both bootstrap and library-call usage (R27)", () => {
+    // After the {{task}}-canonical refactor there are no separate modes;
+    // the same operator works both standalone (bootstrap-loaded) and as
+    // a library operator pushed by a meta-framework. The header prose
+    // should still mention both usages.
     const s = readFileSync(resolve(INTERP, "operators/chatdev.md"), "utf-8");
-    assert.match(s, /mode 1.*standalone|standalone.*mode 1/i);
-    assert.match(s, /mode 2.*aflow|aflow.*mode 2/i);
+    assert.match(s, /bootstrap/i);
+    assert.match(s, /meta-framework|aflow|library operator/i);
   });
 
   test("operators/chatdev.md Sub-instructions section is empty (this operator needs none)", () => {
