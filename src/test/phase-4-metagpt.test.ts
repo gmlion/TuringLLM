@@ -34,10 +34,14 @@ describe("phase-4 a-metagpt: layout, roles, evaluate reuse", () => {
 
   test("strategy uses Push-Args to forward typed hand-offs", () => {
     const s = readFileSync(resolve(INTERP, "operators/metagpt.md"), "utf-8");
-    // Architect receives {{prd}}, Engineer receives {{design}}, QA receives {{tasks}}.
-    assert.match(s, /\{\{prd\}\}/);
-    assert.match(s, /\{\{design\}\}/);
-    assert.match(s, /\{\{tasks\}\}/);
+    // Each role's typed input is named as a push-arg key in the strategy's
+    // hand-off contract. The contract prose lists them as backtick-quoted
+    // names rather than {{placeholder}} (strict bootstrap would reject any
+    // stray {{name}} in a root-loadable operator that isn't a real
+    // placeholder).
+    for (const k of ["prd", "design", "tasks"]) {
+      assert.match(s, new RegExp(`\`${k}\``), `strategy must mention the '${k}' push-arg in its hand-off contract`);
+    }
   });
 
   test("role-qa pushes evaluate.md", () => {

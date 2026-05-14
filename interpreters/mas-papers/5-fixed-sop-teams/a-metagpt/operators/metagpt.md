@@ -11,10 +11,10 @@ Produces: `## State done` + `## Return` block with key `answer`. The `## Review`
 This operator implements the MetaGPT pattern (patterns.md Group 5): a fixed SOP walking PM → Architect → Engineer → QA, with document hand-off as the contract between roles (one role per phase, each produces a typed document consumed by the next).
 
 Typed hand-off contract (per role, via `## Push-Args` and `## Return`). Section names follow the project convention: Title Case, no underscores. Return keys are single English words so the shell's splice (`key:` → `## Key`) yields clean section names:
-- `role-pm.md` consumes `{{task}}`, returns key `prd` → splices as `## Prd`.
-- `role-architect.md` consumes `{{prd}}`, returns key `design` → splices as `## Design`.
-- `role-engineer.md` consumes `{{design}}`, returns key `tasks` → splices as `## Tasks`.
-- `role-qa.md` consumes `{{tasks}}` and `{{code_location}}`, returns key `review` → splices as `## Review`.
+- `role-pm.md` consumes a `task` push-arg, returns key `prd` → splices as `## Prd`.
+- `role-architect.md` consumes a `prd` push-arg, returns key `design` → splices as `## Design`.
+- `role-engineer.md` consumes a `design` push-arg, returns key `tasks` → splices as `## Tasks`.
+- `role-qa.md` consumes `tasks` and `code_location` push-args, returns key `review` → splices as `## Review`.
 
 Each Dispatch instruction sets the caller's state to a phase-active label (`pm_active`, `architect_active`, `engineer_active`, `qa_active`) BEFORE the push. The shell preserves that as the returnState; on pop, the caller's state becomes `<label>_completed`, which the next Dispatch instruction matches. This avoids the `empty_completed` aliasing across all four push sites.
 

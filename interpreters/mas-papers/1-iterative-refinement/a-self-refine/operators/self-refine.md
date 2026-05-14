@@ -8,7 +8,7 @@ Receives push-args:
 
 Produces: `## State done` + `## Return` block with key `answer`. The existing `## Refined` section is also written for human inspection.
 
-This operator implements the Self-Refine pattern (patterns.md Group 1). A single role drafts into `./scoped/draft.md`, critiques its own draft via the `operators/self-critique.md` sub-operator (which receives `{{draft}}` as a push-arg and returns `critique` + `refined` via `## Return`), and decides whether to accept or loop. No memory carries across iterations beyond the current `./scoped/draft.md`.
+This operator implements the Self-Refine pattern (patterns.md Group 1). A single role drafts into `./scoped/draft.md`, critiques its own draft via the `operators/self-critique.md` sub-operator (which receives a `draft` push-arg and returns `critique` + `refined` via `## Return`), and decides whether to accept or loop. No memory carries across iterations beyond the current `./scoped/draft.md`.
 
 ## Instruction: Initialize
 **Condition:** MEMORY state is "empty"
