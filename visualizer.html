@@ -1203,12 +1203,79 @@
       }
       empty.hidden = true;
       cyDiv.style.display = '';
-      const ROW_H = 90, COL_W = 160, PAD_X = 40, PAD_Y = 40;   // wider COL_W so per-cycle labels like "execute-step #57" fit per column without overlapping
+      // Cytoscape positions are node CENTERS. Node width is set by the
+      // style block below to `max(60, label.length * 7 + 12)` — we mirror
+      // that formula here so the per-frame layout packs rows tightly
+      // without letting wider labels overlap their neighbours.
+      const PAD_X = 40, PAD_Y = 40;
+      const nodeWidth = (label) => Math.max(60, String(label).length * 7 + 12);
+      const isPerFrame = currentGraphMode === 'frame';
       const rowOf = new Map(graph.slugRowOrder.map((slug, i) => [slug, i]));
+
+      let posById;
+      if (isPerFrame) {
+        // Per-frame layout: pack each slug's row from x=PAD_X by
+        // occurrence order (chronological within the slug), not by
+        // absolute cycle. Each box claims its own actual width plus a
+        // small horizontal gap. When a slug's packed width exceeds
+        // SUBROW_WRAP_WIDTH the row wraps into up to MAX_SUBROWS
+        // sub-rows (split into roughly-equal chunks). Sub-rows of the
+        // same slug are tighter vertically than the gap to a different
+        // slug, so the swimlane structure still reads.
+        const NODE_GAP = 12;
+        const SUB_ROW_H = 40;
+        const SLUG_GAP = 70;
+        const SUBROW_WRAP_WIDTH = 1100;
+        const MAX_SUBROWS = 3;
+
+        const bySlug = new Map();
+        for (const n of graph.nodes) {
+          if (!bySlug.has(n.slug)) bySlug.set(n.slug, []);
+          bySlug.get(n.slug).push(n);
+        }
+        for (const arr of bySlug.values()) arr.sort((a, b) => a.cycle - b.cycle);
+
+        posById = new Map();
+        let yCursor = PAD_Y;
+        for (const slug of graph.slugRowOrder) {
+          const nodes = bySlug.get(slug) ?? [];
+          if (nodes.length === 0) continue;
+          const widths = nodes.map(n => nodeWidth(n.label));
+          const packedW = widths.reduce((s, w) => s + w + NODE_GAP, -NODE_GAP);
+          const subRows = Math.min(
+            MAX_SUBROWS,
+            Math.max(1, Math.ceil(packedW / SUBROW_WRAP_WIDTH)),
+          );
+          const perSubRow = Math.ceil(nodes.length / subRows);
+
+          let xCursor = PAD_X;
+          let curSub = 0;
+          for (let i = 0; i < nodes.length; i++) {
+            const sub = Math.floor(i / perSubRow);
+            if (sub !== curSub) { curSub = sub; xCursor = PAD_X; }
+            const w = widths[i];
+            posById.set(nodes[i].id, {
+              x: xCursor + w / 2,
+              y: yCursor + curSub * SUB_ROW_H,
+            });
+            xCursor += w + NODE_GAP;
+          }
+          yCursor += (subRows - 1) * SUB_ROW_H + SLUG_GAP;
+        }
+      } else {
+        // Per-cycle layout unchanged: x = absolute cycle. Labels like
+        // "execute-step #57" need ~160px per column to avoid overlap.
+        const COL_W = 160, ROW_H = 90;
+        posById = new Map(graph.nodes.map(n => [
+          n.id,
+          { x: PAD_X + n.cycle * COL_W, y: PAD_Y + (rowOf.get(n.slug) ?? 0) * ROW_H },
+        ]));
+      }
+
       const elements = [
         ...graph.nodes.map(n => ({
           data: { id: n.id, label: n.label, frameDir: n.frameDir, cycle: n.cycle },
-          position: { x: PAD_X + n.cycle * COL_W, y: PAD_Y + (rowOf.get(n.slug) ?? 0) * ROW_H },
+          position: posById.get(n.id) ?? { x: PAD_X, y: PAD_Y },
         })),
         ...graph.edges.map((e, i) => ({ data: { id: `e${i}`, source: e.source, target: e.target, type: e.type } })),
       ];

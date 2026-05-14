@@ -185,8 +185,8 @@ The caller is paused while the pushed frame runs through its own
 state machine.
 
 **Pop.** When the pushed frame's state reaches `done`, the shell
-destroys it and resumes the caller. Any `## Return` block on the
-popped frame is spliced into the caller's MEMORY as top-level
+destroys it and resumes the caller. The `## Return` block, if
+present, in the popped frame's MEMORY is spliced into the caller's MEMORY as top-level
 sections (key `foo` becomes `## Foo`), and the caller's state is
 renamed to `<caller_state>_completed`:
 
@@ -226,18 +226,62 @@ invocation:
 - **`## Return`** — written by a popping frame; spliced into the
   caller's MEMORY as top-level sections (e.g. `verdict: pass`
   becomes `## Verdict\npass`).
-- **`## Pending Questions`** — non-blocking user questions; only
-  asked when state reaches `waiting_for_user`.
+- **`## Pending Questions`** — user-facing questions written by the
+  LLM. The shell sends each one to the user immediately after the
+  cycle that added it; the LLM does not change state and keeps
+  working. See [Human-in-the-loop](#human-in-the-loop).
 
 And these MEMORY states:
 
 - **`done`** — halts if the stack is at depth 1; otherwise pops one
   frame and sets the caller's state to `{caller_state}_completed`.
-- **`waiting_for_user`** — reads `## Pending Questions`, prompts
-  the user one at a time (via stdin or Telegram), writes answers to
-  `## Answers`, sets state to `user_responded`.
+- **`waiting_for_user`** — signals the LLM can't proceed without an
+  answer. Blocks the cycle loop until any outstanding question is
+  answered, writes the reply to `## Answers`, sets state to
+  `user_responded`.
 - **unmatched state** — if no instruction's condition matches, the
   shell transitions to `waiting_for_user` and asks for guidance.
+
+### Human-in-the-loop
+
+The LLM can ask the user questions *without halting*. It writes
+them to `## Pending Questions` in MEMORY (without changing state)
+and keeps working on whatever else it can do in the meantime.
+
+After every cycle, the shell:
+
+1. Sends each not-yet-presented question to the user immediately
+   (Telegram message or stdin prompt). Answers come back
+   asynchronously, possibly several cycles later, and are spliced
+   into `## Answers` in MEMORY when they arrive.
+2. Blocks the cycle loop **only** if the LLM has set state to
+   `waiting_for_user` — i.e. the LLM has decided it has run out
+   of independent work and now needs the answer to continue. The
+   shell waits for any outstanding reply, writes it, and sets
+   state to `user_responded`.
+
+Stdin is the default channel — questions print to the console and
+the user types replies.
+
+Telegram is recommended for long-running runs: questions arrive as
+push notifications, and you can answer from your phone without
+keeping the terminal open. Set it up per-instance:
+
+```bash
+./setup-telegram.sh <BOT_TOKEN> instances/foo
+```
+
+Get a bot token from [@BotFather](https://t.me/BotFather) on
+Telegram, then send any message to your bot — the script polls
+for the message, extracts the chat ID, and writes
+`TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` to the instance's
+`.env`. Omit the instance dir to write to the project-root `.env`
+instead, where the values act as a default for every instance that
+doesn't set its own `TELEGRAM_*`. Replies must use Telegram's
+"reply" feature so the shell can match the answer to the right
+question. If Telegram fails (bad token, network outage), the
+shell logs a degraded notice and falls back to stdin without
+losing already-collected answers.
 
 ### Frames on disk
 
@@ -257,6 +301,30 @@ via stable paths:
 
 When the root frame reaches `done`, the shell writes any `## Return`
 keys to `instances/<name>/OUTPUT.md` and halts.
+
+## Visualizer
+
+A browser-based UI for inspecting an instance — running or
+completed. It reads the same files the shell writes (frames,
+`history/`, `events.jsonl`), so there is no separate database or
+extra logging hook.
+
+<p align="center">
+  <a href="VISUALIZER.md"><img src="docs/assets/visualizer-1.jpg" alt="Per-frame graph view: swimlanes per slug, sub-row wrapping for many siblings, live event stream on the right" width="900"></a>
+</p>
+
+The graph view (above) shows each frame as a node on a per-slug
+swimlane row — push edges fan out to children, pop edges return,
+and a slug with many sibling frames wraps into sub-rows. Click any
+node to open a three-column cycle inspector with the call stack,
+the event timeline for that cycle, and the frame's MEMORY /
+INSTRUCTIONS / scoped files rendered live.
+
+```bash
+./visualize.sh my-project
+```
+
+Full guide: [VISUALIZER.md](VISUALIZER.md).
 
 ## Examples — the `interpreters/` directory
 
@@ -347,7 +415,7 @@ vim instances/my-project/PROGRAM.md
 # Run
 instances/my-project/run.sh
 
-# Visualize a running or completed instance
+# Visualize a running or completed instance (see Visualizer section above)
 ./visualize.sh my-project
 ```
 
@@ -441,9 +509,9 @@ Other shared knobs:
 
 - `BASH_TIMEOUT` — seconds for `bash` tool commands (default 300, set
   to 0 to disable).
-- `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` — when both are set, user
-  questions are sent via Telegram instead of stdin.
-  `./setup-telegram.sh <TOKEN>` autodetects the chat ID.
+- `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` — route user questions
+  through Telegram instead of stdin. Use `./setup-telegram.sh` to
+  populate them — see [Human-in-the-loop](#human-in-the-loop).
 
 ## Two Git Repos Per Instance
 
