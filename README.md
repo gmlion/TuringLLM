@@ -48,6 +48,48 @@ for the full breakdown. If you're a MAS researcher, the catalogue
 is a substrate for comparing patterns without re-implementing the
 surrounding scaffolding each time.
 
+## Quick start
+
+Build the shell, then run the **deep-research-with-HITL** demo — a
+recursive researcher that asks you a few clarifying questions
+up-front, keeps gathering background while you think, and produces a
+structured report at `instances/<name>/workspace/report.md`.
+
+```bash
+npm run build
+
+# Create the instance. PROGRAM.md ships pre-filled with an
+# under-specified research goal that invites clarification.
+./new-instance.sh interpreters/mas-papers/2-planning-decomposition/c-deep-research-hitl my-cdr-hitl
+
+# Optional but recommended: route the LLM's clarifying questions
+# through Telegram so they arrive as push notifications and you can
+# answer from your phone. Stdin works too (questions print inline).
+./setup-telegram.sh <BOT_TOKEN> instances/my-cdr-hitl   # see Human-in-the-loop
+
+# Run
+instances/my-cdr-hitl/run.sh
+```
+
+In a second terminal, open the visualizer to watch the call stack
+and event stream live as the run unfolds:
+
+```bash
+./visualize.sh my-cdr-hitl
+```
+
+You'll see the strategy frame `f000-plan-execute-clarify` write a
+few questions to `## Pending Questions`, the shell deliver them via
+your channel, and the LLM keep cycling — appending background
+research notes — while it waits. Once your answers arrive (or the
+strategy decides background is exhausted) it pushes `tackle.md` and
+the recursive solver writes the final report.
+
+Provider defaults to Claude Code with Haiku. To swap to the
+Anthropic API, an OpenAI-compatible endpoint, Ollama, or a local
+GGUF model, edit `instances/my-cdr-hitl/.env` — see
+[Providers](#providers).
+
 ## Architecture
 
 ```
