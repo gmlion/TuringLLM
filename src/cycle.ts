@@ -94,8 +94,7 @@ export async function runOneCycle(
   callStack: CallStack,
   cycle: number,
 ): Promise<"halt" | "continue"> {
-  const { memoryPath } = activeFramePaths(callStack);
-  await collectReplies(memoryPath);
+  await collectReplies(callStack);
 
   // Set cycle context with the pre-stack-ops top frame so push/pop/splice
   // events fired inside runStackBlock are stamped with the correct cycle
@@ -128,7 +127,7 @@ export async function runOneCycle(
   if (currentState === "waiting_for_user") {
     log(`--- Cycle ${cycle} (frame: ${fd2}) (user interaction) ---`);
     commitCycleAndEmit(cycle, "waiting_for_user", t0, ip2, instructionsBytesBefore);
-    await handleUserInteraction(mp2);
+    await handleUserInteraction(mp2, callStack.stack[callStack.stack.length - 1].frameDir);
     log("");
     return "continue";
   }
@@ -159,7 +158,7 @@ export async function runOneCycle(
     if (matchedValue === "none") {
       handleNoMatch(getMemoryState(mp3), mp3);
       commitCycleAndEmit(cycle, "waiting_for_user", t0, ip3, instructionsBytesBefore);
-      await handleUserInteraction(mp3);
+      await handleUserInteraction(mp3, callStack.stack[callStack.stack.length - 1].frameDir);
       log("");
       return "continue";
     }
@@ -167,7 +166,7 @@ export async function runOneCycle(
     executeSyscalls(ip3, fd3);
     const state = getMemoryState(mp3);
     commitCycleAndEmit(cycle, state, t0, ip3, instructionsBytesBefore);
-    await postCycleUserOps(cycle, result.summary, mp3, state);
+    await postCycleUserOps(cycle, result.summary, callStack, state);
     log("");
     return "continue";
   }
@@ -177,7 +176,7 @@ export async function runOneCycle(
   if (result.noMatch) handleNoMatch(state, mp3);
   const finalState = result.noMatch ? "waiting_for_user" : state;
   commitCycleAndEmit(cycle, finalState, t0, ip3, instructionsBytesBefore);
-  await postCycleUserOps(cycle, result.summary, mp3, finalState);
+  await postCycleUserOps(cycle, result.summary, callStack, finalState);
   log("");
   return "continue";
 }
