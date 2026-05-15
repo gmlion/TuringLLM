@@ -68,7 +68,7 @@ strategy
     └── tackle("write final report") ← atomic write to workspace/report.md
 ```
 
-Peak stack depth on this demo: 1 strategy + 3 nested tackles + 1
+Peak stack on this demo — depth 4: 1 strategy + 3 nested tackles + 1
 plan = **5 frames simultaneously** when a planner runs at the
 deepest tackle. You can verify by inspecting `.call-stack.json`
 mid-run.

@@ -25,7 +25,7 @@ That separation is the point of the family.
 
 ## The variants and their axis of variation
 
-| Interpreter | Critic | Memory across iterations | Critique structure | Stack depth |
+| Interpreter | Critic | Memory across iterations | Critique structure | Peak frames |
 | --- | --- | --- | --- | --- |
 | [`a-self-refine/`](./a-self-refine/) | same role (the producer's model, but a fresh context) | none | free-form prose | 2 |
 | [`b-evaluator-optimizer/`](./b-evaluator-optimizer/) | a separate evaluator role with an explicit acceptance criterion | none | `verdict` (pass/fail) + `feedback` | 2 |

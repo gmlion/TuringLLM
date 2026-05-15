@@ -16,7 +16,7 @@ A breadth-first walk of a codebase's import graph from a chosen entry file. For 
 | **Verify** (orchestrator) | Exit code and last 50 lines of the configured verification command | A PASS marker in the log entry (if any), or a transition into the fix loop on failure |
 | **Fix** (orchestrator, only on verify FAIL) | The latest verify tail + the per-file accumulated `_fix_history.md` | A targeted regression fix that preserves the structural intent; loops back to verify |
 
-The push depth is 2: the orchestrator at `f000-orchestrate` pushes the reviewer (popped after `## Suggestions` returns), then later pushes the refiner (popped after `## Refined` + `## Log_entry` return). Apply / verify / fix all run inline in the orchestrator's frame.
+Stack depth never exceeds 1 — the orchestrator at `f000-orchestrate` pushes the reviewer (popped after `## Suggestions` returns), then later pushes the refiner (popped after `## Refined` + `## Log_entry` return). Apply / verify / fix all run inline in the orchestrator's frame.
 
 ## State machine
 

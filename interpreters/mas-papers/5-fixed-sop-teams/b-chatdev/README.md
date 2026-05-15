@@ -46,9 +46,9 @@ re-handed in via `input`. The evaluator's verdict travels back to
 the strategy through `## Return` splicing; the strategy decides
 what to do with it.
 
-Peak stack depth is therefore three: `strategy → dialogue →
-evaluate`. Coding/testing/documenting reach depth 3 on the
-acceptance gate; design pops directly back to depth 1 (no gate).
+Peak stack depth is therefore 2 — 3 frames: `strategy → dialogue →
+evaluate`. Coding/testing/documenting reach depth 2 on the
+acceptance gate; design pops directly back to the strategy frame (no gate).
 
 ## How the dialogue actually works
 

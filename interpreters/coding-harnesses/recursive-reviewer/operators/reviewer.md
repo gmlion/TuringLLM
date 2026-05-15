@@ -39,7 +39,7 @@ Before scanning the file, skim `{{refactor_log}}`. It tells you which files have
 
 ## Instruction: Review
 **Condition:** MEMORY state is "empty"
-**Action:** Read the file at `{{file_path}}` and apply all four lenses, with the refactor log in mind. Build a numbered list of concrete suggestions; each item must include a `path:line` (or `path:line-line`) anchor, the lens that surfaced it, the proposed change in one or two sentences, and a one-sentence rationale. Then write the FULL done state in a single heredoc — the `## Return` block MUST be in the same heredoc as the state change, since at depth>=2 the shell pops as soon as state becomes "done":
+**Action:** Read the file at `{{file_path}}` and apply all four lenses, with the refactor log in mind. Build a numbered list of concrete suggestions; each item must include a `path:line` (or `path:line-line`) anchor, the lens that surfaced it, the proposed change in one or two sentences, and a one-sentence rationale. Then write the FULL done state in a single heredoc — the `## Return` block MUST be in the same heredoc as the state change, since at depth>=1 the shell pops as soon as state becomes "done":
 
 ```
 cat > ./MEMORY.md << 'MEMEOF'

@@ -666,7 +666,7 @@ criterion: |
       $SOLUTION
     SOLVED_EOF
 
-The shell intercepts `state == done` at stack depth 1 (R36) and halts.
+The shell intercepts `state == done` when only the root frame remains (R36) and halts.
 
 # Sub-instructions
 

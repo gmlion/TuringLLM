@@ -23,7 +23,7 @@ iteration responsibility.
 Under sequential execution, four published patterns reduce to
 the same recursive state machine. The differences between them
 are in the demo PROGRAM and in how naturally the recursion
-unfolds (depth 1 for orchestrator-workers; 2–3+ for deep
+unfolds (shallow for plan-execute and orchestrator-workers; deeper for deep
 research) — not in the dynamics themselves. So this group ships
 **one strategy** exposed through **three interpreters**, each with
 a different `PROGRAM.md` to elicit the distinguishing trace.

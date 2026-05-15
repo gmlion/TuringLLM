@@ -23,7 +23,7 @@ producer's self-judgement.
 | **Evaluator** (`fNNN-evaluate`) | One judging pass, then it's gone | Only the attempt and criterion handed in via push-args; nothing about the strategy's history, prior verdicts, or how many iterations have passed | A `verdict` (literal `pass` or `fail`) and `feedback` text, spliced back to the strategy on pop |
 
 A new evaluator context is created on every push and destroyed on
-the matching pop. Stack depth is at most 2: `strategy →
+the matching pop. The stack is at most 2 frames deep — depth 1: `strategy →
 evaluator`. Continuity across iterations lives only on disk:
 `./scoped/attempt.md` (overwritten with each new attempt) and
 `./scoped/criterion.md` (set once at startup, never rewritten).

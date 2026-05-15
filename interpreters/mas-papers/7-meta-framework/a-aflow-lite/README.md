@@ -66,7 +66,7 @@ A successful run halts with `## Solution` (best workflow + score) in `OUTPUT.md`
 ## Notable behaviour
 
 - **No meta-reflexion in v1:** The operator `reflexion.md` is in the library and runs INSIDE workflows (per-attempt verbal lessons within its own pushed frame), but aflow-lite's own meta-strategy uses only UCT + LLM-driven expansion (with `recent_scores` as data) for learning. Cross-iteration meta-meta-reflection is future scope.
-- **No nested shell instances:** All workflow execution happens via push/pop within one instance. Stack depth temporarily grows during operator execution (depth 2 for the operator itself, depth 3+ when an operator pushes its own sub-operators) and shrinks back.
+- **No nested shell instances:** All workflow execution happens via push/pop within one instance. Stack depth temporarily grows during operator execution (depth 1 for the operator itself, depth 2+ when an operator pushes its own sub-operators) and shrinks back.
 - **Stack-depth invariant:** `stack.length ≤ 4` at every cycle (root aflow-lite + library operator + library operator's sub-push + sub-push's own sub-push).
 - **No concurrency:** Sequential under the existing single-threaded shell, exactly like LATS. Per-iteration, the 3 benchmark items are processed in sequence; each runs the candidate workflow's operators in sequence.
 - **No new "## Aflow Answer" tag:** The terminal state writes the standard `## Return\nanswer:` block, identical to every other operator. The `OUTPUT.md` writer surfaces this as `## Answer`.

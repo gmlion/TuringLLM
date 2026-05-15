@@ -246,8 +246,24 @@ distinguish "I just pushed and got a result back" from the original
 state where it issued the push — it would otherwise immediately
 re-fire the same instruction and push again.
 
-Push frames can nest arbitrarily. The stack is persisted to
-`.call-stack.json` and snapshotted into every `history/` entry.
+**Depth.** Push frames can nest arbitrarily — a pushed operator may
+itself push another. Two quantities describe how deep a run is, and
+the docs use them consistently:
+
+- **`stack.length`** — the literal number of frames on the stack.
+  Always ≥ 1, because the root frame is always present.
+- **depth** — the nesting level, counted from zero. The root frame
+  is **depth 0**, the frame it pushes is depth 1, and so on:
+  `depth == stack.length - 1`.
+
+So d-cove (`cove.md` → `verify.md` → `answer-independently.md`)
+reaches depth 2 — three frames; a flat interpreter that only ever
+pushes one operator reaches depth 1 — two frames. The shell halts
+when `state == done` and only the root frame remains
+(`stack.length == 1`, i.e. depth 0).
+
+The stack is persisted to `.call-stack.json` and snapshotted into
+every `history/` entry.
 
 The convention used by the examples — calling pushable files
 "operators" and putting them in `operators/` — is purely a user
@@ -275,7 +291,7 @@ invocation:
 
 And these MEMORY states:
 
-- **`done`** — halts if the stack is at depth 1; otherwise pops one
+- **`done`** — halts if only the root frame remains (`stack.length` 1); otherwise pops one
   frame and sets the caller's state to `{caller_state}_completed`.
 - **`waiting_for_user`** — signals the LLM can't proceed without an
   answer. Blocks the cycle loop until any outstanding question is
@@ -433,6 +449,53 @@ one strategy subsumes several published patterns.
 The first axis is the more common one in MAS literature
 comparisons. The second axis is what makes the planning-decomposition
 group's "these are all the same pattern" claim auditable.
+
+### What nesting (depth > 1) buys you
+
+A single push already gives you the valuable things — role
+separation, a fresh uncontaminated context, a structured return
+value — and most interpreters never need more. Depth > 1 matters in
+exactly two situations: a sub-task is itself decomposable, or you
+want to build patterns out of other patterns. Four cases from the
+catalogue:
+
+**d-cove — independence becomes structural.** Chain-of-Verification's
+hallucination-reduction result rests on each claim being checked by
+something that *cannot see the draft*. The structure `cove.md` →
+`verify.md` → `answer-independently.md` gives each claim its own
+depth-2 frame containing only that claim. Flattened to depth 1, the
+verifier would check every claim in one context, staring at the whole
+draft at once — exactly the contamination the pattern exists to
+prevent.
+
+**c-deep-research — decomposition becomes recursive.** A research
+question splits into sub-questions; a sub-question may itself be broad
+enough to need its own. The stack depth mirrors the depth of the
+research tree — each composite `tackle` pushes a `plan` and more
+`tackle`s beneath it. Depth 1 alone would force a fixed two-level
+plan-then-execute, with no way to discover mid-run that a branch needs
+to go deeper.
+
+**aflow-lite — patterns compose.** A meta-framework searches over
+workflows, and a workflow is a composition of operators: aflow-lite
+(depth 0) → a library operator like CoVe (depth 1) → `verify`
+(depth 2) → `answer-independently` (depth 3). "An operator that
+orchestrates operators that orchestrate operators" is only
+expressible with nesting.
+
+**MetaGPT's QA role — the library reaches across a nesting
+boundary.** MetaGPT pushes four roles at depth 1; the QA role, while
+running, *itself* pushes the canonical `evaluate.md` to depth 2 — the
+same evaluator a top-level Evaluator–Optimizer strategy uses. A pushed
+frame stays a first-class caller, not a dead end.
+
+Underneath all four: the shell handles every depth identically — the
+cwd invariants and the push/pop/splice mechanics don't change with
+depth. So operators are **position-independent**: `verify.md` is
+byte-identical whether it runs at depth 1 in standalone d-cove or
+depth 2 inside aflow-lite, because it never needs to know where it
+sits. Recursion and composition fall out of the same three primitives
+that give you a flat subroutine call.
 
 ## Usage
 

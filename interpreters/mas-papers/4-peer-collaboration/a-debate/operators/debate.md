@@ -278,7 +278,7 @@ Compose 4–8 sentences of synthesis in a coordinator voice. Do NOT use any pers
       $SYNTHESIS
     CONCLUDE_EOF
 
-The shell intercepts state `done` at stack depth 1 and halts (or pops the frame if called from within a workflow).
+The shell intercepts state `done` when only the root frame remains and halts (or pops the frame if called from within a workflow).
 
 # Sub-instructions
 

@@ -36,7 +36,7 @@ Prior answer (substituted at push-time, may be empty):
 
 ## Instruction: Handle verdict
 **Condition:** MEMORY state is "attempted_completed" and `## Verdict` is present
-**Action:** If `## Verdict` is literally "pass", write `./MEMORY.md` with the FULL done state in a SINGLE heredoc (the `## Return` block MUST be in the same heredoc as the state change — at depth>=2 the shell pops on state is "done" BEFORE any subsequent instruction runs, so a separate Finish instruction would be unreachable):
+**Action:** If `## Verdict` is literally "pass", write `./MEMORY.md` with the FULL done state in a SINGLE heredoc (the `## Return` block MUST be in the same heredoc as the state change — at depth>=1 the shell pops on state is "done" BEFORE any subsequent instruction runs, so a separate Finish instruction would be unreachable):
 
 ```
 cat > ./MEMORY.md << FINEOF

@@ -24,7 +24,7 @@ gradients.
 | **Reflector** (`fNNN-reflect`) | One distillation pass after each failed verdict | Only the failed attempt + verdict + feedback handed in via push-args; **no view of prior lessons or prior attempts** | A single `lesson` directive, spliced back to the strategy on pop |
 
 A new evaluator or reflector context is created on every push and
-destroyed on the matching pop. Stack depth is at most 2:
+destroyed on the matching pop. The stack is at most 2 frames deep — depth 1:
 `strategy → {evaluator | reflector}`. The two child contexts
 never see each other; the strategy is the only thing that
 threads them. Continuity across iterations lives entirely on

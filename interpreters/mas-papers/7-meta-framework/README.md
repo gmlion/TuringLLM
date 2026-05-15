@@ -12,7 +12,7 @@ A meta-framework operator (such as `aflow-lite.md`) at the canonical position is
 
 ## Notable group properties
 
-- Stack-depth invariant: aflow-lite reaches stack depth 4 in the deepest case (root `aflow-lite` + library operator at depth 2 + sub-push of library operator at depth 3 + sub-push's own sub-push at depth 4 — e.g., CoVe → verify → answer-independently). Most cycles run at depth 1–2.
+- Stack-depth invariant: aflow-lite reaches 4 frames — depth 3 — in the deepest case (root `aflow-lite` at depth 0 + library operator at depth 1 + sub-push of library operator at depth 2 + sub-push's own sub-push at depth 3 — e.g., CoVe → verify → answer-independently). Most cycles run at depth 0–1.
 - Operators in the library are byte-equal copies of their canonical sources elsewhere in the catalogue, accessible through any interpreter's `INSTRUCTIONS.md` marker (`operators/<name>.md`).
 - No nested shell instances. All workflow execution happens through push/pop within one shell instance.
 

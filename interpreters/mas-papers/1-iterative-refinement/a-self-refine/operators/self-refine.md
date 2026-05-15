@@ -36,7 +36,7 @@ Prior answer (substituted at push-time, may be empty):
 **Condition:** MEMORY state is "drafted_completed" and both `## Critique` and `## Refined` are present in MEMORY
 **Action:** Decide whether `## Refined` adequately addresses the task.
 
-**If accepted:** Write `./MEMORY.md` with state `done`, `## Refined`, and `## Return\nanswer:` in a SINGLE heredoc. (Note: the `## Return` block MUST be in the same heredoc as the state change — at depth>=2 the shell pops on state is "done" BEFORE any subsequent instruction runs, so a separate Finish instruction would be unreachable.)
+**If accepted:** Write `./MEMORY.md` with state `done`, `## Refined`, and `## Return\nanswer:` in a SINGLE heredoc. (Note: the `## Return` block MUST be in the same heredoc as the state change — at depth>=1 the shell pops on state is "done" BEFORE any subsequent instruction runs, so a separate Finish instruction would be unreachable.)
 
 ```
 cat > ./MEMORY.md << FINEOF

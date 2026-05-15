@@ -39,7 +39,7 @@ Prior answer (substituted at push-time, may be empty):
 
 ## Instruction: Finalize
 **Condition:** MEMORY state is "drafted_completed" and `## Revised` is present in MEMORY
-**Action:** Read `## Revised` from MEMORY. Write `./MEMORY.md` with the FULL done state in a SINGLE heredoc (the `## Return` block MUST be in the same heredoc as the state change — at depth>=2 the shell pops on state is "done" BEFORE any subsequent instruction runs, so a separate Finish instruction would be unreachable):
+**Action:** Read `## Revised` from MEMORY. Write `./MEMORY.md` with the FULL done state in a SINGLE heredoc (the `## Return` block MUST be in the same heredoc as the state change — at depth>=1 the shell pops on state is "done" BEFORE any subsequent instruction runs, so a separate Finish instruction would be unreachable):
 
 ```
 REVISED=$(grep -A 9999 '^## Revised' ./MEMORY.md | tail -n +2 | sed '/^## /,$d')

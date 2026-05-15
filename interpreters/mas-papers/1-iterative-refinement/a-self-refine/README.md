@@ -24,8 +24,8 @@ isn't a continuation of the producer's train of thought.
 
 A new critic context is created on every push and destroyed on the
 matching pop. **Nothing is preserved between two critic
-contexts** — each iteration's critic is a clean slate. Stack depth
-is at most 2: `strategy → critic`. Continuity across iterations
+contexts** — each iteration's critic is a clean slate. The stack
+is at most 2 frames deep — depth 1: `strategy → critic`. Continuity across iterations
 lives in two places only: the file `./scoped/draft.md` (which the
 strategy overwrites with the accepted refinement) and the
 strategy's own state machine.

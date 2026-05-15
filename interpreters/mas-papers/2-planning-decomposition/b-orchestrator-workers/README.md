@@ -53,7 +53,7 @@ through its accumulating `./scoped/sub-results.md`.
 
 ## How the orchestrator–worker fan-out runs
 
-For the bundled demo (5 input files), peak stack depth is 3:
+For the bundled demo (5 input files), the stack reaches 3 frames — depth 2:
 strategy → root tackle → worker tackle. Walk-through:
 
 1. **(root tackle, Try)** Read goal: "summarize each of the 5

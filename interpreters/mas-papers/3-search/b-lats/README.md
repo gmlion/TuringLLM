@@ -23,7 +23,7 @@ evaluating_completed     → Evaluate-absorb  → done (reward=1, ## Solution)
 reflecting               → Reflect-push     → reflecting (shell pop → reflecting_completed)
 reflecting_completed     → Reflect-absorb   → selecting (next iter)
                                             | done (budget exhausted, ## No Solution Found)
-done                     → (shell halts at stack depth 1)
+done                     → (shell halts: only the root frame remains)
 ```
 
 Tree state lives in the strategy frame's `./scoped/tree.md` as an append-only YAML-block ledger; per-node partial states live in `./scoped/state-<id>.md` files (write-once); per-node accumulated lessons live in `./scoped/lessons-<id>.md` files (lazy + append-only). Every field update of `tree.md` is an awk-based surgical edit (R39).

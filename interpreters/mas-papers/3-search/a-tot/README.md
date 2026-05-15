@@ -23,7 +23,7 @@ advancing              → Advance       → expanding | goal_checking
 goal_checking          → Goal-push     → goal_checking (shell pop → goal_checking_completed)
 goal_checking_completed→ Goal-absorb   → goal_checking | solved | done (R34)
 solved                 → Solved        → done
-done                   → (shell halts at stack depth 1)
+done                   → (shell halts: only the root frame remains)
 ```
 
 Tree state lives in the strategy frame's `./scoped/tree.md` as an append-only YAML-block ledger; every field update is an awk-based surgical edit (R12).

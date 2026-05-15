@@ -19,7 +19,7 @@ summary vs. nothing).
 
 ## The variants and their axis of variation
 
-| Interpreter | Interaction | Synchrony | Termination | Stack depth |
+| Interpreter | Interaction | Synchrony | Termination | Peak frames |
 | --- | --- | --- | --- | --- |
 | [`a-debate/`](./a-debate/) | Multi-round, mutual critique | R synchronous rounds | After R rounds, synthesise | 2 |
 
