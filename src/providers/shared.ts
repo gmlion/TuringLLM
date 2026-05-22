@@ -16,27 +16,35 @@ export type ProviderEvent =
   | { type: "retry"; attempt: number; reason: string };
 
 /**
- * Dispatch table for ProviderEvent types. Maps event types to their corresponding
- * emit functions. Eliminates control flow and makes event handling declarative.
- */
-const eventHandlers: Record<ProviderEvent['type'], (ev: ProviderEvent) => void> = {
-  llm_request: (ev) => emitLlmRequest((ev as any).provider, (ev as any).model, (ev as any).prompt),
-  llm_response: (ev) => emitLlmResponse((ev as any).output, (ev as any).durationMs, (ev as any).usage),
-  tool_call: (ev) => emitToolCall((ev as any).tool, (ev as any).input),
-  tool_result: (ev) => emitToolResult((ev as any).tool, (ev as any).output, (ev as any).isError),
-  retry: (ev) => emitRetry((ev as any).attempt, (ev as any).reason),
-};
-
-/**
  * Translate the buffered ProviderEvent list (returned by every provider's
  * runCycle) into the corresponding emit calls. Providers buffer rather
  * than emit directly so a provider can be unit-tested without an active
  * events.jsonl, and so the shell can decide on ordering vs. its own
  * cycle-start/end emissions.
+ *
+ * The switch narrows on `ev.type` so each branch sees the right shape —
+ * no `as any` and no field-level coercion. Adding a new ProviderEvent
+ * variant becomes a compile-time error here until the case is handled.
  */
 export function drainProviderEvents(events: ProviderEvent[]): void {
   for (const ev of events) {
-    eventHandlers[ev.type](ev);
+    switch (ev.type) {
+      case "llm_request":
+        emitLlmRequest(ev.provider, ev.model, ev.prompt);
+        break;
+      case "llm_response":
+        emitLlmResponse(ev.output, ev.durationMs, ev.usage);
+        break;
+      case "tool_call":
+        emitToolCall(ev.tool, ev.input);
+        break;
+      case "tool_result":
+        emitToolResult(ev.tool, ev.output, ev.isError);
+        break;
+      case "retry":
+        emitRetry(ev.attempt, ev.reason);
+        break;
+    }
   }
 }
 

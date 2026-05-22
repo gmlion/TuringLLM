@@ -70,11 +70,23 @@ class StdinStateManager {
 /**
  * Thin I/O handler: readline interface and user interaction.
  * Delegates state management to the pure state machine layer.
+ *
+ * `readline.createInterface` captures the process TTY on construction,
+ * which breaks the test suite and steals stdin even when Telegram is
+ * the active session. Defer creation until the first prompt is
+ * actually drained.
  */
 class StdinSession implements UserSession {
   private state = new StdinStateManager();
-  private rl = createInterface({ input: process.stdin, output: process.stdout, terminal: false });
+  private _rl: ReturnType<typeof createInterface> | null = null;
   private listening = false;
+
+  private get rl(): ReturnType<typeof createInterface> {
+    if (!this._rl) {
+      this._rl = createInterface({ input: process.stdin, output: process.stdout, terminal: false });
+    }
+    return this._rl;
+  }
 
   async presentQuestion(id: string, question: string): Promise<void> {
     this.state.presentQuestion(id);

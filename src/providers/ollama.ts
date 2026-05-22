@@ -1,4 +1,3 @@
-import { writeFileSync } from "fs";
 import { resolve } from "path";
 import { getTools, executeTool } from "../tools.js";
 import { getSystemPrompt, getUserPrompt } from "../prompt.js";
@@ -145,47 +144,9 @@ export async function runCycle(
   instructionsPath: string,
   memoryPath: string
 ): Promise<CycleResult> {
-  const stateful = process.env.TURING_STATEFUL === "1";
   const systemPrompt = getSystemPrompt("ollama");
   const userPrompt = getUserPrompt(memoryPath, instructionsPath, "ollama");
   const events: ProviderEvent[] = [];
-
-  // Stateful mode: no tools, LLM outputs MEMORY.md + SYSCALLS.md
-  if (stateful) {
-    const messages: OllamaMessage[] = [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: userPrompt },
-    ];
-
-    const t0Llm = Date.now();
-    events.push({ type: "llm_request", provider: "ollama", model: MODEL, prompt: `${systemPrompt}\n\n${userPrompt}` });
-    const result = await ollamaChat(messages, []);
-    let content = result.message.content.trim();
-
-    // Strip markdown fences if the model wraps output
-    content = content.replace(/^```(?:markdown)?\n?/g, "").replace(/\n?```$/g, "").trim();
-
-    // Split on ===SYSCALLS=== separator
-    const parts = content.split(/^===SYSCALLS===$/m);
-    const memoryContent = (parts[0] || "").trim();
-    const syscallsContent = (parts[1] || "").trim();
-
-    // In stateful mode the response contains both MEMORY and SYSCALLS sections
-    // separated by ===SYSCALLS===; we log the full pre-split content for debugging
-    // rather than just the MEMORY portion.
-    events.push({ type: "llm_response", output: result.message.content, durationMs: Date.now() - t0Llm });
-
-    if (memoryContent) {
-      logRaw(`  [memory-write] ${memoryContent}`);
-      writeFileSync(memoryPath, memoryContent + "\n", "utf-8");
-    }
-
-    const syscallsPath = resolve(memoryPath, "..", "..", "..", "SYSCALLS.md");
-    // Write new syscalls (empty string if no actions requested)
-    writeFileSync(syscallsPath, syscallsContent ? syscallsContent + "\n" : "", "utf-8");
-
-    return { halt: false, events };
-  }
 
   const tools = convertTools(getTools());
 

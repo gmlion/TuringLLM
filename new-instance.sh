@@ -139,9 +139,6 @@ STRATEOF
 EOF
 fi
 
-# SYSCALLS.md — empty, used by stateful mode (instance root, unchanged).
-touch "$DIR/SYSCALLS.md"
-
 # .gitignore for instance
 cat > "$DIR/.gitignore" << 'EOF'
 .api_key

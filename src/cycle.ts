@@ -17,12 +17,11 @@ import {
   setCycleContext, clearCycleContext,
 } from "./events.js";
 import { setState } from "./memory.js";
-import { BASE_DIR, CALL_STACK_PATH, HISTORY_DIR, STATEFUL, activeFramePaths } from "./config.js";
+import { BASE_DIR, CALL_STACK_PATH, HISTORY_DIR, activeFramePaths } from "./config.js";
 import { readFile, getMemoryState, getPendingQuestions } from "./io.js";
 import { withBackoff } from "./retry.js";
 import { drainProviderEvents } from "./providers/shared.js";
 import { runCycle as providerRunCycle } from "./providers/dispatch.js";
-import { executeSyscalls } from "./syscalls.js";
 import { emitOutputMd } from "./bootstrap.js";
 import { collectReplies, handleUserInteraction, postCycleUserOps } from "./interaction.js";
 import { runStackBlock } from "./stack-shell.js";
@@ -148,30 +147,8 @@ export async function runOneCycle(
   drainProviderEvents(result.events);
 
   // Re-resolve after provider invocation (provider may have changed files).
-  const { frameDir: fd3, memoryPath: mp3, instructionsPath: ip3 } = activeFramePaths(callStack);
+  const { memoryPath: mp3, instructionsPath: ip3 } = activeFramePaths(callStack);
 
-  if (STATEFUL) {
-    const memoryContent = readFile(mp3);
-    const matchedMatch = memoryContent.match(/^## Matched Instruction\n(.+)/m);
-    const matchedValue = matchedMatch ? matchedMatch[1].trim().toLowerCase() : "";
-
-    if (matchedValue === "none") {
-      handleNoMatch(getMemoryState(mp3), mp3);
-      commitCycleAndEmit(cycle, "waiting_for_user", t0, ip3, instructionsBytesBefore);
-      await handleUserInteraction(mp3, callStack.stack[callStack.stack.length - 1].frameDir);
-      log("");
-      return "continue";
-    }
-
-    executeSyscalls(ip3, fd3);
-    const state = getMemoryState(mp3);
-    commitCycleAndEmit(cycle, state, t0, ip3, instructionsBytesBefore);
-    await postCycleUserOps(cycle, result.summary, callStack, state);
-    log("");
-    return "continue";
-  }
-
-  // Non-stateful mode
   const state = getMemoryState(mp3);
   if (result.noMatch) handleNoMatch(state, mp3);
   const finalState = result.noMatch ? "waiting_for_user" : state;

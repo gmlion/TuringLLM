@@ -3,17 +3,10 @@ import { strict as assert } from "node:assert";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { tmpdir } from "node:os";
-import { getSystemPrompt, getUserPrompt } from "../prompt.js";
+import { getSystemPrompt, getUserPrompt, _shared } from "../prompt.js";
 
 describe("getSystemPrompt", () => {
-  const origStateful = process.env.TURING_STATEFUL;
-  afterEach(() => {
-    if (origStateful === undefined) delete process.env.TURING_STATEFUL;
-    else process.env.TURING_STATEFUL = origStateful;
-  });
-
-  test("api provider: base prompt includes Dynamics section and API_TOOLS_SECTION", () => {
-    delete process.env.TURING_STATEFUL;
+  test("api provider: base prompt includes Operators section and API_TOOLS_SECTION", () => {
     const p = getSystemPrompt("api");
     assert.match(p, /# Operators \(Push\/Pop\)/);
     assert.match(p, /## Push\n[\s\S]*operators\/consult\.md/);
@@ -21,32 +14,47 @@ describe("getSystemPrompt", () => {
   });
 
   test("claude-code provider: includes CC_TOOLS_SECTION instead of API_TOOLS_SECTION", () => {
-    delete process.env.TURING_STATEFUL;
     const p = getSystemPrompt("claude-code");
     assert.match(p, /# Cycle discipline/);
     assert.doesNotMatch(p, /\*\*update_instructions\*\*:/);
   });
 
-  test("ollama provider: returns the compact Ollama-specific prompt with dynamics", () => {
-    delete process.env.TURING_STATEFUL;
+  test("ollama provider: returns the compact Ollama-specific prompt", () => {
     const p = getSystemPrompt("ollama");
     assert.match(p, /You are a Turing machine/);
     assert.match(p, /## Push/);
-    // Compact Ollama prompt inlines dynamics guidance without the # heading.
-    assert.doesNotMatch(p, /# Dynamics \(Push\/Pop\)/);
-  });
-
-  test("stateful mode overrides provider and returns STATEFUL prompt", () => {
-    process.env.TURING_STATEFUL = "1";
-    const p = getSystemPrompt("api");
-    assert.match(p, /===SYSCALLS===/);
-    assert.match(p, /# Operators \(Push\/Pop\)/);
   });
 
   test("default provider (undefined) returns api-style prompt", () => {
-    delete process.env.TURING_STATEFUL;
     const p = getSystemPrompt();
     assert.match(p, /\*\*bash\*\*: Run a shell command/);
+  });
+
+  // Anti-drift guard: the prompt file used to contain two or three byte-
+  // identical copies of "# Mutating other files" and "# Operators (Push/Pop)".
+  // After the dedup these are single constants; this test pins the
+  // invariant so a future copy-paste-and-edit reintroduces the drift only
+  // when the test is also updated.
+  describe("shared sections (anti-drift)", () => {
+    test("API and OLLAMA include the tool-loop frame paths verbatim", () => {
+      assert.ok(getSystemPrompt("api").includes(_shared.FRAME_PATHS_TOOL));
+      assert.ok(getSystemPrompt("ollama").includes(_shared.FRAME_PATHS_TOOL));
+    });
+
+    test("API and OLLAMA include the tool-loop mutating-other-files block", () => {
+      assert.ok(getSystemPrompt("api").includes(_shared.MUTATING_OTHER_FILES_TOOL));
+      assert.ok(getSystemPrompt("ollama").includes(_shared.MUTATING_OTHER_FILES_TOOL));
+    });
+
+    test("API prompt includes the long Operators (Push/Pop) section", () => {
+      assert.ok(getSystemPrompt("api").includes(_shared.OPERATORS_PUSH_POP));
+    });
+
+    test("API includes the MEMORY recipe and the Asking-the-user section", () => {
+      const p = getSystemPrompt("api");
+      assert.ok(p.includes(_shared.MEMORY_RECIPE_BASH));
+      assert.ok(p.includes(_shared.ASKING_USER_TOOL));
+    });
   });
 });
 
@@ -66,7 +74,6 @@ describe("getUserPrompt", () => {
 
   afterEach(() => {
     rmSync(dir, { recursive: true, force: true });
-    delete process.env.TURING_STATEFUL;
   });
 
   test("inlines MEMORY and INSTRUCTIONS content", () => {
@@ -89,16 +96,6 @@ describe("getUserPrompt", () => {
     writeFileSync(instructionsPath, "# Strategy", "utf-8");
     const p = getUserPrompt(memoryPath, instructionsPath, "ollama");
     assert.match(p, /You MUST respond with tool calls only/);
-  });
-
-  test("stateful mode includes SYSCALLS block", () => {
-    process.env.TURING_STATEFUL = "1";
-    writeFileSync(memoryPath, "## State\nfoo", "utf-8");
-    writeFileSync(instructionsPath, "# Strategy", "utf-8");
-    writeFileSync(resolve(dir, "SYSCALLS.md"), "## Result 1: bash\nok", "utf-8");
-    const p = getUserPrompt(memoryPath, instructionsPath, "api");
-    assert.match(p, /<SYSCALLS>\n## Result 1: bash\nok\n<\/SYSCALLS>/);
-    assert.match(p, /===SYSCALLS===/);
   });
 
   test("working directory reported in prompt body", () => {

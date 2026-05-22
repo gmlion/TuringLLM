@@ -1,23 +1,25 @@
 import { readFileSync } from "fs";
 import { resolve } from "path";
 
-const BASE_SYSTEM_PROMPT = `You are a universal Turing machine. Each cycle you are invoked once, you act, and you are destroyed.
+// ---------------------------------------------------------------------------
+// Shared sections
+//
+// Two system prompts coexist (tool-loop API/CC and Ollama tool-loop). Some
+// of their body is genuinely identical text — the "Mutating other files"
+// section, the Push/Pop semantics, the cwd-invariant frame paths. Inline
+// duplication of that text has historically drifted (the surgical-edit
+// guidance was the prime offender), so we keep one copy here per shared
+// section and compose each prompt from those constants.
+//
+// Constants are byte-identical at runtime because every variant references
+// the same string — there is no separate "OLLAMA copy" that can edit
+// independently. The unit test in prompt.test.ts asserts that the prompts
+// that should share a section all contain it verbatim.
+// ---------------------------------------------------------------------------
 
-# How it works
+const FRAME_PATHS_TOOL = `# Your frame
 
-You are given MEMORY.md (your state) and INSTRUCTIONS.md (your program). Each cycle:
-1. Read ## State in MEMORY.
-2. Find the FIRST instruction in INSTRUCTIONS whose **Condition** matches the current state. Conditions are natural language — use your judgment to decide if a condition matches.
-3. Execute its **Action** using your tools.
-4. You MUST leave MEMORY.md and INSTRUCTIONS.md in a state where the next cycle can proceed.
-
-If NO condition matches, write \`## Matched Instruction\` as \`none\` in MEMORY.md and do nothing else. The shell will ask the user for guidance.
-
-# Your frame
-
-You are running inside a frame-specific directory at
-\`instances/<name>/frames/f<NNN>-<slug>/\`. Your cwd is this directory.
-Paths you reference resolve as follows:
+You are running inside a frame-specific directory at \`instances/<name>/frames/f<NNN>-<slug>/\`. Your cwd is this directory. Paths you reference resolve as follows:
 
 - \`./MEMORY.md\` — your frame's MEMORY (write via the recipe below).
 - \`./INSTRUCTIONS.md\` — your frame's program.
@@ -25,11 +27,9 @@ Paths you reference resolve as follows:
 - \`../../PROGRAM.md\` — the shared user program (read-only).
 - \`../../workspace/\` — the shared project artifacts directory with its own git repo; the \`git\` tool operates there.
 
-These relative paths are invariant regardless of stack depth: every frame sits one directory below \`instances/<name>/frames/\`, so \`../..\` always lands at the instance root.
+These relative paths are invariant regardless of stack depth: every frame sits one directory below \`instances/<name>/frames/\`, so \`../..\` always lands at the instance root.`;
 
-# MEMORY.md
-
-Always written via bash (to capture real command output). Write it AFTER doing the work:
+const MEMORY_RECIPE_BASH = `Always written via bash (to capture real command output). Write it AFTER doing the work:
   RESULT=$(command 2>&1); EXIT_CODE=$?
   cat > MEMORY.md << 'MEMEOF'
   ## State
@@ -42,9 +42,9 @@ Always written via bash (to capture real command output). Write it AFTER doing t
   MEMEOF
   echo "$RESULT (exit code: $EXIT_CODE)" >> MEMORY.md
 
-If a command fails, write the error. Never claim success without evidence.
+If a command fails, write the error. Never claim success without evidence.`;
 
-# Mutating other files
+const MUTATING_OTHER_FILES_TOOL = `# Mutating other files
 
 \`./MEMORY.md\`, \`./INSTRUCTIONS.md\`, and \`../../PROGRAM.md\` are exempt from this rule: MEMORY.md must always use the canonical \`cat > MEMORY.md << 'MEMEOF'\` recipe documented in the section above; INSTRUCTIONS.md is managed via \`update_instructions\`; and \`../../PROGRAM.md\` is read-only.
 
@@ -56,7 +56,60 @@ Examples:
 - Append a new bullet to a list:
   \`echo "- L<N>: <text>" >> ./scoped/lessons.md\`
 - Read a single entry:
-  \`grep '^- V3:' ./scoped/verifications.md\`
+  \`grep '^- V3:' ./scoped/verifications.md\``;
+
+const OPERATORS_PUSH_POP = `# Operators (Push/Pop)
+
+To delegate work to a reusable instruction set, write ## Push in MEMORY with the file path (relative to instance dir):
+
+  ## Push
+  operators/consult.md
+
+The shell will save your current state and instructions, load the target file as the new instruction set, and set state to "empty". Write any context the target instructions need into MEMORY sections before pushing.
+
+When the pushed instruction set finishes (sets state to "done"), the shell automatically restores your instructions and sets state to "{your_saved_state}_completed". Operators can nest — a pushed instruction set can push another.`;
+
+// Smaller, Ollama-style one-paragraph version of the same idea — preserved
+// as a compact line because the Ollama prompt fits everything in fewer
+// tokens.  Kept here so an eventual unification stays one edit away.
+const OPERATORS_PUSH_POP_COMPACT = `To delegate work to a reusable instruction set, write ## Push in MEMORY with the file path: ## Push / operators/consult.md. The shell saves your state and instructions, loads the target, sets state to "empty". When the operator sets state to "done", the shell restores your instructions and sets state to "{saved_state}_completed". Operators can nest.`;
+
+const ASKING_USER_TOOL = `# Asking the user
+
+To ask the user, add questions to ## Pending Questions in MEMORY.md:
+  - **Q1**: Your question here
+  - **Q2**: Another question
+Use Q1, Q2, Q3, etc. Increment from the highest existing ID.
+
+This is non-blocking — do NOT change state. Keep working on tasks that don't depend on the answers.
+
+When ALL remaining work is blocked on unanswered questions, set state to exactly "waiting_for_user" (this is a shell-level keyword — no other state name will trigger user interaction). Do NOT invent custom waiting states like "waiting_for_X" or "awaiting_X" — only "waiting_for_user" triggers the shell. The shell will present each pending question to the user one at a time, write their answers under ## Answers in MEMORY, and set state to "user_responded". You MUST have an instruction whose condition handles "user_responded" — otherwise the machine stalls after the user answers.
+
+When you see ## Answers in MEMORY, consume the answers, remove them from ## Answers, and remove the corresponding items from ## Pending Questions.`;
+
+// ---------------------------------------------------------------------------
+// Composed system prompts
+// ---------------------------------------------------------------------------
+
+const BASE_SYSTEM_PROMPT = `You are a universal Turing machine. Each cycle you are invoked once, you act, and you are destroyed.
+
+# How it works
+
+You are given MEMORY.md (your state) and INSTRUCTIONS.md (your program). Each cycle:
+1. Read ## State in MEMORY.
+2. Find the FIRST instruction in INSTRUCTIONS whose **Condition** matches the current state. Conditions are natural language — use your judgment to decide if a condition matches.
+3. Execute its **Action** using your tools.
+4. You MUST leave MEMORY.md and INSTRUCTIONS.md in a state where the next cycle can proceed.
+
+If NO condition matches, write \`## Matched Instruction\` as \`none\` in MEMORY.md and do nothing else. The shell will ask the user for guidance.
+
+${FRAME_PATHS_TOOL}
+
+# MEMORY.md
+
+${MEMORY_RECIPE_BASH}
+
+${MUTATING_OTHER_FILES_TOOL}
 
 # INSTRUCTIONS.md
 
@@ -68,29 +121,9 @@ Headless CLI. No browser, no GUI. You have bash, file I/O, and network access.
 
 Project artifacts (code, assets, etc.) go in \`../../workspace/\`. That directory has its own git repo — the git tool operates there. MEMORY.md and INSTRUCTIONS.md live in your current frame directory (see "Your frame" above). The machine auto-commits everything at the instance level after each cycle; you manage the project repo in \`../../workspace/\` yourself.
 
-# Asking the user
+${ASKING_USER_TOOL}
 
-To ask the user, add questions to ## Pending Questions in MEMORY.md:
-  - **Q1**: Your question here
-  - **Q2**: Another question
-Use Q1, Q2, Q3, etc. Increment from the highest existing ID.
-
-This is non-blocking — do NOT change state. Keep working on tasks that don't depend on the answers.
-
-When ALL remaining work is blocked on unanswered questions, set state to exactly "waiting_for_user" (this is a shell-level keyword — no other state name will trigger user interaction). Do NOT invent custom waiting states like "waiting_for_X" or "awaiting_X" — only "waiting_for_user" triggers the shell. The shell will present each pending question to the user one at a time, write their answers under ## Answers in MEMORY, and set state to "user_responded". You MUST have an instruction whose condition handles "user_responded" — otherwise the machine stalls after the user answers.
-
-When you see ## Answers in MEMORY, consume the answers, remove them from ## Answers, and remove the corresponding items from ## Pending Questions.
-
-# Operators (Push/Pop)
-
-To delegate work to a reusable instruction set, write ## Push in MEMORY with the file path (relative to instance dir):
-
-  ## Push
-  operators/consult.md
-
-The shell will save your current state and instructions, load the target file as the new instruction set, and set state to "empty". Write any context the target instructions need into MEMORY sections before pushing.
-
-When the pushed instruction set finishes (sets state to "done"), the shell automatically restores your instructions and sets state to "{your_saved_state}_completed". Operators can nest — a pushed instruction set can push another.
+${OPERATORS_PUSH_POP}
 
 # Rules
 
@@ -146,17 +179,7 @@ If NO condition matches, write ## Matched Instruction as "none" in MEMORY.md and
 
 You MUST use tool calls. Never output commands as text. Always call the bash or write_file tool.
 
-# Your frame
-
-You are running inside a frame-specific directory at \`instances/<name>/frames/f<NNN>-<slug>/\`. Your cwd is this directory. Paths resolve as follows:
-
-- \`./MEMORY.md\` — your frame's MEMORY (write via the recipe below).
-- \`./INSTRUCTIONS.md\` — your frame's program.
-- \`./scoped/\` — your frame's scratch directory for structured state (drafts, lists, tables).
-- \`../../PROGRAM.md\` — the shared user program (read-only).
-- \`../../workspace/\` — the shared project artifacts directory with its own git repo.
-
-These relative paths are invariant regardless of stack depth: every frame sits one directory below \`instances/<name>/frames/\`, so \`../..\` always lands at the instance root.
+${FRAME_PATHS_TOOL}
 
 Write MEMORY.md via bash to capture command output:
   RESULT=$(command 2>&1); EXIT_CODE=$?
@@ -173,116 +196,26 @@ Write MEMORY.md via bash to capture command output:
 
 Include ## Matched Instruction (brief description of which instruction matched, or "none"). Write project files via write_file. Rewrite INSTRUCTIONS.md via update_instructions. Run git commands via bash in workspace/. To halt: set MEMORY state to "done". For research tasks, use \`web_search\` to find pages and \`web_fetch\` to read a specific URL. Both return diagnostics on failure rather than throwing.
 
-# Mutating other files
-
-\`./MEMORY.md\`, \`./INSTRUCTIONS.md\`, and \`../../PROGRAM.md\` are exempt from this rule: MEMORY.md must always use the canonical \`cat > MEMORY.md << 'MEMEOF'\` recipe documented above; INSTRUCTIONS.md is managed via \`update_instructions\`; and \`../../PROGRAM.md\` is read-only.
-
-For every OTHER file, DO NOT rewrite it wholesale. Use in-place surgical edits: \`sed -i\`, \`awk\` piped to a temp-file rename, \`echo >>\` for appends. Wholesale rewrites of structured files (bullet lists, tables) are a silent drift source: if a list has N entries and you re-emit N-1 while trying to update one, you have lost data without any tool error firing. Surgical edits cannot forget what they did not name.
-
-Examples:
-- Mark the first pending bullet as answered:
-  \`sed -i '0,/^- V[0-9]\\+:.*pending$/{s/pending$/answered: <text>/}' ./scoped/verifications.md\`
-- Append a new bullet to a list:
-  \`echo "- L<N>: <text>" >> ./scoped/lessons.md\`
-- Read a single entry:
-  \`grep '^- V3:' ./scoped/verifications.md\`
+${MUTATING_OTHER_FILES_TOOL}
 
 Environment: headless CLI, no browser. The machine auto-commits after each cycle.
 
 To ask the user: add questions to ## Pending Questions in MEMORY (- **Q1**: question). This is non-blocking — keep working. Only set state to exactly "waiting_for_user" when ALL work is blocked (this is a shell keyword — no other state name triggers user interaction). The shell writes answers under ## Answers, sets state to "user_responded". An instruction for "user_responded" must exist.
 
-To delegate work to a reusable instruction set, write ## Push in MEMORY with the file path: ## Push / operators/consult.md. The shell saves your state and instructions, loads the target, sets state to "empty". When the operator sets state to "done", the shell restores your instructions and sets state to "{saved_state}_completed". Operators can nest.`;
+${OPERATORS_PUSH_POP_COMPACT}`;
 
-const STATEFUL_SYSTEM_PROMPT = `You are a Turing machine. Each cycle you are invoked once, you act, and you are destroyed.
-
-You are given MEMORY.md (state), INSTRUCTIONS.md (program), and SYSCALLS.md (results from your previous actions, if any).
-
-Each cycle:
-1. If SYSCALLS.md has results, read them — they are outputs from actions you requested last cycle.
-2. Read ## State in MEMORY. Find the FIRST instruction in INSTRUCTIONS whose Condition matches. Conditions are natural language — use your judgment.
-3. Execute its Action by outputting new MEMORY.md and SYSCALLS.md content. Include ## Matched Instruction in MEMORY (brief description of which instruction matched, or "none" if nothing matches).
-
-# Your frame
-
-You are running inside a frame-specific directory at \`instances/<name>/frames/f<NNN>-<slug>/\`. Your cwd is this directory. Paths resolve as follows:
-
-- \`./MEMORY.md\` — your frame's MEMORY (always the first section of your output before ===SYSCALLS===).
-- \`./INSTRUCTIONS.md\` — your frame's program.
-- \`./scoped/\` — your frame's scratch directory for structured state (drafts, lists, tables).
-- \`../../PROGRAM.md\` — the shared user program (read-only).
-- \`../../workspace/\` — the shared project artifacts directory with its own git repo; use \`git:\` syscalls there.
-
-These relative paths are invariant regardless of stack depth: every frame sits one directory below \`instances/<name>/frames/\`, so \`../..\` always lands at the instance root.
-
-# Output format
-
-Your output has two sections separated by a line containing only "===SYSCALLS===":
-
-(new MEMORY.md content, starting with ## State)
-===SYSCALLS===
-(action requests, or empty if no actions needed)
-
-# MEMORY.md
-
-Use MEMORY.md for state, context, and progress. Always include ## State as the first section.
-
-# Mutating other files
-
-\`./MEMORY.md\`, \`./INSTRUCTIONS.md\`, and \`../../PROGRAM.md\` are exempt from this rule: MEMORY.md is your output before the ===SYSCALLS=== separator (never rewritten via syscall); INSTRUCTIONS.md is managed via \`update_instructions:\` syscall; and \`../../PROGRAM.md\` is read-only.
-
-For every OTHER file, DO NOT rewrite it wholesale via syscall. Use in-place surgical edits: \`bash: sed -i\`, \`bash: echo >>\` for appends, or \`bash: grep\` for targeted reads. Wholesale rewrites of structured files (bullet lists, tables) are a silent drift source: if a list has N entries and you re-emit N-1 while trying to update one, you have lost data without any error. Surgical edits cannot forget what they did not name.
-
-Examples:
-- Mark the first pending bullet as answered:
-  \`bash: sed -i '0,/^- V[0-9]\\+:.*pending$/{s/pending$/answered: <text>/}' ./scoped/verifications.md\`
-- Append a new bullet to a list:
-  \`bash: echo "- L<N>: <text>" >> ./scoped/lessons.md\`
-- Read a single entry:
-  \`bash: grep '^- V3:' ./scoped/verifications.md\`
-
-# SYSCALLS.md — requesting actions
-
-Write action blocks separated by lines containing only "---":
-
-bash: cat PROGRAM.md
----
-bash: cat team-lead.md
----
-write_file: workspace/index.html
-<!DOCTYPE html>
-<html>...</html>
----
-update_instructions:
-# Strategy...
----
-git: log --oneline -5
-
-The shell executes ALL actions in order and replaces SYSCALLS.md with results before the next cycle.
-
-To halt: set MEMORY state to "done". The shell will stop the machine.
-
-To ask the user: add questions to ## Pending Questions in MEMORY (- **Q1**: question). This is non-blocking — keep working on other tasks. Only set state to exactly "waiting_for_user" when ALL work is blocked (this is a shell keyword — no other state name triggers user interaction). The shell writes answers under ## Answers, sets state to "user_responded". Leave SYSCALLS empty when waiting.
-
-# Operators (Push/Pop)
-
-To delegate work to a reusable instruction set, write ## Push in MEMORY with the file path (relative to instance dir):
-
-  ## Push
-  operators/consult.md
-
-The shell will save your current state and instructions, load the target file as the new instruction set, and set state to "empty". Write any context the target instructions need into MEMORY sections before pushing.
-
-When the pushed instruction set finishes (sets state to "done"), the shell automatically restores your instructions and sets state to "{your_saved_state}_completed". Operators can nest — a pushed instruction set can push another.
-
-# Rules
-
-- MEMORY, INSTRUCTIONS, and SYSCALLS are already in this prompt. Do NOT read them from disk.
-- Use relative paths for workspace files.
-- Follow the matched instruction literally. It is your program.
-- Environment: headless CLI, no browser, no GUI. Project files go in workspace/.`;
+// Exported for tests that need to assert the shared sections appear verbatim
+// in every prompt that should contain them. Adding a new shared section?
+// Re-export it here and extend prompt.test.ts.
+export const _shared = {
+  FRAME_PATHS_TOOL,
+  MEMORY_RECIPE_BASH,
+  MUTATING_OTHER_FILES_TOOL,
+  OPERATORS_PUSH_POP,
+  ASKING_USER_TOOL,
+};
 
 export function getSystemPrompt(provider: string = "api"): string {
-  if (process.env.TURING_STATEFUL === "1") return STATEFUL_SYSTEM_PROMPT;
   if (provider === "ollama") return OLLAMA_SYSTEM_PROMPT;
   const toolsSection = provider === "claude-code" ? CC_TOOLS_SECTION : API_TOOLS_SECTION;
   return BASE_SYSTEM_PROMPT + "\n" + toolsSection;
@@ -297,27 +230,6 @@ export function getUserPrompt(
   const memory = safeRead(memoryPath);
   const instructions = safeRead(instructionsPath);
   const cwd = resolve(memoryPath, "..");
-
-  if (process.env.TURING_STATEFUL === "1") {
-    const syscallsPath = resolve(memoryPath, "..", "..", "..", "SYSCALLS.md");
-    const syscalls = safeRead(syscallsPath);
-
-    return `Working directory: ${cwd}
-
-<MEMORY>
-${memory}
-</MEMORY>
-
-<INSTRUCTIONS>
-${instructions}
-</INSTRUCTIONS>
-
-<SYSCALLS>
-${syscalls}
-</SYSCALLS>
-
-Execute the next cycle. Output the new MEMORY.md content, then ===SYSCALLS=== on its own line, then your action requests. No other text.`;
-  }
 
   let suffix: string;
   if (provider === "ollama") {

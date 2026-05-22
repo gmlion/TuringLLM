@@ -119,18 +119,27 @@ function extractString(value: unknown, fallback: string = ""): string {
   return typeof value === "string" ? value : String(value ?? fallback);
 }
 
+/**
+ * Resolve the shared subprocess timeout for bash and git tool calls.
+ * `BASH_TIMEOUT` is in seconds; `0` disables (execSync convention).
+ * Default: 5 minutes — long enough for compiles, short enough that a
+ * hung process surfaces as a timeout instead of an indefinite wedge.
+ */
+function resolveSubprocessTimeoutMs(): number {
+  return process.env.BASH_TIMEOUT
+    ? parseInt(process.env.BASH_TIMEOUT, 10) * 1000
+    : 5 * 60 * 1000;
+}
+
 // Handler: Execute bash command with timeout and syntax-error detection
 function executeBash(command: string, cwd?: string): ToolResult {
   if (!command) {
     return { output: "Error: no command provided.", error: true };
   }
   try {
-    const timeout = process.env.BASH_TIMEOUT
-      ? parseInt(process.env.BASH_TIMEOUT, 10) * 1000
-      : 5 * 60 * 1000; // 5 minutes default
     const stdout = execSync(command, {
       encoding: "utf-8",
-      timeout,
+      timeout: resolveSubprocessTimeoutMs(),
       maxBuffer: 1024 * 1024,
       ...(cwd ? { cwd } : {}),
     });
@@ -178,7 +187,7 @@ function executeGit(args: string, workspacePath?: string): ToolResult {
   try {
     const stdout = execSync(`git ${args}`, {
       encoding: "utf-8",
-      timeout: 0,
+      timeout: resolveSubprocessTimeoutMs(),
       maxBuffer: 1024 * 1024,
       cwd: workspacePath,
     });

@@ -32,11 +32,9 @@ export function initializeConfig(): void {
 }
 
 export const HISTORY_DIR = resolve(BASE_DIR, "history");
-export const SYSCALLS_PATH = resolve(BASE_DIR, "SYSCALLS.md");
 export const CALL_STACK_PATH = resolve(BASE_DIR, ".call-stack.json");
 
 export const PROVIDER = process.env.TURING_PROVIDER || "claude-code";
-export const STATEFUL = process.env.TURING_STATEFUL === "1";
 export const INSTANCE_NAME = basename(BASE_DIR);
 
 export const TELEGRAM_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "";
