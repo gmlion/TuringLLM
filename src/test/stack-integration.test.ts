@@ -395,10 +395,26 @@ describe("applyPop", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Phase-4 retirement: game-team directory must be deleted (R35)
+// game-team reconstruction (post-Phase-4 retirement was reverted): the
+// interpreter was rebuilt under the Phase-2b architecture with .root-operator
+// + per-frame directories + the ## Popped Return contract. This guard pins
+// the expected layout so a future restructure doesn't silently break the
+// interpreter without also touching this test.
 // ---------------------------------------------------------------------------
 
-test("game-team directory is removed (R35 — Phase-4 retirement)", () => {
-  const p = resolveGT(__dirnameGT, "../../interpreters/game-team");
-  assert.equal(existsSyncGT(p), false, "interpreters/game-team should be deleted in Phase-4 retirement");
+test("game-team has the new Phase-2b layout (root-operator marker + roles/ + operators/)", () => {
+  const gt = resolveGT(__dirnameGT, "../../interpreters/game-team");
+  assert.equal(existsSyncGT(gt), true, "interpreters/game-team should exist");
+  assert.equal(existsSyncGT(resolveGT(gt, "INSTRUCTIONS.md")), true, "INSTRUCTIONS.md marker should exist");
+  assert.equal(existsSyncGT(resolveGT(gt, "PROGRAM.md")), true, "PROGRAM.md template should exist");
+  assert.equal(existsSyncGT(resolveGT(gt, "operators/team-lead.md")), true, "root operator team-lead.md should exist");
+  assert.equal(existsSyncGT(resolveGT(gt, "operators/consult-role.md")), true, "consult-role.md sub-operator should exist");
+  assert.equal(existsSyncGT(resolveGT(gt, "operators/implement-feature.md")), true, "implement-feature.md sub-operator should exist");
+  for (const role of ["architect", "game-designer", "developer", "artist-2d", "ui-ux"]) {
+    assert.equal(
+      existsSyncGT(resolveGT(gt, `roles/${role}.md`)),
+      true,
+      `roles/${role}.md should exist`,
+    );
+  }
 });

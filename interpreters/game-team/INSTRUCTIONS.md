@@ -1,0 +1,1 @@
+operators/team-lead.md
