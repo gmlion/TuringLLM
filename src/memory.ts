@@ -215,6 +215,13 @@ export function removePushArgs(memory: string): string {
  * with 2-space indentation. Malformed lines (no `:`, or identifier rule
  * violation) are collected separately so the caller can log them.
  * Single-line keys allow hyphens; block-scalar keys do not.
+ *
+ * Used by `bootstrap.ts:emitOutputMd` to splay the root frame's return
+ * into OUTPUT.md sections. The shell's own pop path does NOT use this —
+ * it uses `getReturnBody` and `spliceReturn` to place the verbatim body
+ * under a single `## Popped Return` section, avoiding the per-key splay
+ * that would collide with shell-managed sections (`## State`, `## Push`,
+ * etc.) in the caller.
  */
 export function parseReturn(memory: string): {
   entries: Record<string, string>;
@@ -226,42 +233,61 @@ export function parseReturn(memory: string): {
   });
 }
 
+/**
+ * Extract the verbatim body of the `## Return` section: everything from
+ * the line after `## Return` up to (but not including) the next `## `
+ * heading or end of file. Trailing newlines are trimmed.
+ *
+ * Returns `""` if no `## Return` section is present, OR if the section
+ * exists but its body is empty.
+ *
+ * Used by `applyPop` to splice the return body into the caller's MEMORY
+ * under a single `## Popped Return` section, without splaying per key —
+ * the splay would let a child overwrite shell-managed sections via key
+ * collision.
+ */
+export function getReturnBody(memory: string): string {
+  const headerMatch = memory.match(/(^|\n)## Return\n/);
+  if (!headerMatch) return "";
+  const start = (headerMatch.index ?? 0) + headerMatch[0].length;
+  const rest = memory.slice(start);
+  const nextHeading = rest.match(/\n## [A-Z]/);
+  const end = nextHeading ? start + (nextHeading.index ?? 0) : memory.length;
+  return memory.slice(start, end).replace(/\n+$/, "");
+}
+
 /** Remove the ## Return section from MEMORY. Mirror of removePushArgs. */
 export function removeReturn(memory: string): string {
   return removeSection(memory, "Return");
 }
 
 /**
- * Capitalize the first character of a key for use in section headers.
- * Example: "answerId" → "AnswerId", "verdict" → "Verdict"
+ * Splice the verbatim body of a child's `## Return` into the caller's
+ * MEMORY under a single `## Popped Return` section. Upsert: replace an
+ * existing section's body if present, append at end otherwise.
+ *
+ * Why a single section instead of per-key splay? A per-key splay would
+ * let a child write keys that capitalize to shell-managed section
+ * headers (e.g. `state`, `push`, `return`, `answers`) and inject those
+ * sections into the caller — a real cascade-pop / control-flow hijack
+ * vector. Confining the entire return body under one fixed header makes
+ * the injection structurally impossible: the caller's interpreter reads
+ * named keys *inside* `## Popped Return`, not as top-level MEMORY
+ * sections.
+ *
+ * Empty body is a no-op (caller MEMORY returned unchanged).
  */
-function capitalizeKey(key: string): string {
-  return key.charAt(0).toUpperCase() + key.slice(1);
-}
-
-/**
- * Splice return entries into caller MEMORY as ## <CapitalizedKey> sections.
- * Upsert: replace an existing section's body if present, append a new
- * section at the end otherwise. First character of the key is uppercased;
- * remaining characters preserved (so "answerId" → "## AnswerId").
- */
-export function spliceReturns(
-  callerMemory: string,
-  returns: Record<string, string>,
-): string {
-  let out = callerMemory;
-  for (const [key, value] of Object.entries(returns)) {
-    const sectionName = `## ${capitalizeKey(key)}`;
-    const re = new RegExp(
-      `(^|\\n)${sectionName}\\n[^\\n]*(\\n(?!## )[^\\n]*)*`,
-      "m",
-    );
-    if (re.test(out)) {
-      out = out.replace(re, `$1${sectionName}\n${value}`);
-    } else {
-      if (!out.endsWith("\n")) out += "\n";
-      out += `${sectionName}\n${value}\n`;
-    }
+export function spliceReturn(callerMemory: string, returnBody: string): string {
+  if (returnBody === "") return callerMemory;
+  const sectionName = "## Popped Return";
+  const re = new RegExp(
+    `(^|\\n)${sectionName}\\n[^\\n]*(\\n(?!## )[^\\n]*)*`,
+    "m",
+  );
+  if (re.test(callerMemory)) {
+    return callerMemory.replace(re, `$1${sectionName}\n${returnBody}`);
   }
-  return out;
+  let out = callerMemory;
+  if (!out.endsWith("\n")) out += "\n";
+  return out + `${sectionName}\n${returnBody}\n`;
 }

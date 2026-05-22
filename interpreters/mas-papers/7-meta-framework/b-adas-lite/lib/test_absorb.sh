@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Test-absorb: capture spliced ## Answer, append to sim/answers.md, advance
+# Test-absorb: capture the `answer` value from ## Popped Return, append to
+# sim/answers.md, advance
 # item index. When all items done, score via scorer.sh, transition to
 # post_mortem_pending (reward < 1.0) or finalize_entry (reward == 1.0).
 # Item count and source come from sim/items_total.md and sim/items_source.md

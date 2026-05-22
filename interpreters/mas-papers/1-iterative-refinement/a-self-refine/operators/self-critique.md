@@ -2,7 +2,7 @@
 
 Receives argument: {{draft}}.
 Produced MEMORY: ## State done + ## Return block with keys `critique`, `refined`.
-Return: state done → caller sees {caller_state}_completed, and ## Return entries are spliced into caller's MEMORY as ## Critique and ## Refined.
+Return: state done → caller sees {caller_state}_completed, and the verbatim ## Return body is placed into caller's MEMORY under a single `## Popped Return` section (the caller reads `critique` and `refined` keys from inside that section).
 
 ## Instruction: Critique
 **Condition:** MEMORY state is "empty"

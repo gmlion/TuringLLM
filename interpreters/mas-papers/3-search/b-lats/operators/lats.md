@@ -441,11 +441,18 @@ The state value `simulating` is the returnState; on pop the shell sets state to 
     fi
 
 ## Instruction: Evaluate-absorb
-**Condition:** MEMORY state is "evaluating_completed" and `## Verdict` is present in MEMORY
-**Action:** Parse verdict; map to reward (R54). Back-propagate (R55). On reward=1: mark chosen_child terminal_pass (record-A: no intermediate materialisation, R82), emit `## Solution`, set state `done` (R56). On reward=0: transition to `reflecting` (R57; do NOT mark terminal_fail here).
+**Condition:** MEMORY state is "evaluating_completed" and `## Popped Return` is present in MEMORY with a `verdict` key
+**Action:** Parse verdict from inside `## Popped Return`; map to reward (R54). Back-propagate (R55). On reward=1: mark chosen_child terminal_pass (record-A: no intermediate materialisation, R82), emit `## Solution`, set state `done` (R56). On reward=0: transition to `reflecting` (R57; do NOT mark terminal_fail here).
 
     CC=$(cat ./scoped/chosen_child.md)
-    VERDICT=$(awk '/^## Verdict$/{f=1; next} /^## /{f=0} f && /[a-z]/{print; exit}' ./MEMORY.md | tr -d ' ')
+    VERDICT=$(awk '
+      /^## Popped Return$/ { in_pr=1; next }
+      in_pr && /^## / { exit }
+      in_pr && /^verdict: \|$/ { in_v=1; next }
+      in_pr && /^verdict: / && !in_v { sub(/^verdict: /, ""); print; exit }
+      in_pr && in_v && /^[a-zA-Z_]/ { exit }
+      in_pr && in_v { sub(/^  /, ""); print; exit }
+    ' ./MEMORY.md | tr -d ' ')
 
     case "$VERDICT" in
       pass) REWARD=1 ;;
@@ -507,7 +514,13 @@ The state value `simulating` is the returnState; on pop the shell sets state to 
 
     cp ./scoped/last_terminal.md ./scoped/staged/attempt.md
     echo "fail" > ./scoped/staged/verdict.md
-    awk '/^## Feedback$/{f=1; next} /^## /{f=0} f' ./MEMORY.md > ./scoped/staged/feedback.md
+    awk '
+      /^## Popped Return$/ { in_pr=1; next }
+      in_pr && /^## / { exit }
+      in_pr && /^feedback: \|$/ { in_v=1; next }
+      in_pr && in_v && /^[a-zA-Z_]/ { exit }
+      in_pr && in_v { sub(/^  /, ""); print }
+    ' ./MEMORY.md > ./scoped/staged/feedback.md
     [ -s ./scoped/staged/feedback.md ] || echo "rollout judged fail" > ./scoped/staged/feedback.md
 
 Then emit MEMORY:
@@ -538,11 +551,17 @@ The state value `reflecting` is the returnState; on pop the shell sets state to 
 
 ## Instruction: Reflect-absorb
 **Condition:** MEMORY state is "reflecting_completed"
-**Action:** Append `## Lesson` (if non-empty, R59) to `./scoped/lessons-<chosen_child>.md` lazily and append-only (R64, R65). Increment iter_count. Budget check: if exhausted, emit `## No Solution Found` and set state `done` (R61, R63); else transition to `selecting`.
+**Action:** Read the `lesson` value from inside `## Popped Return` (if non-empty, R59) and append to `./scoped/lessons-<chosen_child>.md` lazily and append-only (R64, R65). Increment iter_count. Budget check: if exhausted, emit `## No Solution Found` and set state `done` (R61, R63); else transition to `selecting`.
 
     CC=$(cat ./scoped/chosen_child.md)
 
-    LESSON=$(awk '/^## Lesson$/{f=1; next} /^## /{f=0} f' ./MEMORY.md)
+    LESSON=$(awk '
+      /^## Popped Return$/ { in_pr=1; next }
+      in_pr && /^## / { exit }
+      in_pr && /^lesson: \|$/ { in_v=1; next }
+      in_pr && in_v && /^[a-zA-Z_]/ { exit }
+      in_pr && in_v { sub(/^  /, ""); print }
+    ' ./MEMORY.md)
     if [ -n "$(echo "$LESSON" | tr -d ' \n')" ]; then
       LESSON_FLAT=$(echo "$LESSON" | tr '\n' ' ' | sed 's/  */ /g; s/^ *//; s/ *$//')
       echo "- $LESSON_FLAT" >> "./scoped/lessons-${CC}.md"

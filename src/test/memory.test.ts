@@ -4,7 +4,7 @@ import {
   parseState, setState, getAnswersSection, writeAnswer,
   parsePendingQuestions, parsePush, removePush,
   parsePushArgs, removePushArgs,
-  parseReturn, removeReturn, spliceReturns,
+  parseReturn, removeReturn, getReturnBody, spliceReturn,
 } from "../memory.js";
 
 describe("parseState", () => {
@@ -251,6 +251,7 @@ describe("parseReturn", () => {
     const r = parseReturn(memory);
     assert.deepEqual(r.entries, { q: "hi" });
   });
+
 });
 
 describe("removeReturn", () => {
@@ -270,36 +271,72 @@ describe("removeReturn", () => {
   });
 });
 
-describe("spliceReturns", () => {
-  test("appends a new section for a new key", () => {
+describe("getReturnBody", () => {
+  test("returns empty string when section absent", () => {
+    assert.equal(getReturnBody("## State\ndone\n## Last Action\nfoo"), "");
+  });
+
+  test("extracts verbatim body up to next ## heading", () => {
+    const memory = "## State\ndone\n## Return\nverdict: pass\nfeedback: |\n  ok\n## Last Action\nfoo";
+    assert.equal(getReturnBody(memory), "verdict: pass\nfeedback: |\n  ok");
+  });
+
+  test("extracts body to end of memory when no next heading", () => {
+    const memory = "## State\ndone\n## Return\nanswer: yes\n";
+    assert.equal(getReturnBody(memory), "answer: yes");
+  });
+
+  test("trims trailing newlines", () => {
+    const memory = "## Return\nfoo: bar\n\n\n";
+    assert.equal(getReturnBody(memory), "foo: bar");
+  });
+
+  test("handles ## Return at start of memory", () => {
+    const memory = "## Return\nx: 1";
+    assert.equal(getReturnBody(memory), "x: 1");
+  });
+
+  test("returns empty string for empty body", () => {
+    const memory = "## State\ndone\n## Return\n\n## Last Action\nfoo";
+    assert.equal(getReturnBody(memory), "");
+  });
+});
+
+describe("spliceReturn", () => {
+  test("appends ## Popped Return at end when absent", () => {
     const caller = "## State\nattempted_completed\n";
-    const r = spliceReturns(caller, { verdict: "pass" });
+    const r = spliceReturn(caller, "verdict: pass\nfeedback: ok");
     assert.match(r, /## State\nattempted_completed/);
-    assert.match(r, /## Verdict\npass/);
+    assert.match(r, /## Popped Return\nverdict: pass\nfeedback: ok/);
   });
 
-  test("replaces an existing section body", () => {
-    const caller = "## State\nfoo\n## Verdict\nfail\n## Feedback\nold";
-    const r = spliceReturns(caller, { verdict: "pass" });
-    assert.match(r, /## Verdict\npass/);
-    assert.doesNotMatch(r, /## Verdict\nfail/);
-    assert.match(r, /## Feedback\nold/);
+  test("replaces an existing ## Popped Return body", () => {
+    const caller = "## State\nfoo\n## Popped Return\nold: value\n## Other\nkeep";
+    const r = spliceReturn(caller, "new: value");
+    assert.match(r, /## Popped Return\nnew: value/);
+    assert.doesNotMatch(r, /## Popped Return\nold: value/);
+    assert.match(r, /## Other\nkeep/);
   });
 
-  test("capitalizes only the first character of the key", () => {
+  test("handles multi-line block scalars in body", () => {
     const caller = "## State\nfoo\n";
-    const r = spliceReturns(caller, { answerId: "42" });
-    assert.match(r, /## AnswerId\n42/);
+    const r = spliceReturn(caller, "draft: |\n  line1\n  line2");
+    assert.match(r, /## Popped Return\ndraft: \|\n  line1\n  line2/);
   });
 
-  test("handles multi-line values", () => {
-    const caller = "## State\nfoo\n";
-    const r = spliceReturns(caller, { draft: "line1\nline2\nline3" });
-    assert.match(r, /## Draft\nline1\nline2\nline3/);
-  });
-
-  test("returns caller unchanged when returns map is empty", () => {
+  test("returns caller unchanged when body is empty (no return)", () => {
     const caller = "## State\nfoo\n## Something\nbar";
-    assert.equal(spliceReturns(caller, {}), caller);
+    assert.equal(spliceReturn(caller, ""), caller);
+  });
+
+  test("a child's `state: done` in body cannot inject ## State into caller", () => {
+    // Structural anti-injection: the body lives inside ## Popped Return, so
+    // the caller's ## State parser never sees a line `state: done` as a
+    // section header. This is what the previous per-key spliceReturns
+    // implementation could not guarantee.
+    const caller = "## State\nattempted_completed\n";
+    const r = spliceReturn(caller, "state: done\nverdict: pass");
+    assert.equal(parseState(r), "attempted_completed");
+    assert.match(r, /## Popped Return\nstate: done\nverdict: pass/);
   });
 });

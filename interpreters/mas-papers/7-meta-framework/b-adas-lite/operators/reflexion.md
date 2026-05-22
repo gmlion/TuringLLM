@@ -42,8 +42,8 @@ Prior answer (substituted at push-time, may be empty):
       <verbatim contents of ./scoped/criterion.md, every line indented two spaces>
 
 ## Instruction: Route on verdict
-**Condition:** MEMORY state is "attempted_completed" and `## Verdict` is present
-**Action:** Read `## Verdict` from MEMORY. If `## Verdict` is literally "pass", write `./MEMORY.md` with the FULL done state in a SINGLE heredoc (the `## Return` block MUST be in the same heredoc as the state change — at depth>=1 the shell pops on state is "done" BEFORE any subsequent instruction runs, so a separate Finish instruction would be unreachable):
+**Condition:** MEMORY state is "attempted_completed" and `## Popped Return` is present with a `verdict` key
+**Action:** Read the `verdict` value from the `## Popped Return` section in MEMORY. If `verdict` is literally "pass", write `./MEMORY.md` with the FULL done state in a SINGLE heredoc (the `## Return` block MUST be in the same heredoc as the state change — at depth>=1 the shell pops on state is "done" BEFORE any subsequent instruction runs, so a separate Finish instruction would be unreachable):
 
 ```
 cat > ./MEMORY.md << FINEOF
@@ -65,11 +65,11 @@ $(cat ./scoped/attempt.md | sed 's/^/  /')
 FINEOF
 ```
 
-Otherwise (literal "fail" or any malformed value), set state to "failed_attempt". When rewriting MEMORY, retain `## Verdict` and `## Feedback` so the Reflect step can read them. If `## Verdict` was neither literally "pass" nor literally "fail", additionally append a non-blocking `## Pending Questions` item flagging the malformed verdict before transitioning — do NOT set state to "waiting_for_user" (the loop must continue so the machine makes progress).
+Otherwise (literal "fail" or any malformed value), set state to "failed_attempt". When rewriting MEMORY, retain the `## Popped Return` section so the Reflect step can read the `verdict` and `feedback` keys from it. If `verdict` was neither literally "pass" nor literally "fail", additionally append a non-blocking `## Pending Questions` item flagging the malformed verdict before transitioning — do NOT set state to "waiting_for_user" (the loop must continue so the machine makes progress).
 
 ## Instruction: Reflect
-**Condition:** MEMORY state is "failed_attempt" and `## Verdict` is present
-**Action:** Read `./scoped/attempt.md` for the attempt, and `## Verdict` and `## Feedback` from MEMORY. Append the following to `./MEMORY.md` (do not change state — the shell will set it to "empty" when it pushes the operator):
+**Condition:** MEMORY state is "failed_attempt" and `## Popped Return` is present with a `verdict` key
+**Action:** Read `./scoped/attempt.md` for the attempt, and the `verdict` and `feedback` values from the `## Popped Return` section in MEMORY. Append the following to `./MEMORY.md` (do not change state — the shell will set it to "empty" when it pushes the operator):
 
     ## Push
     operators/reflect.md
@@ -77,10 +77,10 @@ Otherwise (literal "fail" or any malformed value), set state to "failed_attempt"
     attempt: |
       <verbatim contents of ./scoped/attempt.md, every line indented two spaces>
     verdict: |
-      <verbatim contents of ## Verdict, every line indented two spaces>
+      <verbatim verdict value from ## Popped Return, every line indented two spaces>
     feedback: |
-      <verbatim contents of ## Feedback, every line indented two spaces; if absent, use the literal value `(no feedback)`>
+      <verbatim feedback value from ## Popped Return, every line indented two spaces; if absent, use the literal value `(no feedback)`>
 
 ## Instruction: Accumulate lesson
-**Condition:** MEMORY state is "failed_attempt_completed" and `## Lesson` is present
-**Action:** Read `./scoped/lessons.md` to determine the next sequential lesson index (count existing `- L<N>:` lines; next index = count + 1). Append the lesson SURGICALLY using: `echo "- L<N>: <lesson text>" >> ./scoped/lessons.md` where `<N>` is the next sequential index. Do NOT use `cat > ./scoped/lessons.md` or any wholesale rewrite — only surgical appends are permitted. When rewriting MEMORY, omit the `## Verdict`, `## Feedback`, and `## Lesson` sections (they were already consumed). Set MEMORY state to "attempting".
+**Condition:** MEMORY state is "failed_attempt_completed" and `## Popped Return` is present with a `lesson` key
+**Action:** Read `./scoped/lessons.md` to determine the next sequential lesson index (count existing `- L<N>:` lines; next index = count + 1). Read the `lesson` value from the `## Popped Return` section in MEMORY. Append the lesson SURGICALLY using: `echo "- L<N>: <lesson text>" >> ./scoped/lessons.md` where `<N>` is the next sequential index. Do NOT use `cat > ./scoped/lessons.md` or any wholesale rewrite — only surgical appends are permitted. When rewriting MEMORY, omit the `## Popped Return` section entirely (it was just consumed). Set MEMORY state to "attempting".

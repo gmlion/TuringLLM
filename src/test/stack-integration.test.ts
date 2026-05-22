@@ -293,15 +293,14 @@ describe("applyPop", () => {
     assert.equal(popped.callStack.stack.length, 1);
     assert.equal(popped.callerFrameDir, "frames/f000-strategy");
     assert.match(popped.callerMemoryAfter, /## State\nneeds_opinion_completed/);
-    assert.match(popped.callerMemoryAfter, /## Result\nok/);
+    assert.match(popped.callerMemoryAfter, /## Popped Return\nresult: ok/);
     assert.equal(popped.events.length, 1);
     assert.equal(popped.events[0].returnState, "needs_opinion");
     assert.equal(popped.events[0].frameDir, "frames/f001-consult");
-    assert.equal(popped.events[0].missingReturn, false);
-    assert.deepEqual(popped.events[0].splicedKeys, ["result"]);
+    assert.equal(popped.events[0].hasReturn, true);
   });
 
-  test("pop without ## Return succeeds and logs missingReturn", () => {
+  test("pop without ## Return succeeds with hasReturn=false", () => {
     const cs: CallStack = {
       nextCounter: 2,
       stack: [
@@ -312,11 +311,12 @@ describe("applyPop", () => {
     const childMemory = "## State\ndone";
     const popped = applyPop(cs, childMemory, () => "## State\nfoo\n");
     assert.equal(popped.callStack.stack.length, 1);
-    assert.equal(popped.events[0].missingReturn, true);
-    assert.deepEqual(popped.events[0].splicedKeys, []);
+    assert.equal(popped.events[0].hasReturn, false);
+    // No ## Popped Return section appended when child had no return.
+    assert.doesNotMatch(popped.callerMemoryAfter, /## Popped Return/);
   });
 
-  test("pop with malformed ## Return entries skips them and splices the rest", () => {
+  test("pop with mixed ## Return content places body verbatim under ## Popped Return", () => {
     const cs: CallStack = {
       nextCounter: 2,
       stack: [
@@ -326,9 +326,9 @@ describe("applyPop", () => {
     };
     const childMemory = "## State\ndone\n## Return\nok: yes\nbroken-no-colon";
     const popped = applyPop(cs, childMemory, () => "## State\nfoo\n");
-    assert.match(popped.callerMemoryAfter, /## Ok\nyes/);
-    assert.deepEqual(popped.events[0].splicedKeys, ["ok"]);
-    assert.deepEqual(popped.events[0].malformedLines, ["broken-no-colon"]);
+    // Whole body lives inside ## Popped Return — no parsing/filtering.
+    assert.match(popped.callerMemoryAfter, /## Popped Return\nok: yes\nbroken-no-colon/);
+    assert.equal(popped.events[0].hasReturn, true);
   });
 
   test("pop never removes the root frame (depth 1 + done does NOT pop)", () => {

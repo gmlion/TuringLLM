@@ -200,16 +200,14 @@ describe("1c reflexion", () => {
       assert.equal(popped.callerFrameDir, "frames/f000-strategy");
       assert.equal(popped.events.length, 1);
 
-      // Verify spliced keys.
-      assert.deepEqual(popped.events[0].splicedKeys.sort(), ["feedback", "verdict"]);
-      assert.equal(popped.events[0].missingReturn, false);
+      // Verify hasReturn was true.
+      assert.equal(popped.events[0].hasReturn, true);
 
-      // Verify caller MEMORY now has ## Verdict and ## Feedback.
+      // Verify caller MEMORY has the verbatim return body under ## Popped Return.
       assert.match(popped.callerMemoryAfter, /^## State\nattempted_completed/m, "caller state should be attempted_completed");
-      assert.match(popped.callerMemoryAfter, /## Verdict\n/, "## Verdict should be spliced in");
-      assert.match(popped.callerMemoryAfter, /pass/, "verdict content should be present");
-      assert.match(popped.callerMemoryAfter, /## Feedback\n/, "## Feedback should be spliced in");
-      assert.match(popped.callerMemoryAfter, /looks good/, "feedback content should be present");
+      assert.match(popped.callerMemoryAfter, /## Popped Return\n/, "## Popped Return should be present");
+      assert.match(popped.callerMemoryAfter, /verdict: \|\n  pass/, "verdict block scalar should be in body");
+      assert.match(popped.callerMemoryAfter, /feedback: \|\n  looks good/, "feedback content should be present in body");
     });
   });
 
@@ -222,10 +220,11 @@ describe("1c reflexion", () => {
       rmSync(tmp, { recursive: true, force: true });
     });
 
-    test("evaluate fail -> splice verdict+feedback -> state=failed_attempt -> push reflect -> reflect returns lesson: -> ## Lesson spliced in caller", () => {
-      // Start with failed_attempt state (after evaluate returned fail verdict + feedback)
+    test("evaluate fail -> ## Popped Return carries verdict+feedback -> state=failed_attempt -> push reflect -> reflect returns lesson body -> ## Popped Return overwritten in caller", () => {
+      // Start with failed_attempt state (after evaluate returned fail verdict + feedback).
+      // After the new splice contract, the popped evaluate return lives inside ## Popped Return.
       const memAtFailedAttempt =
-        "## State\nfailed_attempt\n## Verdict\nfail\n## Feedback\nmissed edge case X\n";
+        "## State\nfailed_attempt\n## Popped Return\nverdict: fail\nfeedback: missed edge case X\n";
       const { cs, rootMemPath } = setupRootFrame(
         tmp,
         memAtFailedAttempt +
@@ -275,13 +274,12 @@ describe("1c reflexion", () => {
 
       assert.equal(popped.callStack.stack.length, 1, "stack should be back to root after reflect pop");
       assert.equal(popped.events.length, 1);
-      assert.deepEqual(popped.events[0].splicedKeys, ["lesson"], "lesson should be spliced into caller MEMORY");
-      assert.equal(popped.events[0].missingReturn, false);
+      assert.equal(popped.events[0].hasReturn, true, "reflect should return a non-empty body");
 
-      // Caller MEMORY should have state=failed_attempt_completed and ## Lesson spliced in.
+      // Caller MEMORY should have state=failed_attempt_completed and lesson in ## Popped Return body.
       assert.match(popped.callerMemoryAfter, /^## State\nfailed_attempt_completed/m, "caller state should be failed_attempt_completed");
-      assert.match(popped.callerMemoryAfter, /## Lesson\n/, "## Lesson should be spliced into caller MEMORY");
-      assert.match(popped.callerMemoryAfter, /always handle X/, "lesson content should be present");
+      assert.match(popped.callerMemoryAfter, /## Popped Return\n/, "## Popped Return should be present");
+      assert.match(popped.callerMemoryAfter, /lesson:.*always handle X|always handle X/, "lesson content should be present in body");
     });
   });
 
@@ -403,15 +401,22 @@ describe("1c reflexion", () => {
 
         assert.equal(popped.callStack.stack.length, 1, "stack back to root after reflect pop");
         assert.match(popped.callerMemoryAfter, /^## State\nfailed_attempt_completed/m);
-        assert.match(popped.callerMemoryAfter, /## Lesson\n/);
+        // Lesson now lives inside ## Popped Return body.
+        assert.match(popped.callerMemoryAfter, /## Popped Return\n/);
         assert.match(popped.callerMemoryAfter, new RegExp(lessonText));
 
         const memoryAfterPop = popped.callerMemoryAfter;
 
         // --- Simulate Accumulate-lesson transition (I3) ---
-        // 1. Read the spliced ## Lesson from caller MEMORY.
-        const lessonMatch = memoryAfterPop.match(/^## Lesson\n([\s\S]*?)(?=^##|\z)/m);
-        const splicedLesson = lessonMatch ? lessonMatch[1].trim() : lessonText;
+        // 1. Read the spliced lesson from inside ## Popped Return body.
+        //    The body is "lesson: |\n  <text>" (block scalar form).
+        const poppedReturnMatch = memoryAfterPop.match(/^## Popped Return\n([\s\S]*?)(?=^##|\z)/m);
+        const poppedReturnBody = poppedReturnMatch ? poppedReturnMatch[1] : "";
+        const lessonBlockMatch = poppedReturnBody.match(/^lesson:\s*\|\n((?:  [^\n]*\n?)+)/m)
+          ?? poppedReturnBody.match(/^lesson:\s*(.+)$/m);
+        const splicedLesson = lessonBlockMatch
+          ? lessonBlockMatch[1].split("\n").map((l) => l.replace(/^  /, "")).join("\n").trim()
+          : lessonText;
 
         // 2. Count existing lines in lessons.md to determine index N.
         const existingLessons = readFileSync(lessonsPath, "utf-8");
@@ -421,23 +426,17 @@ describe("1c reflexion", () => {
         // { shell: "bash" } ensures POSIX echo semantics (not Windows cmd.exe).
         execSync(`echo "- L${n}: ${splicedLesson}" >> "${lessonsPath}"`, { shell: "bash" });
 
-        // 4. Remove ## Lesson / ## Verdict / ## Feedback from caller MEMORY and
-        //    transition state to "attempting" (simulating strategy's Accumulate instruction).
-        // Split on ## section boundaries so trailing content is captured correctly
-        // regardless of whether the section is last or has a successor.
+        // 4. Remove ## Popped Return from caller MEMORY and transition state to
+        //    "attempting" (simulating strategy's Accumulate instruction).
         const memoryAfterAccumulate = memoryAfterPop
           .split(/^(?=## )/m)
-          .filter((p) => !["## Lesson\n", "## Verdict\n", "## Feedback\n"].some((h) => p.startsWith(h)))
+          .filter((p) => !p.startsWith("## Popped Return\n"))
           .join("")
           .replace(/^## State\nfailed_attempt_completed/m, "## State\nattempting");
 
-        // 5. Assert spliced sections were removed and state transitioned.
-        assert.doesNotMatch(memoryAfterAccumulate, /^## Lesson\b/m,
-          "## Lesson should be removed after Accumulate step");
-        assert.doesNotMatch(memoryAfterAccumulate, /^## Verdict\b/m,
-          "## Verdict should be removed after Accumulate step");
-        assert.doesNotMatch(memoryAfterAccumulate, /^## Feedback\b/m,
-          "## Feedback should be removed after Accumulate step");
+        // 5. Assert ## Popped Return was removed and state transitioned.
+        assert.doesNotMatch(memoryAfterAccumulate, /^## Popped Return\b/m,
+          "## Popped Return should be removed after Accumulate step");
         assert.match(memoryAfterAccumulate, /^## State\nattempting/m,
           "state should be 'attempting' after Accumulate step");
 
@@ -450,16 +449,17 @@ describe("1c reflexion", () => {
       };
 
       // First iteration: reflect + accumulate
+      // The post-pop MEMORY already lives inside ## Popped Return now.
       const r1 = doOneReflectAndAccumulateCycle(
         cs0,
-        "## State\nfailed_attempt\n## Verdict\nfail\n## Feedback\nmissed A\n",
+        "## State\nfailed_attempt\n## Popped Return\nverdict: fail\nfeedback: missed A\n",
         "attempt v1", "fail", "missed A", "always handle A"
       );
 
       // Second iteration: reflect + accumulate (fresh push counter)
       const r2 = doOneReflectAndAccumulateCycle(
         r1.cs,
-        "## State\nfailed_attempt\n## Verdict\nfail\n## Feedback\nmissed B\n",
+        "## State\nfailed_attempt\n## Popped Return\nverdict: fail\nfeedback: missed B\n",
         "attempt v2", "fail", "missed B", "always handle B"
       );
 

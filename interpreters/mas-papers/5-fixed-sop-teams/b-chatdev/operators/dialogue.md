@@ -99,7 +99,7 @@ Overwrite `./scoped/turns.md` with `N+1`. If you emitted `<SOLUTION>`, set state
 Do not change state.
 
 ## Instruction: Return after evaluate
-**Condition:** MEMORY state is "decide_accept_completed" and `## Verdict` is present
+**Condition:** MEMORY state is "decide_accept_completed" and `## Popped Return` is present with a `verdict` key
 **Action:** Extract the consensus artefact from the transcript and write it to the output path (read it from `./scoped/output_path.md`):
 
     OUTPATH=$(cat ./scoped/output_path.md)
@@ -108,7 +108,7 @@ Do not change state.
     <consensus artefact body — verbatim, NO indentation>
     TURING_DLG_BODY_EOF_4f7a2b9e
 
-Read `## Verdict` (literal `pass` or `fail`) and `## Feedback` from MEMORY — these were placed there by the just-popped `evaluate.md`. Then write `./MEMORY.md` with this EXACT single-heredoc shape (the `## Return` block MUST be in the same heredoc as the state change — without it the shell pops with no return value, breaking the strategy):
+Read the `verdict` (literal `pass` or `fail`) and `feedback` values from inside the `## Popped Return` section in MEMORY — they were placed there by the just-popped `evaluate.md`. Then write `./MEMORY.md` with this EXACT single-heredoc shape (the `## Return` block MUST be in the same heredoc as the state change — without it the shell pops with no return value, breaking the strategy):
 
 ```
 cat > ./MEMORY.md << 'MEMEOF'
@@ -123,13 +123,13 @@ Dialogue + evaluation complete.
 ## Return
 dialogue: |
   (written to $OUTPATH)
-verdict: <copy the literal value of ## Verdict — `pass` or `fail`>
+verdict: <copy the literal verdict value from ## Popped Return — `pass` or `fail`>
 feedback: |
-  <verbatim ## Feedback body, indented two spaces>
+  <verbatim feedback value from ## Popped Return, indented two spaces>
 MEMEOF
 ```
 
-(The shell will splice `## Dialogue` (containing the path marker), `## Verdict`, and `## Feedback` into the caller's MEMORY; the caller decides whether to retry on `fail` or proceed by reading `$OUTPATH` directly.)
+(The shell will place this whole ## Return body verbatim under `## Popped Return` in the caller's MEMORY. The caller reads `dialogue`, `verdict`, and `feedback` keys from inside that section and decides whether to retry on `fail` or proceed by reading `$OUTPATH` directly.)
 
 ## Instruction: Return without evaluate
 **Condition:** MEMORY state is "decide_accept" AND the value below does NOT equal the literal `true`: `{{acceptance}}`

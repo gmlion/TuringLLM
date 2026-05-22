@@ -18,30 +18,28 @@ afterEach(() => {
 });
 
 describe("loadCallStack", () => {
-  test("returns fresh stack when file does not exist", () => {
-    const cs = loadCallStack(path);
-    assert.equal(cs.stack.length, 1);
-    assert.equal(cs.stack[0].returnState, "<root>");
-    assert.equal(cs.nextCounter, 1);
+  test("throws when file does not exist", () => {
+    assert.throws(() => loadCallStack(path), /cannot read call stack/);
   });
 
-  test("returns fresh stack when file is empty", () => {
+  test("throws when file is empty", () => {
     writeFileSync(path, "", "utf-8");
-    const cs = loadCallStack(path);
-    assert.equal(cs.stack.length, 1);
-    assert.equal(cs.stack[0].returnState, "<root>");
+    assert.throws(() => loadCallStack(path), /not valid JSON/);
   });
 
-  test("returns fresh stack when file has malformed JSON", () => {
+  test("throws when file has malformed JSON", () => {
     writeFileSync(path, "{not json", "utf-8");
-    const cs = loadCallStack(path);
-    assert.equal(cs.stack.length, 1);
+    assert.throws(() => loadCallStack(path), /not valid JSON/);
   });
 
-  test("returns fresh stack when JSON is not a CallStack shape", () => {
+  test("throws when JSON shape is invalid", () => {
     writeFileSync(path, '{"x":1}', "utf-8");
-    const cs = loadCallStack(path);
-    assert.equal(cs.stack.length, 1);
+    assert.throws(() => loadCallStack(path), /invalid shape/);
+  });
+
+  test("throws when stack is empty", () => {
+    writeFileSync(path, '{"nextCounter":1,"stack":[]}', "utf-8");
+    assert.throws(() => loadCallStack(path), /invalid shape/);
   });
 
   test("loads a previously-saved CallStack", () => {
@@ -128,7 +126,7 @@ describe("applyPop", () => {
     assert.equal(r.events[0].returnState, "planning");
     assert.equal(r.events[0].depthAfter, 1);
     assert.equal(r.events[0].frameDir, "frames/f001-dyn");
-    assert.equal(r.events[0].missingReturn, true);
+    assert.equal(r.events[0].hasReturn, false);
   });
 
   test("does not mutate input callStack", () => {
@@ -165,7 +163,7 @@ describe("applyPop", () => {
     assert.equal(r.events[0].depthAfter, 2);
   });
 
-  test("## Return entries are spliced into caller memory", () => {
+  test("## Return body is spliced into caller memory under ## Popped Return", () => {
     const cs: CallStack = {
       nextCounter: 2,
       stack: [
@@ -175,42 +173,22 @@ describe("applyPop", () => {
     };
     const childMemory = "## State\ndone\n## Return\nresult: success\nscore: 42";
     const r = applyPop(cs, childMemory, () => "## State\nwaiting");
-    assert.match(r.callerMemoryAfter, /## Result\nsuccess/);
-    assert.match(r.callerMemoryAfter, /## Score\n42/);
-    assert.deepEqual(r.events[0].splicedKeys, ["result", "score"]);
-    assert.equal(r.events[0].missingReturn, false);
+    assert.match(r.callerMemoryAfter, /## Popped Return\nresult: success\nscore: 42/);
+    // No per-key splay: no top-level ## Result or ## Score sections.
+    assert.doesNotMatch(r.callerMemoryAfter, /^## Result\nsuccess/m);
+    assert.doesNotMatch(r.callerMemoryAfter, /^## Score\n42/m);
+    assert.equal(r.events[0].hasReturn, true);
   });
 
-  test("malformed ## Return lines are logged but valid entries still splice", () => {
-    const cs: CallStack = {
-      nextCounter: 2,
-      stack: [
-        { returnState: "<root>", frameDir: "frames/f000-strategy" },
-        { returnState: "foo", frameDir: "frames/f001-x" },
-      ],
-    };
-    const childMemory = "## State\ndone\n## Return\nok: yes\nbroken-no-colon";
-    const r = applyPop(cs, childMemory, () => "## State\nfoo\n");
-    assert.match(r.callerMemoryAfter, /## Ok\nyes/);
-    assert.deepEqual(r.events[0].splicedKeys, ["ok"]);
-    assert.deepEqual(r.events[0].malformedLines, ["broken-no-colon"]);
-  });
-
-  test("cascade pop fires when child's ## Return overrides caller state to done", () => {
-    // This test documents the cascade-pop contract and the intermediate-frame
-    // MEMORY loss caveat described in the applyPop JSDoc.
+  test("a child's `state: done` in ## Return cannot inject ## State into caller (no cascade)", () => {
+    // Regression: previously the per-key splay would write `## State\ndone`
+    // into the caller, overriding the `<x>_completed` state and triggering a
+    // second cascade-pop iteration, losing intermediate-frame MEMORIes.
     //
-    // Setup: 3-deep stack (root + mid + leaf).
-    // The leaf's ## Return includes `state: done`.
-    // spliceReturns treats "state" as a regular key and upserts ## State in the
-    // mid-frame's MEMORY to "done" — overriding the "leaf_completed" that
-    // setState wrote — which causes the while-loop to fire a second time.
-    //
-    // After cascade: stack reduces to [root] only, events.length === 2.
-    // The FINAL caller (root) gets its MEMORY returned in callerMemoryAfter.
-    // The INTERMEDIATE caller (mid) had its MEMORY computed inside the loop
-    // but it is NOT returned — only the final caller's MEMORY is. This is the
-    // intermediate-frame loss that runStackBlock warns about when events.length > 1.
+    // The fix is structural: the child's return body now lives verbatim inside
+    // a single `## Popped Return` section in the caller. The line `state: done`
+    // is body text, not a section header, so the caller's ## State parser
+    // never sees it. This test pins the structural property.
     const cs: CallStack = {
       nextCounter: 3,
       stack: [
@@ -220,46 +198,29 @@ describe("applyPop", () => {
       ],
     };
 
-    // Child (leaf) signals done and passes back state: done in ## Return.
-    // spliceReturns will capitalize "state" → "## State" and upsert it,
-    // replacing the "leaf_completed" value that setState wrote into mid's MEMORY.
-    const childMemory = "## State\ndone\n## Return\nstate: done";
+    // Child (leaf) signals done and tries to inject state: done in ## Return.
+    const childMemory = "## State\ndone\n## Return\nstate: done\nverdict: pass";
 
     const r = applyPop(cs, childMemory, (frameDir) => {
       if (frameDir === "frames/f001-mid") {
         return "## State\nintermediate\n## Work\nsome work";
       }
-      if (frameDir === "frames/f000-strategy") {
-        return "## State\nroot_state\n## Root\nroot data";
-      }
       throw new Error(`unexpected readFrame call for: ${frameDir}`);
     });
 
-    // Cascade fired: both leaf and mid were popped in a single applyPop call.
-    assert.equal(r.events.length, 2, "cascade should produce 2 pop events");
+    // No cascade: exactly one pop event.
+    assert.equal(r.events.length, 1, "single section splice must prevent cascade");
 
-    // Stack reduced to root frame only.
-    assert.equal(r.callStack.stack.length, 1);
-    assert.equal(r.callStack.stack[0].frameDir, "frames/f000-strategy");
+    // Stack reduced to [root, mid] — mid was NOT popped a second time.
+    assert.equal(r.callStack.stack.length, 2);
+    assert.equal(r.callStack.stack[1].frameDir, "frames/f001-mid");
 
-    // First event: leaf popped, mid becomes caller.
-    assert.equal(r.events[0].returnState, "leaf");
-    assert.equal(r.events[0].depthAfter, 2);
-    assert.equal(r.events[0].frameDir, "frames/f002-leaf");
+    // Mid frame's state is properly `leaf_completed` (setState's write
+    // survived because the return body lives in ## Popped Return).
+    assert.match(r.callerMemoryAfter, /^## State\nleaf_completed/m);
 
-    // Second event: mid popped (because its spliced state became "done"), root becomes caller.
-    assert.equal(r.events[1].returnState, "intermediate");
-    assert.equal(r.events[1].depthAfter, 1);
-    assert.equal(r.events[1].frameDir, "frames/f001-mid");
-
-    // callerMemoryAfter is the FINAL caller's (root's) MEMORY after state transition.
-    // Root's state was set to "intermediate_completed" by setState.
-    assert.match(r.callerMemoryAfter, /^## State\nintermediate_completed/m);
-
-    // The intermediate mid-frame's MEMORY (which had state overridden to "done"
-    // by spliceReturns) was computed but is NOT present in any return value —
-    // it was only used as the loop's "currentChildMemory" for the next iteration.
-    // This is the intermediate-frame loss documented in the applyPop JSDoc.
+    // The entire return body sits verbatim under ## Popped Return.
+    assert.match(r.callerMemoryAfter, /## Popped Return\nstate: done\nverdict: pass/);
   });
 });
 

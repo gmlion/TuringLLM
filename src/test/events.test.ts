@@ -130,12 +130,11 @@ describe("events.ts structural emitters", () => {
     assert.equal(ev.depth, 0);
   });
 
-  test("emitSplice carries splicedKeys + targetFrame (R10)", () => {
+  test("emitSplice carries targetFrame (R10)", () => {
     setCycleContext(5, "frames/f000-strategy");
-    emitSplice("frames/f000-strategy", ["revised", "verdict"]);
+    emitSplice("frames/f000-strategy");
     const ev = lastEvent();
     assert.equal(ev.type, "splice");
-    assert.deepEqual(ev.splicedKeys, ["revised", "verdict"]);
     assert.equal(ev.targetFrame, "frames/f000-strategy");
   });
 

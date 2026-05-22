@@ -445,11 +445,12 @@ describe("phase-6 a-tot: Goal-absorb (R31–R34)", () => {
     }
   });
 
-  test("Goal-absorb matches state == goal_checking_completed with ## Verdict (R31, R32)", () => {
+  test("Goal-absorb matches state == goal_checking_completed and reads verdict from ## Popped Return (R31, R32)", () => {
     const ga = extractInstructionBody(s, "Goal-absorb");
     assert.ok(ga.length > 0, "Goal-absorb missing");
     assert.match(ga, /goal_checking_completed/);
-    assert.match(ga, /## Verdict/);
+    assert.match(ga, /## Popped Return/);
+    assert.match(ga, /verdict/);
   });
 
   test("Goal-absorb maps pass → terminal_pass and routes to solved (R31)", () => {

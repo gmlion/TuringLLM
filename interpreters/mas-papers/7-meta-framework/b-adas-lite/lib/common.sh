@@ -28,16 +28,29 @@ next_archive_nn() {
   printf '%02d' "$((n + 1))"
 }
 
-# Extract the spliced ## Answer block from MEMORY.md.
+# Extract the `answer` value from the ## Popped Return section the shell
+# wrote into MEMORY after the operator popped. Operators in this lib emit
+# `answer: |` followed by two-space-indented body lines, so strip the indent.
 extract_answer() {
-  awk '/^## Answer$/{found=1;next} found && /^## /{exit} found{print}' ./MEMORY.md \
-    | sed '/^[[:space:]]*$/d'
+  awk '
+    /^## Popped Return$/ { in_pr=1; next }
+    in_pr && /^## / { exit }
+    in_pr && /^answer: \|$/ { in_v=1; next }
+    in_pr && in_v && /^[a-zA-Z_]/ { exit }
+    in_pr && in_v { sub(/^  /, ""); print }
+  ' ./MEMORY.md | sed '/^[[:space:]]*$/d'
 }
 
-# Extract the spliced ## Operator_content block from MEMORY.md.
-# (Splice from `operator_content:` Return key per Phase-2b grammar.)
+# Extract the `operator_content` value from the ## Popped Return section.
+# `operator_content: |` followed by two-space-indented body lines.
 extract_operator_content() {
-  awk '/^## Operator_content$/{found=1;next} found && /^## /{exit} found{print}' ./MEMORY.md
+  awk '
+    /^## Popped Return$/ { in_pr=1; next }
+    in_pr && /^## / { exit }
+    in_pr && /^operator_content: \|$/ { in_v=1; next }
+    in_pr && in_v && /^[a-zA-Z_]/ { exit }
+    in_pr && in_v { sub(/^  /, ""); print }
+  ' ./MEMORY.md
 }
 
 # Append a recent-scores line and cap the file at the last 20 entries.

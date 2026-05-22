@@ -2,7 +2,7 @@
 
 Receives arguments: {{attempt}}, {{verdict}}, {{feedback}}.
 Produced MEMORY: ## State done + ## Return block with key `lesson`.
-Return: state done → caller sees {caller_state}_completed, and ## Return entries are spliced into caller's MEMORY as ## Lesson.
+Return: state done → caller sees {caller_state}_completed, and the verbatim ## Return body is placed into caller's MEMORY under a single `## Popped Return` section (the caller reads the `lesson` key from inside that section).
 
 ## Instruction: Distil lesson
 **Condition:** MEMORY state is "empty"

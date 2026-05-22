@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Simulate-absorb: capture the just-popped operator's ## Answer, advance
+# Simulate-absorb: capture the just-popped operator's `answer` (extracted
+# from the ## Popped Return section the shell wrote into MEMORY), advance
 # op_index. If recipe exhausted for the current item, score the item via
 # ./scoped/scorer.sh, advance item_index. If all 3 items done, transition to
 # evaluating; otherwise loop back to simulating.
@@ -16,8 +17,18 @@ IFS=',' read -ra OPS <<< "$RECIPE"
 NUM_OPS=${#OPS[@]}
 NUM_ITEMS=3
 
-# Capture ## Answer (spliced from the popped operator's ## Return).
-ANSWER=$(awk '/^## Answer$/{found=1;next} found && /^## /{exit} found{print}' ./MEMORY.md | sed '/^[[:space:]]*$/d')
+# Capture the `answer` value from the ## Popped Return section the shell
+# wrote into MEMORY after the operator popped. The return body is YAML-ish
+# (key: value or key: | with two-space-indented block). For the single-key
+# `answer: |` shape that all operators in this lib emit, strip the leading
+# two-space indent off the body lines.
+ANSWER=$(awk '
+  /^## Popped Return$/ { in_pr=1; next }
+  in_pr && /^## / { exit }
+  in_pr && /^answer: \|$/ { in_v=1; next }
+  in_pr && in_v && /^[a-zA-Z_]/ { exit }
+  in_pr && in_v { sub(/^  /, ""); print }
+' ./MEMORY.md | sed '/^[[:space:]]*$/d')
 printf '%s\n' "$ANSWER" > ./scoped/sim/last_answer.md
 
 OP_IDX=$((OP_IDX + 1))

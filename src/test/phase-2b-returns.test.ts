@@ -62,11 +62,12 @@ describe("phase-2b end-to-end push/pop/splice", () => {
     writeFileSync(rootMemPath, popped.callerMemoryAfter, "utf-8");
     rmSync(resolve(tmp, pushed.frameDir), { recursive: true, force: true });
 
-    // Verify on-disk end state.
+    // Verify on-disk end state. The return body sits under ## Popped Return,
+    // not as a top-level ## Revised section.
     const final = readFileSync(rootMemPath, "utf-8");
     assert.match(final, /## State\ndrafted_completed/);
     assert.match(final, /## Draft\nclaim X/);
-    assert.match(final, /## Revised\nrevised answer/);
+    assert.match(final, /## Popped Return\nrevised: revised answer/);
     assert.equal(existsSync(resolve(tmp, pushed.frameDir)), false);
   });
 
@@ -119,8 +120,8 @@ describe("phase-2b end-to-end push/pop/splice", () => {
     );
     assert.equal(pop1.callStack.stack.length, 2);
     assert.equal(pop1.callerFrameDir, push1.frameDir);
-    // verify's MEMORY got a ## Answer splice.
-    assert.match(pop1.callerMemoryAfter, /## Answer\nyes, q1 is true/);
+    // verify's MEMORY got the return body under ## Popped Return.
+    assert.match(pop1.callerMemoryAfter, /## Popped Return\nanswer: yes, q1 is true/);
 
     // Simulate main.ts-side filesystem effects after pop:
     // - Write pop1.callerMemoryAfter to the caller's frame MEMORY.md
@@ -147,9 +148,10 @@ describe("phase-2b end-to-end push/pop/splice", () => {
     // Additional assertion: the popped child frame dir should no longer exist.
     assert.equal(existsSync(resolve(tmp, poppedFrameDir)), false);
 
-    // Additional assertion: verify's MEMORY.md should now contain the spliced state and answer.
+    // Additional assertion: verify's MEMORY.md should now contain the spliced state
+    // and the return body under ## Popped Return.
     const verifyMemAfter = readFileSync(resolve(tmp, push1.frameDir, "MEMORY.md"), "utf-8");
     assert.match(verifyMemAfter, /^## State\nasking_completed/m);
-    assert.match(verifyMemAfter, /## Answer\nyes, q1 is true/);
+    assert.match(verifyMemAfter, /## Popped Return\nanswer: yes, q1 is true/);
   });
 });

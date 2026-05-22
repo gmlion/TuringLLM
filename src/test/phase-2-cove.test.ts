@@ -267,11 +267,12 @@ describe("d-cove", () => {
       assert.equal(popped.callStack.stack.length, 2, "popped back to verify (depth 2)");
       assert.equal(popped.callerFrameDir, push1.frameDir);
       assert.equal(popped.events.length, 1);
-      assert.deepEqual(popped.events[0].splicedKeys, ["answer"], "answer should be spliced into verify's MEMORY");
+      assert.equal(popped.events[0].hasReturn, true, "answer-indep should return a body");
 
-      // verify's MEMORY should have state=asking_completed and ## Answer spliced in.
+      // verify's MEMORY should have state=asking_completed and answer in ## Popped Return body.
+      // The body preserves block-scalar formatting from the child's ## Return.
       assert.match(popped.callerMemoryAfter, /^## State\nasking_completed/m);
-      assert.match(popped.callerMemoryAfter, /## Answer\nyes, X is true/);
+      assert.match(popped.callerMemoryAfter, /## Popped Return\nanswer: \|\n  yes, X is true/);
     });
 
     test("verify pops back to strategy with drafted_completed and ## Revised spliced", () => {
@@ -304,11 +305,11 @@ describe("d-cove", () => {
       assert.equal(popped.callStack.stack.length, 1, "popped back to strategy (depth 1)");
       assert.equal(popped.callerFrameDir, "frames/f000-strategy");
       assert.equal(popped.events.length, 1);
-      assert.deepEqual(popped.events[0].splicedKeys, ["revised"], "revised should be spliced into strategy's MEMORY");
+      assert.equal(popped.events[0].hasReturn, true, "verify should return a body");
 
-      // Strategy's MEMORY should have state=drafted_completed and ## Revised spliced in.
+      // Strategy's MEMORY should have state=drafted_completed and revised body under ## Popped Return.
       assert.match(popped.callerMemoryAfter, /^## State\ndrafted_completed/m);
-      assert.match(popped.callerMemoryAfter, /## Revised\n/);
+      assert.match(popped.callerMemoryAfter, /## Popped Return\nrevised: \|/);
       assert.match(popped.callerMemoryAfter, /the corrected answer/);
     });
 

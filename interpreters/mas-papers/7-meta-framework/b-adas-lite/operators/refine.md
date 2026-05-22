@@ -6,9 +6,9 @@ Receives push-args:
   - `{{task}}` — the task body. PROGRAM.md content when bootstrap-loaded; the per-item task text when invoked as a library operator by a meta-framework.
   - `{{prior_answer}}` — a prior operator's answer to use as a starting attempt, or empty if none.
 
-Produces: `## State done` + `## Return` block with key `answer`. The existing `## Refined`, `## Verdict`, and `## Feedback` sections are also written for human inspection.
+Produces: `## State done` + `## Return` block with key `answer`. The existing `## Refined` section is also written for human inspection.
 
-This operator implements the Evaluator–Optimizer pattern (patterns.md Group 1). A generator role produces attempts into `./scoped/attempt.md`; a separate evaluator role (the `operators/evaluate.md` sub-operator) judges each attempt against an explicit `./scoped/criterion.md` and returns `verdict` + `feedback` via `## Return`, which the shell splices into caller MEMORY as `## Verdict` and `## Feedback`.
+This operator implements the Evaluator–Optimizer pattern (patterns.md Group 1). A generator role produces attempts into `./scoped/attempt.md`; a separate evaluator role (the `operators/evaluate.md` sub-operator) judges each attempt against an explicit `./scoped/criterion.md` and returns `verdict` + `feedback` via `## Return`. The shell places the evaluator's return body verbatim under `## Popped Return` in this frame's MEMORY; this operator then reads `verdict` and `feedback` from inside `## Popped Return`.
 
 ## Instruction: Initialize
 **Condition:** MEMORY state is "empty"
@@ -35,8 +35,8 @@ Prior answer (substituted at push-time, may be empty):
       <verbatim contents of ./scoped/criterion.md, every line indented two spaces>
 
 ## Instruction: Handle verdict
-**Condition:** MEMORY state is "attempted_completed" and `## Verdict` is present
-**Action:** If `## Verdict` is literally "pass", write `./MEMORY.md` with the FULL done state in a SINGLE heredoc (the `## Return` block MUST be in the same heredoc as the state change — at depth>=1 the shell pops on state is "done" BEFORE any subsequent instruction runs, so a separate Finish instruction would be unreachable):
+**Condition:** MEMORY state is "attempted_completed" and `## Popped Return` is present with a `verdict` key
+**Action:** Read the `verdict` value from the `## Popped Return` section in MEMORY. If `verdict` is literally "pass", write `./MEMORY.md` with the FULL done state in a SINGLE heredoc (the `## Return` block MUST be in the same heredoc as the state change — at depth>=1 the shell pops on state is "done" BEFORE any subsequent instruction runs, so a separate Finish instruction would be unreachable):
 
 ```
 cat > ./MEMORY.md << FINEOF
@@ -56,4 +56,4 @@ $(cat ./scoped/attempt.md | sed 's/^/  /')
 FINEOF
 ```
 
-Otherwise (literal "fail" or any malformed value), use `## Feedback` to rewrite `./scoped/attempt.md` wholesale (`cat > ./scoped/attempt.md << EOF ... EOF` is fine — a single blob). When rewriting MEMORY, omit the `## Verdict` and `## Feedback` sections (they were already consumed) and set state to "attempted" (which re-enters "Request evaluation" on the next cycle). If `## Verdict` was neither literally "pass" nor literally "fail", additionally append a non-blocking `## Pending Questions` item flagging the malformed verdict before transitioning — do NOT set state to "waiting_for_user" (the loop must continue so the machine makes progress).
+Otherwise (literal "fail" or any malformed value), use the `feedback` value from `## Popped Return` to rewrite `./scoped/attempt.md` wholesale (`cat > ./scoped/attempt.md << EOF ... EOF` is fine — a single blob). When rewriting MEMORY, omit the `## Popped Return` section entirely (it was just consumed) and set state to "attempted" (which re-enters "Request evaluation" on the next cycle). If `verdict` was neither literally "pass" nor literally "fail", additionally append a non-blocking `## Pending Questions` item flagging the malformed verdict before transitioning — do NOT set state to "waiting_for_user" (the loop must continue so the machine makes progress).

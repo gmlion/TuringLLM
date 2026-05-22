@@ -152,11 +152,17 @@ ${DRAFT_BODY}
 (Post-pop state will be "cove_verifying_completed".)
 
 ## Instruction: Verifier done — extract ADR queue
-**Condition:** MEMORY state is "cove_verifying_completed" and `## Answer` is present
-**Action:** Extract the revised design body to `../../workspace/02-design.md`, parse the ADR index into a queue, prune MEMORY, then advance to ADR-iteration.
+**Condition:** MEMORY state is "cove_verifying_completed" and `## Popped Return` is present in MEMORY with an `answer` key
+**Action:** Extract the revised design body (from the `answer` value inside `## Popped Return`) to `../../workspace/02-design.md`, parse the ADR index into a queue, prune MEMORY, then advance to ADR-iteration.
 
     mkdir -p ../../workspace ../../workspace/02-adr ./scoped
-    awk '/^## Answer$/{f=1; next} /^## [A-Z]/ && f {exit} f' ./MEMORY.md > ../../workspace/02-design.md
+    awk '
+      /^## Popped Return$/ { in_pr=1; next }
+      in_pr && /^## / { exit }
+      in_pr && /^answer: \|$/ { in_v=1; next }
+      in_pr && in_v && /^[a-zA-Z_]/ { exit }
+      in_pr && in_v { sub(/^  /, ""); print }
+    ' ./MEMORY.md > ../../workspace/02-design.md
 
 Parse the ADR index. Rows look like `| ADR-001 | <title> | <status> | <drives> |`. Extract number and title to `./scoped/adr-queue.md`, status `pending`:
 
@@ -171,9 +177,9 @@ Parse the ADR index. Rows look like `| ADR-001 | <title> | <status> | <drives> |
       }
     ' ../../workspace/02-design.md > ./scoped/adr-queue.md
 
-Prune the splice sections from MEMORY and advance:
+Prune the `## Popped Return` section from MEMORY and advance:
 
-    awk 'BEGIN{f=0} /^## (Answer|Refined|Revised|Result)$/{f=1; next} /^## [A-Z]/ && f {f=0} !f' ./MEMORY.md > ./MEMORY.md.tmp && mv ./MEMORY.md.tmp ./MEMORY.md
+    awk 'BEGIN{f=0} /^## Popped Return$/{f=1; next} /^## [A-Z]/ && f {f=0} !f' ./MEMORY.md > ./MEMORY.md.tmp && mv ./MEMORY.md.tmp ./MEMORY.md
     sed -i 's/^cove_verifying_completed$/adr_iterating/' ./MEMORY.md
 
 ## Instruction: ADR loop — push next or finish

@@ -68,8 +68,8 @@ export function emitPush(target: string, frameDir: string, depth: number): void 
 export function emitPop(frameDir: string, returnState: string, depth: number): void {
   emit("pop", { frameDir, returnState, depth });
 }
-export function emitSplice(targetFrame: string, splicedKeys: string[]): void {
-  emit("splice", { targetFrame, splicedKeys });
+export function emitSplice(targetFrame: string): void {
+  emit("splice", { targetFrame });
 }
 export function emitMachineGitCommit(hash: string, subject: string): void {
   emit("machine_git_commit", { hash, subject });

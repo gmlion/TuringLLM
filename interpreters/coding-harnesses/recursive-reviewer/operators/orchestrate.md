@@ -11,8 +11,8 @@ Produces: `## State done` + `## Return` block with key `summary`.
 ## What this operator does
 
 Drives a breadth-first review of every source file reachable from a chosen entry point, and any new files that prior refactors have created. For each file it:
-1. Pushes `operators/reviewer.md` (which applies the praxis lenses and returns `## Suggestions`).
-2. Pushes `operators/refiner.md` (which receives the file + the suggestions + the refactor log and returns a curated `## Refined` list plus a `log_entry` for long-term memory).
+1. Pushes `operators/reviewer.md` (which applies the praxis lenses and returns a `suggestions` key via `## Return`).
+2. Pushes `operators/refiner.md` (which receives the file + the suggestions + the refactor log and returns a curated `refined` list plus a `log_entry` key for long-term memory).
 3. Applies the refined changes to the file in-place.
 4. Runs the configured verification command. If verification fails, iterates a fix loop (read the failure tail → make a targeted fix → re-verify) **without a cap**: a broken build is shared across the workspace, so giving up would just mean every next file's verify fails too. Each fix attempt sees the latest verify tail plus an accumulated `./scoped/_fix_history.md` of prior attempts so it can change tack instead of repeating itself.
 5. Loops to the next file in the queue once verify is green.
@@ -29,8 +29,8 @@ Configuration (source root, entry file, file extension, verification command) is
 - `./scoped/queue.md` — files awaiting review, one path per line, in BFS order; paths are relative to source_root
 - `./scoped/visited.md` — files already pulled off the queue, one per line
 - `./scoped/current_file.md` — single line: the file currently being processed
-- `./scoped/suggestions.md` — last reviewer's `## Suggestions` payload (rewritten each round)
-- `./scoped/refined.md` — last refiner's `## Refined` payload (rewritten each round)
+- `./scoped/suggestions.md` — last reviewer's `suggestions` payload (extracted from `## Popped Return`, rewritten each round)
+- `./scoped/refined.md` — last refiner's `refined` payload (extracted from `## Popped Return`, rewritten each round)
 - `./scoped/refactor_log.md` — long-term memory across files (NOT a transcript). Only files whose refiner emitted a non-empty `log_entry` get an entry; files with purely local refactors are skipped. Verify outcomes append to existing entries on PASS, or synthesize a fresh entry on FAIL. **MUST be appended via `>>` only** so prior entries survive
 - `./scoped/summary.md` — one short bullet per file processed; **MUST be appended via `>>` only**
 - `./scoped/_log_pending.md` — single-line marker (`yes` / `no`) that apply writes for verify to read; ephemeral, removed once a file is fully done
@@ -165,14 +165,17 @@ MEMEOF
 ```
 
 ## Instruction: Process reviewer suggestions and request refinement
-**Condition:** MEMORY state is "review_completed" and `## Suggestions` is present in MEMORY
-**Action:** Save the spliced `## Suggestions` to `./scoped/suggestions.md`, then push the refiner with the file path, the suggestions, and the cumulative refactor log.
+**Condition:** MEMORY state is "review_completed" and `## Popped Return` is present in MEMORY with a `suggestions` key
+**Action:** Extract the `suggestions` value (block scalar) from inside `## Popped Return` to `./scoped/suggestions.md`, then push the refiner with the file path, the suggestions, and the cumulative refactor log.
 
 ```
-sed -n '/^## Suggestions$/,$p' ./MEMORY.md \
-  | sed '1d' \
-  | sed -n '/^## /q;p' \
-  > ./scoped/suggestions.md
+awk '
+  /^## Popped Return$/ { in_pr=1; next }
+  in_pr && /^## / { exit }
+  in_pr && /^suggestions: \|$/ { in_v=1; next }
+  in_pr && in_v && /^[a-zA-Z_]/ { exit }
+  in_pr && in_v { sub(/^  /, ""); print }
+' ./MEMORY.md > ./scoped/suggestions.md
 
 NEXT=$(cat ./scoped/current_file.md)
 SOURCE_ROOT=$(cat ./scoped/source_root.md)
@@ -202,14 +205,17 @@ MEMEOF
 ```
 
 ## Instruction: Process refined list
-**Condition:** MEMORY state is "refine_completed" and `## Refined` is present in MEMORY
-**Action:** Save the spliced `## Refined` to `./scoped/refined.md` and transition to state `apply`.
+**Condition:** MEMORY state is "refine_completed" and `## Popped Return` is present in MEMORY with a `refined` key
+**Action:** Extract the `refined` value (block scalar) from inside `## Popped Return` to `./scoped/refined.md` and transition to state `apply`.
 
 ```
-sed -n '/^## Refined$/,$p' ./MEMORY.md \
-  | sed '1d' \
-  | sed -n '/^## /q;p' \
-  > ./scoped/refined.md
+awk '
+  /^## Popped Return$/ { in_pr=1; next }
+  in_pr && /^## / { exit }
+  in_pr && /^refined: \|$/ { in_v=1; next }
+  in_pr && in_v && /^[a-zA-Z_]/ { exit }
+  in_pr && in_v { sub(/^  /, ""); print }
+' ./MEMORY.md > ./scoped/refined.md
 
 NEXT=$(cat ./scoped/current_file.md)
 

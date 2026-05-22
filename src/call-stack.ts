@@ -22,8 +22,8 @@ import {
   setState,
   parsePushArgs,
   removePushArgs,
-  parseReturn,
-  spliceReturns,
+  getReturnBody,
+  spliceReturn,
 } from "./memory.js";
 
 // ---------------------------------------------------------------------------
@@ -41,45 +41,62 @@ export type CallStack = {
 };
 
 // ---------------------------------------------------------------------------
-// Phase 2b persistence constants and helpers
-// ---------------------------------------------------------------------------
-
-const ROOT_FRAME_DIR = "frames/f000-strategy";
-const ROOT_RETURN_STATE = "<root>";
-
-function freshCallStack(): CallStack {
-  return {
-    nextCounter: 1,
-    stack: [{ returnState: ROOT_RETURN_STATE, frameDir: ROOT_FRAME_DIR }],
-  };
-}
-
-// ---------------------------------------------------------------------------
 // Phase 2b persistence — loadCallStack / saveCallStack
 // ---------------------------------------------------------------------------
 
+/**
+ * Load the call stack from disk.
+ *
+ * Throws on absence or corruption. There is no fallback: every real instance
+ * gets its root frame from `startupBootstrap` (driven by `.root-operator`),
+ * and main.ts only calls `loadCallStack` AFTER ensuring `.call-stack.json`
+ * exists. If we get here with a missing/invalid file, the instance state is
+ * unrecoverable — better to fail loudly than to invent a frame directory
+ * that doesn't match what's actually on disk.
+ */
 export function loadCallStack(path: string): CallStack {
+  let raw: string;
   try {
-    const parsed = JSON.parse(readFileSync(path, "utf-8"));
-    if (
-      parsed &&
-      typeof parsed === "object" &&
-      !Array.isArray(parsed) &&
-      typeof parsed.nextCounter === "number" &&
-      Array.isArray(parsed.stack) &&
-      parsed.stack.length > 0 &&
-      parsed.stack.every(
-        (e: unknown) =>
-          e !== null &&
-          typeof e === "object" &&
-          typeof (e as StackEntry).returnState === "string" &&
-          typeof (e as StackEntry).frameDir === "string",
-      )
-    ) {
-      return parsed as CallStack;
-    }
-  } catch { /* fall through */ }
-  return freshCallStack();
+    raw = readFileSync(path, "utf-8");
+  } catch (err) {
+    throw new Error(
+      `cannot read call stack at ${path}: ${err instanceof Error ? err.message : err}. ` +
+      `Recreate the instance via new-instance.sh.`,
+    );
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (err) {
+    throw new Error(
+      `call stack at ${path} is not valid JSON: ${err instanceof Error ? err.message : err}. ` +
+      `Recreate the instance via new-instance.sh.`,
+    );
+  }
+
+  const ok =
+    parsed !== null &&
+    typeof parsed === "object" &&
+    !Array.isArray(parsed) &&
+    typeof (parsed as { nextCounter?: unknown }).nextCounter === "number" &&
+    Array.isArray((parsed as { stack?: unknown }).stack) &&
+    (parsed as { stack: unknown[] }).stack.length > 0 &&
+    (parsed as { stack: unknown[] }).stack.every(
+      (e: unknown) =>
+        e !== null &&
+        typeof e === "object" &&
+        typeof (e as StackEntry).returnState === "string" &&
+        typeof (e as StackEntry).frameDir === "string",
+    );
+
+  if (!ok) {
+    throw new Error(
+      `call stack at ${path} has invalid shape (expected { nextCounter: number, stack: StackEntry[] } with a non-empty stack). ` +
+      `Recreate the instance via new-instance.sh.`,
+    );
+  }
+  return parsed as CallStack;
 }
 
 export function saveCallStack(path: string, callStack: CallStack): void {
@@ -94,9 +111,7 @@ export type PopEvent = {
   returnState: string;
   depthAfter: number;           // stack.length after this pop
   frameDir: string;             // popped frame's dir — caller rmSync's this
-  splicedKeys: string[];        // keys from ## Return that were spliced into caller MEMORY
-  missingReturn: boolean;       // true if child had state=done but no ## Return section
-  malformedLines: string[];     // malformed ## Return entries (logged by caller)
+  hasReturn: boolean;           // true if child had a non-empty ## Return section
 };
 
 export type PopResult = {
@@ -131,10 +146,12 @@ export type PushResult =
  *
  * Per iteration:
  *  - Pop the top frame.
- *  - Parse ## Return from child memory (may be absent → missingReturn=true).
+ *  - Extract the verbatim body of ## Return from child memory via
+ *    `getReturnBody` (may be empty → hasReturn=false).
  *  - Read caller MEMORY via readFrame(callerFrameDir, "MEMORY.md").
  *  - Transition caller state to {returnState}_completed via setState.
- *  - Splice return entries into caller memory via spliceReturns.
+ *  - Splice the return body into caller memory under ## Popped Return
+ *    via `spliceReturn` (NOT per-key splay — see spliceReturn's docs).
  *  - Record a PopEvent.
  *  - Set currentChildMemory = callerMemory for next cascade check.
  *
@@ -142,39 +159,31 @@ export type PushResult =
  * top-of-stack frameDir. If no pops occurred (state != done OR stack.length === 1),
  * returns child memory and current top-of-stack unchanged.
  *
- * ## Cascade-pop semantics and the intermediate-frame loss caveat
+ * ## Cascade-pop semantics: now structurally rare
  *
- * **When does cascade fire?**
  * Cascade (events.length > 1) fires while `state === "done" && stack.length > 1`.
- * In normal operation this rarely produces more than one pop per call because
- * `setState(callerMemory, frame.returnState + "_completed")` transitions the
- * caller's state to `<x>_completed`, NOT `done`. The while-loop therefore exits
- * after a single iteration.
+ * The loop sets caller state to `<x>_completed`, NOT `done`, so it exits after
+ * one iteration in the normal case.
  *
- * The only way cascade fires for real is if the caller's MEMORY still ends up
- * with `state === "done"` AFTER the setState + spliceReturns pass. That can
- * happen when the child's `## Return` section contains a `state: done` entry —
- * because `spliceReturns` treats `state` as just another key and upserts a
- * `## State\ndone` section into the caller's MEMORY, overwriting the
- * `<x>_completed` value that `setState` just wrote. Short of that, cascade
- * requires the caller's MEMORY file on disk to already contain `## State\ndone`
- * (e.g. a stale file from a prior run), which is a degenerate scenario.
+ * The historical injection vector — child writes `state: done` in its `## Return`
+ * and the per-key splay overrides the caller's `<x>_completed` back to `done` —
+ * was closed by switching to a single `## Popped Return` section. A child's
+ * return body now lives inside that fixed wrapper section in the caller, so it
+ * cannot reach the caller's `## State` parser.
  *
- * **Intermediate-frame MEMORY loss.**
- * When cascade DOES fire (events.length > 1), each iteration computes a
- * transformed caller MEMORY (setState + spliceReturns) but only the FINAL
- * caller's MEMORY is returned in `callerMemoryAfter`. The caller of applyPop
- * (currently `runStackBlock` in main.ts) writes `callerMemoryAfter` to
- * `callerFrameDir/MEMORY.md` exactly once. Intermediate frame MEMORIes —
- * the computed strings for frames between the leaf and the final caller — are
- * never written to disk. They exist only as ephemeral variables inside the
- * while-loop and are then discarded.
+ * The only remaining way for cascade to fire is the degenerate case where the
+ * caller's MEMORY file on disk already contains `## State\ndone` (e.g. a stale
+ * file left by a crashed prior run). The runtime warning in runStackBlock
+ * remains as a safety net for that scenario.
  *
- * This is benign today because cascade is structurally rare (see above).
- * If a future change makes cascade common, callers must iterate `events` and
- * write each intermediate frame's MEMORY to its `frameDir/MEMORY.md` before
- * issuing the rmSync that deletes it. A soft warning is emitted by
- * `runStackBlock` whenever `events.length > 1` to surface this scenario.
+ * **Intermediate-frame MEMORY loss (degenerate-only).**
+ * If cascade DOES fire, each iteration computes a transformed caller MEMORY
+ * but only the FINAL caller's MEMORY is returned in `callerMemoryAfter`. The
+ * caller of applyPop (currently `runStackBlock`) writes `callerMemoryAfter` to
+ * `callerFrameDir/MEMORY.md` exactly once. Intermediate frame MEMORIes exist
+ * only as ephemeral variables inside the while-loop. A soft warning fires when
+ * events.length > 1; in practice this only triggers on the degenerate stale-file
+ * scenario above.
  */
 export function applyPop(
   callStack: CallStack,
@@ -189,19 +198,17 @@ export function applyPop(
 
   while (parseState(currentChildMemory) === "done" && stack.length > 1) {
     const frame = stack.pop()!;
-    const { entries: returns, malformedLines } = parseReturn(currentChildMemory);
+    const returnBody = getReturnBody(currentChildMemory);
     const callerFrameDir = stack[stack.length - 1].frameDir;
     const rawCallerMemory = readFrame(callerFrameDir, "MEMORY.md");
     let callerMemory = setState(rawCallerMemory, frame.returnState + "_completed");
-    callerMemory = spliceReturns(callerMemory, returns);
+    callerMemory = spliceReturn(callerMemory, returnBody);
 
     events.push({
       returnState: frame.returnState,
       depthAfter: stack.length,
       frameDir: frame.frameDir,
-      splicedKeys: Object.keys(returns),
-      missingReturn: Object.keys(returns).length === 0,
-      malformedLines,
+      hasReturn: returnBody !== "",
     });
 
     currentChildMemory = callerMemory;

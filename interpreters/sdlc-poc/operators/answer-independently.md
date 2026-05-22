@@ -2,7 +2,7 @@
 
 Receives argument: {{question}}.
 Produced MEMORY: ## State done + ## Return block with key `answer`.
-Return: state done → caller sees {caller_state}_completed, and ## Return entry is spliced into caller's MEMORY as ## Answer.
+Return: state done → caller sees {caller_state}_completed, and the verbatim ## Return body is placed into caller's MEMORY under a single `## Popped Return` section (the caller reads the `answer` key from inside that section).
 
 ## Instruction: Answer in isolation
 **Condition:** MEMORY state is "empty"

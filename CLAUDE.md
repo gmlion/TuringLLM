@@ -277,7 +277,7 @@ key: value      ← optional; written by an operator before setting state to don
 
 ### ## Return splicing
 
-When an operator sets `state: done`, the shell pops the frame and splices any `## Return` block into the caller's MEMORY. The grammar is identical to `## Push-Args` (key-value or key-pipe block scalar). Each entry becomes a top-level MEMORY section in the caller: key `foo` → `## Foo` (first character uppercased, rest preserved).
+When an operator sets `state: done`, the shell pops the frame and splices the verbatim body of its `## Return` block into the caller's MEMORY under a single `## Popped Return` section. The body is **not** parsed into per-key sections — it is placed as-is, preserving the key-value or key-pipe block scalar grammar.
 
 Example: an operator writes:
 
@@ -291,14 +291,19 @@ feedback: |
 After pop, the caller's MEMORY gains:
 
 ```
-## Verdict
-pass
-
-## Feedback
-Looks good.
+## Popped Return
+verdict: pass
+feedback: |
+  Looks good.
 ```
 
-If the caller already has a `## Verdict` section, the shell replaces it in place (surgical splice). If not, the shell appends it.
+If the caller already has a `## Popped Return` section (from a previous pop in the same frame's lifetime), the shell replaces its body in place. If not, the shell appends it.
+
+**Why a single wrapper section?** Earlier versions splayed each return key into its own top-level section (`verdict` → `## Verdict`). That let a child operator return a key like `state` or `push`, which capitalized to `## State` or `## Push` and overrode shell-managed sections in the caller — an injection vector that could trigger cascade-pop and lose intermediate-frame MEMORIes. Confining the return body inside the fixed `## Popped Return` header makes that injection structurally impossible.
+
+**Reading the body.** The caller's interpreter (its instructions) reads named keys from inside `## Popped Return`, not as top-level sections. A condition like "`## Verdict` is present" becomes "the `## Popped Return` section has a `verdict` key"; an action like "read `## Verdict`" becomes "read the `verdict` value from `## Popped Return`".
+
+**OUTPUT.md is different.** When the root frame halts, the shell's `emitOutputMd` *does* splay the root's `## Return` keys into separate top-level sections in `OUTPUT.md` — that file is the user-facing artifact, not in-flight MEMORY, so the per-section splay is fine there.
 
 ### Scoped files and the surgical-edit convention
 

@@ -1,7 +1,7 @@
 # Dynamic: Role — QA
 
 Consumes: `{{tasks}}`, `{{code_location}}`.
-Produces: `## Return` with key `review` (the shell splices it into the caller's MEMORY as `## Review`).
+Produces: `## Return` with key `review` (the shell places the verbatim body under `## Popped Return` in the caller's MEMORY; the caller reads the `review` key from inside that section).
 State flow: `empty` → `reviewing` → `awaiting_verdict` → `done`.
 Stack: pushes `evaluate.md` at depth 2.
 
@@ -28,8 +28,8 @@ Read the relevant files in that location via `bash cat`. Synthesise a review *at
 Set state to "awaiting_verdict". (Note: "awaiting_verdict" is a local label; the shell sets frame state to "empty" on push and to "awaiting_verdict_completed" on pop.)
 
 ## Instruction: Return verdict
-**Condition:** MEMORY state is "awaiting_verdict_completed" and `## Verdict` is present
-**Action:** Read `## Verdict` (literal `pass` or `fail`) and `## Feedback` from MEMORY. Write `./MEMORY.md` with this EXACT single-heredoc shape (the `## Return` block MUST be in the same heredoc as the state change — the system prompt's canonical recipe shows only the four canonical sections, so following it literally would clobber the `## Return`, leaving the shell with nothing to splice on pop):
+**Condition:** MEMORY state is "awaiting_verdict_completed" and `## Popped Return` is present with a `verdict` key
+**Action:** Read the `verdict` (literal `pass` or `fail`) and `feedback` values from inside the `## Popped Return` section in MEMORY. Write `./MEMORY.md` with this EXACT single-heredoc shape (the `## Return` block MUST be in the same heredoc as the state change — the system prompt's canonical recipe shows only the four canonical sections, so following it literally would clobber the `## Return`, leaving the shell with nothing to splice on pop):
 
 ```
 cat > ./MEMORY.md << 'MEMEOF'
@@ -43,8 +43,8 @@ Wrote QA review (verdict + feedback) to ## Return; popping back to strategy.
 QA review complete.
 ## Return
 review: |
-  verdict: <pass|fail, copy literal value of ## Verdict>
+  verdict: <pass|fail, copy literal value of the verdict key from ## Popped Return>
   feedback: |
-    <verbatim ## Feedback body, indented two more spaces>
+    <verbatim feedback value from ## Popped Return, indented two more spaces>
 MEMEOF
 ```

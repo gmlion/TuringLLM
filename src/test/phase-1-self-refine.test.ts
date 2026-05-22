@@ -155,20 +155,18 @@ describe("1a self-refine", () => {
       assert.equal(popped.callerFrameDir, "frames/f000-strategy");
       assert.equal(popped.events.length, 1);
 
-      // Verify spliced keys.
-      assert.deepEqual(popped.events[0].splicedKeys.sort(), ["critique", "refined"]);
-      assert.equal(popped.events[0].missingReturn, false);
+      // Verify hasReturn was true.
+      assert.equal(popped.events[0].hasReturn, true);
 
       // Write pop result to disk.
       writeFileSync(rootMemPath, popped.callerMemoryAfter, "utf-8");
 
-      // Verify caller MEMORY now has ## Critique and ## Refined.
+      // Verify caller MEMORY has the verbatim return body under ## Popped Return.
       const finalMem = readFileSync(rootMemPath, "utf-8");
       assert.match(finalMem, /^## State\ndrafted_completed/m, "caller state should be drafted_completed");
-      assert.match(finalMem, /## Critique\n/, "## Critique should be spliced in");
-      assert.match(finalMem, /concrete feedback/, "critique content should be present");
-      assert.match(finalMem, /## Refined\n/, "## Refined should be spliced in");
-      assert.match(finalMem, /improved draft/, "refined content should be present");
+      assert.match(finalMem, /## Popped Return\n/, "## Popped Return should be present");
+      assert.match(finalMem, /concrete feedback/, "critique content should be present in body");
+      assert.match(finalMem, /improved draft/, "refined content should be present in body");
     });
 
     test("second loop: accepted refinement -> state=done -> halts at depth 0", () => {
@@ -204,8 +202,9 @@ describe("1a self-refine", () => {
       writeFileSync(rootMemPath, popped.callerMemoryAfter, "utf-8");
 
       assert.match(popped.callerMemoryAfter, /^## State\ndrafted_completed/m);
-      assert.match(popped.callerMemoryAfter, /## Critique/);
-      assert.match(popped.callerMemoryAfter, /## Refined/);
+      assert.match(popped.callerMemoryAfter, /## Popped Return\n/);
+      assert.match(popped.callerMemoryAfter, /critique: \|\n  final feedback/);
+      assert.match(popped.callerMemoryAfter, /refined: \|\n  final text/);
 
       // Simulate LLM accepting the refinement: sets state=done, removes Critique/Refined.
       // At depth 1 (only root frame), state=done => halt.

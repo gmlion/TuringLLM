@@ -4,7 +4,7 @@ IMPORTANT: This operator file is the canonical strategy. Do not modify it via up
 
 Receives push-args:
 - `{{file_path}}` — the file the suggestions are about (read it to ground the critique).
-- `{{suggestions}}` — the reviewer's `## Suggestions` block, verbatim.
+- `{{suggestions}}` — the reviewer's `suggestions` payload, verbatim.
 - `{{refactor_log}}` — cumulative log of refactors already applied in this run.
 
 Produces: `## State done` + `## Return` block with two keys: `refined` (the curated list to apply right now) and `log_entry` (a brief, deliberate note for *future* refiners working on *other* files — long-term memory, not a transcript).

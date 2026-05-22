@@ -164,20 +164,18 @@ describe("1b evaluator-optimizer", () => {
       assert.equal(popped.callerFrameDir, "frames/f000-strategy");
       assert.equal(popped.events.length, 1);
 
-      // Verify spliced keys.
-      assert.deepEqual(popped.events[0].splicedKeys.sort(), ["feedback", "verdict"]);
-      assert.equal(popped.events[0].missingReturn, false);
+      // Verify hasReturn was true.
+      assert.equal(popped.events[0].hasReturn, true);
 
       // Write pop result to disk.
       writeFileSync(rootMemPath, popped.callerMemoryAfter, "utf-8");
 
-      // Verify caller MEMORY now has ## Verdict and ## Feedback.
+      // Verify caller MEMORY has the verbatim return body under ## Popped Return.
       const finalMem = readFileSync(rootMemPath, "utf-8");
       assert.match(finalMem, /^## State\nattempted_completed/m, "caller state should be attempted_completed");
-      assert.match(finalMem, /## Verdict\n/, "## Verdict should be spliced in");
-      assert.match(finalMem, /pass/, "verdict content should be present");
-      assert.match(finalMem, /## Feedback\n/, "## Feedback should be spliced in");
-      assert.match(finalMem, /looks good/, "feedback content should be present");
+      assert.match(finalMem, /## Popped Return\n/, "## Popped Return should be present");
+      assert.match(finalMem, /verdict: \|\n  pass/, "verdict block scalar should be in body");
+      assert.match(finalMem, /feedback: \|\n  looks good\n  meets all criteria/, "feedback block scalar should be in body");
     });
 
     test("pass verdict -> state=done -> halts at depth 0", () => {
@@ -211,8 +209,9 @@ describe("1b evaluator-optimizer", () => {
       writeFileSync(rootMemPath, popped.callerMemoryAfter, "utf-8");
 
       assert.match(popped.callerMemoryAfter, /^## State\nattempted_completed/m);
-      assert.match(popped.callerMemoryAfter, /## Verdict/);
-      assert.match(popped.callerMemoryAfter, /## Feedback/);
+      assert.match(popped.callerMemoryAfter, /## Popped Return\n/);
+      assert.match(popped.callerMemoryAfter, /verdict: \|\n  pass/);
+      assert.match(popped.callerMemoryAfter, /feedback: \|\n  all criteria met/);
 
       // Simulate LLM seeing pass verdict: sets state=done, removes Verdict/Feedback.
       // At depth 1 (only root frame), state=done => halt.

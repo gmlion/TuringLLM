@@ -2,7 +2,7 @@
 
 Receives argument: {{draft}}.
 Produced MEMORY: ## State done + ## Return block with key `revised`.
-Return: state done → caller sees {caller_state}_completed, and ## Return entry is spliced into caller's MEMORY as ## Revised.
+Return: state done → caller sees {caller_state}_completed, and the verbatim ## Return body is placed into caller's MEMORY under a single `## Popped Return` section (the caller reads the `revised` key from inside that section).
 
 Internal scoped file: `./scoped/verifications.md` (owned by this dynamic's frame; NOT a MEMORY section).
 **WHOLESALE REWRITES of `./scoped/verifications.md` are FORBIDDEN after initial creation. All status updates MUST use surgical `sed -i` to modify individual bullet lines. Never use `cat >` or any full overwrite on this file after it is created.**
@@ -37,11 +37,11 @@ Draft:
 Do NOT modify `./scoped/verifications.md` here. Do NOT write `## Return`. Do NOT change state — the shell handles it on push.
 
 ## Instruction: Record answer
-**Condition:** MEMORY state is "asking_completed" and `## Answer` is present in MEMORY
+**Condition:** MEMORY state is "asking_completed" and `## Popped Return` is present in MEMORY with an `answer` key
 **Action:**
-1. Read `## Answer` from MEMORY.
-2. SURGICALLY update `./scoped/verifications.md`: replace the FIRST bullet line whose status is the literal word `pending` with the same bullet text but status changed to `answered: <verbatim contents of ## Answer>`. Use `sed -i` for this single-line replacement — do NOT rewrite the whole file.
-3. Remove the `## Answer` section from MEMORY.
+1. Read the `answer` value from the `## Popped Return` section in MEMORY.
+2. SURGICALLY update `./scoped/verifications.md`: replace the FIRST bullet line whose status is the literal word `pending` with the same bullet text but status changed to `answered: <verbatim contents of the answer value>`. Use `sed -i` for this single-line replacement — do NOT rewrite the whole file.
+3. Remove the `## Popped Return` section from MEMORY (it was just consumed).
 4. Check whether any pending bullets remain: run `grep -c 'pending$' ./scoped/verifications.md`.
    - **If count > 0** (more questions remain): set state to "asking".
    - **If count == 0** (all questions answered): read `./scoped/verifications.md` and the draft below, synthesize a corrected full answer by comparing each verified claim against the original draft, then write `./MEMORY.md` with this EXACT single-heredoc shape (the `## Return` block MUST be in the same heredoc as the state change — without it the shell pops with no return value, breaking the caller):

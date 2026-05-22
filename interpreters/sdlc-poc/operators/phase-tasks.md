@@ -203,21 +203,33 @@ ${DRAFT_BODY}
     fi
 
 ## Instruction: Tackle done — append and loop
-**Condition:** MEMORY state is "tackling_completed" and `## Answer` is present
-**Action:** Append the story's task block to `./scoped/all-tasks.md`, prune the splice, mark the story done, and return to iteration.
+**Condition:** MEMORY state is "tackling_completed" and `## Popped Return` is present in MEMORY with an `answer` key
+**Action:** Append the story's task block (from the `answer` value inside `## Popped Return`) to `./scoped/all-tasks.md`, prune the `## Popped Return` section, mark the story done, and return to iteration.
 
     STORY_ID=$(cat ./scoped/current-story.md)
-    awk '/^## Answer$/{f=1; next} /^## [A-Z]/ && f {exit} f' ./MEMORY.md >> ./scoped/all-tasks.md
+    awk '
+      /^## Popped Return$/ { in_pr=1; next }
+      in_pr && /^## / { exit }
+      in_pr && /^answer: \|$/ { in_v=1; next }
+      in_pr && in_v && /^[a-zA-Z_]/ { exit }
+      in_pr && in_v { sub(/^  /, ""); print }
+    ' ./MEMORY.md >> ./scoped/all-tasks.md
     echo "" >> ./scoped/all-tasks.md
     awk -v sid="$STORY_ID" -F '|' 'BEGIN{OFS="|"} $1==sid {$2="done"} {print}' ./scoped/story-queue.md > ./scoped/story-queue.md.tmp && mv ./scoped/story-queue.md.tmp ./scoped/story-queue.md
-    awk 'BEGIN{f=0} /^## (Answer|Refined|Revised|Result)$/{f=1; next} /^## [A-Z]/ && f {f=0} !f' ./MEMORY.md > ./MEMORY.md.tmp && mv ./MEMORY.md.tmp ./MEMORY.md
+    awk 'BEGIN{f=0} /^## Popped Return$/{f=1; next} /^## [A-Z]/ && f {f=0} !f' ./MEMORY.md > ./MEMORY.md.tmp && mv ./MEMORY.md.tmp ./MEMORY.md
     sed -i 's/^tackling_completed$/story_iterating/' ./MEMORY.md
 
 ## Instruction: Finish
-**Condition:** MEMORY state is "cove_verifying_completed" and `## Answer` is present
-**Action:** The CoVe operator returned the renumbered + verified tasks via `## Return answer:`. Write it to `../../workspace/04-tasks.md` and return.
+**Condition:** MEMORY state is "cove_verifying_completed" and `## Popped Return` is present in MEMORY with an `answer` key
+**Action:** The CoVe operator returned the renumbered + verified tasks via `## Return answer:`, which the shell placed inside the `## Popped Return` section. Write the `answer` value to `../../workspace/04-tasks.md` and return.
 
-    awk '/^## Answer$/{f=1; next} /^## [A-Z]/ && f {exit} f' ./MEMORY.md > ../../workspace/04-tasks.md
+    awk '
+      /^## Popped Return$/ { in_pr=1; next }
+      in_pr && /^## / { exit }
+      in_pr && /^answer: \|$/ { in_v=1; next }
+      in_pr && in_v && /^[a-zA-Z_]/ { exit }
+      in_pr && in_v { sub(/^  /, ""); print }
+    ' ./MEMORY.md > ../../workspace/04-tasks.md
 
     cat > ./MEMORY.md << 'FINEOF'
     ## State

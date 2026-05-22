@@ -82,12 +82,18 @@ This shim runs Phase 3. Two steps:
 (Post-pop state will be "decomposing_completed".)
 
 ## Instruction: Decomposer done — stage dialogue
-**Condition:** MEMORY state is "decomposing_completed" and `## Answer` is present
-**Action:** Extract the v0 tree to `../../workspace/03-backlog.md`, prune splice, park at the dialogue-push state.
+**Condition:** MEMORY state is "decomposing_completed" and `## Popped Return` is present in MEMORY with an `answer` key
+**Action:** Extract the v0 tree (from the `answer` value inside `## Popped Return`) to `../../workspace/03-backlog.md`, prune the `## Popped Return` section, park at the dialogue-push state.
 
     mkdir -p ../../workspace
-    awk '/^## Answer$/{f=1; next} /^## [A-Z]/ && f {exit} f' ./MEMORY.md > ../../workspace/03-backlog.md
-    awk 'BEGIN{f=0} /^## (Answer|Refined|Revised|Result)$/{f=1; next} /^## [A-Z]/ && f {f=0} !f' ./MEMORY.md > ./MEMORY.md.tmp && mv ./MEMORY.md.tmp ./MEMORY.md
+    awk '
+      /^## Popped Return$/ { in_pr=1; next }
+      in_pr && /^## / { exit }
+      in_pr && /^answer: \|$/ { in_v=1; next }
+      in_pr && in_v && /^[a-zA-Z_]/ { exit }
+      in_pr && in_v { sub(/^  /, ""); print }
+    ' ./MEMORY.md > ../../workspace/03-backlog.md
+    awk 'BEGIN{f=0} /^## Popped Return$/{f=1; next} /^## [A-Z]/ && f {f=0} !f' ./MEMORY.md > ./MEMORY.md.tmp && mv ./MEMORY.md.tmp ./MEMORY.md
     sed -i 's/^decomposing_completed$/dialogue_pushing/' ./MEMORY.md
 
 ## Instruction: Push dialogue
@@ -137,10 +143,20 @@ This shim runs Phase 3. Two steps:
 
 ## Instruction: Finish
 **Condition:** MEMORY state is "dialoguing_completed"
-**Action:** Capture verdict + feedback and return.
+**Action:** Capture verdict + feedback from inside the `## Popped Return` section (placed there by the just-popped dialogue.md) and return.
 
-    VERDICT=$(awk '/^## Verdict$/{f=1; next} /^## [A-Z]/ && f {exit} f' ./MEMORY.md | head -n 1)
-    FEEDBACK=$(awk '/^## Feedback$/{f=1; next} /^## [A-Z]/ && f {exit} f' ./MEMORY.md)
+    VERDICT=$(awk '
+      /^## Popped Return$/ { in_pr=1; next }
+      in_pr && /^## / { exit }
+      in_pr && /^verdict: / { sub(/^verdict: /, ""); print; exit }
+    ' ./MEMORY.md)
+    FEEDBACK=$(awk '
+      /^## Popped Return$/ { in_pr=1; next }
+      in_pr && /^## / { exit }
+      in_pr && /^feedback: \|$/ { in_v=1; next }
+      in_pr && in_v && /^[a-zA-Z_]/ { exit }
+      in_pr && in_v { sub(/^  /, ""); print }
+    ' ./MEMORY.md)
     if [ -z "$VERDICT" ]; then VERDICT=pass; fi
 
     cat > ./MEMORY.md << FINEOF

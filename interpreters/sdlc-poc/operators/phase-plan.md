@@ -104,12 +104,18 @@ Scoped files:
 (Post-pop state will be "drafting_completed".)
 
 ## Instruction: Drafter done — stage verify
-**Condition:** MEMORY state is "drafting_completed" and `## Answer` is present
-**Action:** Extract the draft to `./scoped/draft.md`, prune the splice sections, and park at the verify-push state.
+**Condition:** MEMORY state is "drafting_completed" and `## Popped Return` is present in MEMORY with an `answer` key
+**Action:** Extract the draft (from the `answer` value inside `## Popped Return`) to `./scoped/draft.md`, prune the `## Popped Return` section, and park at the verify-push state.
 
     mkdir -p ./scoped
-    awk '/^## Answer$/{f=1; next} /^## [A-Z]/ && f {exit} f' ./MEMORY.md > ./scoped/draft.md
-    awk 'BEGIN{f=0} /^## (Answer|Refined|Revised|Result)$/{f=1; next} /^## [A-Z]/ && f {f=0} !f' ./MEMORY.md > ./MEMORY.md.tmp && mv ./MEMORY.md.tmp ./MEMORY.md
+    awk '
+      /^## Popped Return$/ { in_pr=1; next }
+      in_pr && /^## / { exit }
+      in_pr && /^answer: \|$/ { in_v=1; next }
+      in_pr && in_v && /^[a-zA-Z_]/ { exit }
+      in_pr && in_v { sub(/^  /, ""); print }
+    ' ./MEMORY.md > ./scoped/draft.md
+    awk 'BEGIN{f=0} /^## Popped Return$/{f=1; next} /^## [A-Z]/ && f {f=0} !f' ./MEMORY.md > ./MEMORY.md.tmp && mv ./MEMORY.md.tmp ./MEMORY.md
     sed -i 's/^drafting_completed$/verifying_pushing/' ./MEMORY.md
 
 ## Instruction: Push verifier
@@ -149,11 +155,17 @@ ${DRAFT_BODY}
 (Post-pop state will be "verifying_completed".)
 
 ## Instruction: Finish
-**Condition:** MEMORY state is "verifying_completed" and `## Answer` is present
-**Action:** Extract the revised plan to `../../workspace/05-plan.md` and return.
+**Condition:** MEMORY state is "verifying_completed" and `## Popped Return` is present in MEMORY with an `answer` key
+**Action:** Extract the revised plan (from the `answer` value inside `## Popped Return`) to `../../workspace/05-plan.md` and return.
 
     mkdir -p ../../workspace
-    awk '/^## Answer$/{f=1; next} /^## [A-Z]/ && f {exit} f' ./MEMORY.md > ../../workspace/05-plan.md
+    awk '
+      /^## Popped Return$/ { in_pr=1; next }
+      in_pr && /^## / { exit }
+      in_pr && /^answer: \|$/ { in_v=1; next }
+      in_pr && in_v && /^[a-zA-Z_]/ { exit }
+      in_pr && in_v { sub(/^  /, ""); print }
+    ' ./MEMORY.md > ../../workspace/05-plan.md
 
     cat > ./MEMORY.md << 'FINEOF'
     ## State

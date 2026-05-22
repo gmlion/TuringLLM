@@ -10,12 +10,8 @@ describe("CallStack persistence (Phase 2b shape)", () => {
   beforeEach(() => { tmp = mkdtempSync(resolve(tmpdir(), "turing-cs-")); });
   afterEach(() => { rmSync(tmp, { recursive: true, force: true }); });
 
-  test("loads fresh when file absent", () => {
-    const cs = loadCallStack(resolve(tmp, ".call-stack.json"));
-    assert.equal(cs.nextCounter, 1);
-    assert.deepEqual(cs.stack, [
-      { returnState: "<root>", frameDir: "frames/f000-strategy" },
-    ]);
+  test("throws when file absent", () => {
+    assert.throws(() => loadCallStack(resolve(tmp, ".call-stack.json")), /cannot read/);
   });
 
   test("loads the new object shape round-trip", () => {
@@ -32,26 +28,19 @@ describe("CallStack persistence (Phase 2b shape)", () => {
     assert.deepEqual(loaded, cs);
   });
 
-  test("malformed JSON returns fresh shape", () => {
+  test("malformed JSON throws", () => {
     const path = resolve(tmp, ".call-stack.json");
     writeFileSync(path, "not json", "utf-8");
-    const cs = loadCallStack(path);
-    assert.equal(cs.nextCounter, 1);
-    assert.equal(cs.stack.length, 1);
-    assert.equal(cs.stack[0].frameDir, "frames/f000-strategy");
+    assert.throws(() => loadCallStack(path), /not valid JSON/);
   });
 
-  test("pre-Phase-2b bare-array shape returns fresh (no compat)", () => {
+  test("pre-Phase-2b bare-array shape throws (no compat)", () => {
     // R18 explicitly dropped — bare arrays are no longer loaded as stacks.
     const path = resolve(tmp, ".call-stack.json");
     writeFileSync(path, JSON.stringify([
       { returnState: "foo", instructions: "bar" },
     ]), "utf-8");
-    const cs = loadCallStack(path);
-    assert.equal(cs.nextCounter, 1);
-    assert.deepEqual(cs.stack, [
-      { returnState: "<root>", frameDir: "frames/f000-strategy" },
-    ]);
+    assert.throws(() => loadCallStack(path), /invalid shape/);
   });
 
   test("saveCallStack writes valid JSON matching the shape", () => {

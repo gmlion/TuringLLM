@@ -593,11 +593,18 @@ criterion: |
     MEM_EOF
 
 ## Instruction: Goal-absorb
-**Condition:** MEMORY state is "goal_checking_completed" and `## Verdict` is present in MEMORY
-**Action:** Read cursor id and `## Verdict`. On `pass` → status `terminal_pass`, route `solved` (R31). On `fail` → status `terminal_fail`, route `goal_checking` (R32). On malformed verdict → treat as fail, append non-blocking `## Pending Questions` (R33).
+**Condition:** MEMORY state is "goal_checking_completed" and `## Popped Return` is present in MEMORY with a `verdict` key
+**Action:** Read cursor id and the `verdict` value from inside `## Popped Return`. On `pass` → status `terminal_pass`, route `solved` (R31). On `fail` → status `terminal_fail`, route `goal_checking` (R32). On malformed verdict → treat as fail, append non-blocking `## Pending Questions` (R33).
 
     ID=$(cat ./scoped/cursor.md)
-    VERDICT=$(awk '/^## Verdict$/{f=1; next} /^## /{f=0} f && /[a-z]/{print; exit}' ./MEMORY.md | tr -d ' ')
+    VERDICT=$(awk '
+      /^## Popped Return$/ { in_pr=1; next }
+      in_pr && /^## / { exit }
+      in_pr && /^verdict: \|$/ { in_v=1; next }
+      in_pr && /^verdict: / && !in_v { sub(/^verdict: /, ""); print; exit }
+      in_pr && in_v && /^[a-zA-Z_]/ { exit }
+      in_pr && in_v { sub(/^  /, ""); print; exit }
+    ' ./MEMORY.md | tr -d ' ')
 
     case "$VERDICT" in
       pass)

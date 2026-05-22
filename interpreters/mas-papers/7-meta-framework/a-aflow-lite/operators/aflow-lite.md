@@ -103,7 +103,7 @@ EOF
 
 ## Instruction: Simulate-absorb
 **Condition:** MEMORY state is "simulating_completed"
-**Action:** Run `bash ../../lib/sim_absorb.sh`. The script captures the just-popped operator's `## Answer`, advances `current_op`, and (when the recipe is exhausted) scores the item via `./scoped/scorer.sh`, advances `current_item`, and either transitions to `evaluating` (all items done) or loops back to `simulating`.
+**Action:** Run `bash ../../lib/sim_absorb.sh`. The script captures the just-popped operator's `answer` (read from inside the `## Popped Return` section that the shell wrote into MEMORY after pop), advances `current_op`, and (when the recipe is exhausted) scores the item via `./scoped/scorer.sh`, advances `current_item`, and either transitions to `evaluating` (all items done) or loops back to `simulating`.
 
 ## Instruction: Evaluate-absorb
 **Condition:** MEMORY state is "evaluating"

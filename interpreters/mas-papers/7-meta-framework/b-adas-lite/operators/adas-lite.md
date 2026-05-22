@@ -117,7 +117,7 @@ EOF
 
 ## Instruction: Test-absorb
 **Condition:** MEMORY state is "test_pending_completed"
-**Action:** Run `bash ../../lib/test_absorb.sh`. The script captures the spliced `## Answer`, appends it to `sim/answers.md`, advances the item counter, and (when all items in `sim/items_total.md` are done) scores via `./scoped/scorer.sh` and transitions to `post_mortem_pending` (reward < 1.0) or `finalize_entry` (reward == 1.0).
+**Action:** Run `bash ../../lib/test_absorb.sh`. The script captures the `answer` value from the `## Popped Return` section the shell wrote into MEMORY, appends it to `sim/answers.md`, advances the item counter, and (when all items in `sim/items_total.md` are done) scores via `./scoped/scorer.sh` and transitions to `post_mortem_pending` (reward < 1.0) or `finalize_entry` (reward == 1.0).
 
 ## Instruction: Post-mortem-write
 **Condition:** MEMORY state is "post_mortem_pending"
@@ -162,7 +162,7 @@ EOF
 
 ## Instruction: Holdout-absorb
 **Condition:** MEMORY state is "holdout_pending_completed"
-**Action:** Run `bash ../../lib/holdout_absorb.sh`. The script captures the spliced `## Answer`, appends to `sim/answers.md`, advances. When all holdout items are done, scores via `./scoped/scorer.sh`, splices `holdout_score` and `holdout_per_item` into the winner's archive entry's front-matter (via `splice_holdout_fields` in `common.sh`), writes `./scoped/holdout_summary.md`, and transitions MEMORY to `finalizing`. No post-mortem on holdout.
+**Action:** Run `bash ../../lib/holdout_absorb.sh`. The script captures the `answer` value from the `## Popped Return` section the shell wrote into MEMORY, appends to `sim/answers.md`, advances. When all holdout items are done, scores via `./scoped/scorer.sh`, splices `holdout_score` and `holdout_per_item` into the winner's archive entry's front-matter (via `splice_holdout_fields` in `common.sh`), writes `./scoped/holdout_summary.md`, and transitions MEMORY to `finalizing`. No post-mortem on holdout.
 
 ## Instruction: Finalize-run
 **Condition:** MEMORY state is "finalizing"

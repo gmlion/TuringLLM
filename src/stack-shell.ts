@@ -24,8 +24,8 @@ import { readFile, getMemoryState } from "./io.js";
 /**
  * Side-effects for each pop event: rmSync the popped frame's directory (with
  * retries to survive Windows file locks held by visualizer fetches), log the
- * cascade-pop transition, and emit the ## Return splice + pop events. Pure
- * pop logic lives in call-stack.ts; this is the I/O side.
+ * cascade-pop transition, and emit the splice + pop events. Pure pop logic
+ * lives in call-stack.ts; this is the I/O side.
  */
 function applyPopSideEffects(events: PopEvent[], callerFrameDir: string): void {
   for (const ev of events) {
@@ -40,14 +40,9 @@ function applyPopSideEffects(events: PopEvent[], callerFrameDir: string): void {
       log(`  [pop] WARN: failed to remove ${ev.frameDir} after retries: ${rmErr instanceof Error ? rmErr.message : rmErr}`);
     }
     log(`  [pop] → ${ev.returnState}_completed (depth ${ev.depthAfter})`);
-    if (ev.splicedKeys && ev.splicedKeys.length > 0) {
-      emitSplice(callerFrameDir, ev.splicedKeys);
-    }
+    if (ev.hasReturn) emitSplice(callerFrameDir);
     emitPop(ev.frameDir, ev.returnState, ev.depthAfter);
-    if (ev.missingReturn) log(`  [pop] ${ev.frameDir}: no ## Return section`);
-    for (const mal of ev.malformedLines) {
-      log(`  [pop] ${ev.frameDir}: malformed return entry: ${mal}`);
-    }
+    if (!ev.hasReturn) log(`  [pop] ${ev.frameDir}: no ## Return section`);
   }
 }
 

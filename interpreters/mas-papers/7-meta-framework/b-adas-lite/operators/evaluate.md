@@ -2,7 +2,7 @@
 
 Receives arguments: {{attempt}}, {{criterion}}.
 Produced MEMORY: ## State done + ## Return block with keys `verdict`, `feedback`.
-Return: state done → caller sees {caller_state}_completed, and ## Return entries are spliced into caller's MEMORY as ## Verdict and ## Feedback.
+Return: state done → caller sees {caller_state}_completed, and the verbatim ## Return body is placed into caller's MEMORY under a single `## Popped Return` section (the caller reads `verdict` and `feedback` keys from inside that section).
 
 **Two modes (decided from the criterion text):**
 

@@ -25,7 +25,7 @@ Workspace staging files (written by dialogue role agents or by this strategy, re
 - `../../workspace/.chatdev/documentation.md` — documentation dialogue's consensus artefact.
 - `../../workspace/.chatdev/last_rejection.md` — most recent reviewer feedback (overwritten on each retry).
 
-Each transition sets the caller's state to a phase-active label (`design_active`, `coding_active`, `testing_active`, `doc_active`) BEFORE the push. The shell preserves that as the returnState; on pop, the caller's state becomes `<label>_completed`. Retry-stage instructions match `<label>_completed` AND `## Verdict` is `fail`; forward-prune instructions match `<label>_completed` only (the retry-stage instruction would have first-matched on `fail`, so reaching the forward-prune means the verdict was `pass` or absent). Push instructions (both retry and forward) match the corresponding `*_pushing` intermediate state.
+Each transition sets the caller's state to a phase-active label (`design_active`, `coding_active`, `testing_active`, `doc_active`) BEFORE the push. The shell preserves that as the returnState; on pop, the caller's state becomes `<label>_completed`. Retry-stage instructions match `<label>_completed` AND the `verdict` key inside `## Popped Return` is `fail`; forward-prune instructions match `<label>_completed` only (the retry-stage instruction would have first-matched on `fail`, so reaching the forward-prune means the verdict was `pass` or absent). Push instructions (both retry and forward) match the corresponding `*_pushing` intermediate state.
 
 ## Instruction: Initialize
 **Condition:** MEMORY state is "empty"
@@ -73,9 +73,9 @@ Prior answer (substituted at push-time, may be empty):
 
 ## Instruction: Design done — prune (stage)
 **Condition:** MEMORY state is "design_active_completed"
-**Action:** The design dialogue already wrote `../../workspace/.chatdev/design.md`. Prune `## Dialogue` from MEMORY and park at the push state:
+**Action:** The design dialogue already wrote `../../workspace/.chatdev/design.md`. Prune the `## Popped Return` section from MEMORY and park at the push state:
 
-    awk 'BEGIN{f=0} /^## Dialogue$/{f=1; next} /^## [A-Z]/ && f {f=0} !f' ./MEMORY.md > ./MEMORY.md.tmp && mv ./MEMORY.md.tmp ./MEMORY.md
+    awk 'BEGIN{f=0} /^## Popped Return$/{f=1; next} /^## [A-Z]/ && f {f=0} !f' ./MEMORY.md > ./MEMORY.md.tmp && mv ./MEMORY.md.tmp ./MEMORY.md
 
 Then update state via in-place sed (single-line replacement, no template-emission risk):
 
@@ -111,11 +111,17 @@ Then update state via in-place sed (single-line replacement, no template-emissio
     MEM_EOF
 
 ## Instruction: Coding rejected — stage retry
-**Condition:** MEMORY state is "coding_active_completed" AND `## Verdict` equals the literal `fail`
+**Condition:** MEMORY state is "coding_active_completed" AND the `verdict` key inside `## Popped Return` equals the literal `fail`
 **Action:** Extract reviewer feedback to a workspace file (so the retry dialogue reads it by path), then prune and park at the push state. No verbatim substitution into MEMORY — the dialogue will read the file:
 
-    awk '/^## Feedback$/{f=1; next} /^## [A-Z]/ && f {exit} f' ./MEMORY.md > ../../workspace/.chatdev/last_rejection.md
-    awk 'BEGIN{f=0} /^## (Verdict|Feedback|Dialogue)$/{f=1; next} /^## [A-Z]/ && f {f=0} !f' ./MEMORY.md > ./MEMORY.md.tmp && mv ./MEMORY.md.tmp ./MEMORY.md
+    awk '
+      /^## Popped Return$/ { in_pr=1; next }
+      in_pr && /^## / { exit }
+      in_pr && /^feedback: \|$/ { in_v=1; next }
+      in_pr && in_v && /^[a-zA-Z_]/ { exit }
+      in_pr && in_v { sub(/^  /, ""); print }
+    ' ./MEMORY.md > ../../workspace/.chatdev/last_rejection.md
+    awk 'BEGIN{f=0} /^## Popped Return$/{f=1; next} /^## [A-Z]/ && f {f=0} !f' ./MEMORY.md > ./MEMORY.md.tmp && mv ./MEMORY.md.tmp ./MEMORY.md
     sed -i 's/^coding_active_completed$/coding_retry_pushing/' ./MEMORY.md
 
 ## Instruction: Coding rejected — push retry
@@ -148,9 +154,9 @@ Then update state via in-place sed (single-line replacement, no template-emissio
 
 ## Instruction: Coding done — prune (stage)
 **Condition:** MEMORY state is "coding_active_completed"
-**Action:** The coding dialogue already wrote `../../workspace/.chatdev/code.md`. Prune `## Dialogue`, `## Verdict`, and `## Feedback` from MEMORY and park at the push state:
+**Action:** The coding dialogue already wrote `../../workspace/.chatdev/code.md`. Prune the `## Popped Return` section from MEMORY and park at the push state:
 
-    awk 'BEGIN{f=0} /^## (Verdict|Feedback|Dialogue)$/{f=1; next} /^## [A-Z]/ && f {f=0} !f' ./MEMORY.md > ./MEMORY.md.tmp && mv ./MEMORY.md.tmp ./MEMORY.md
+    awk 'BEGIN{f=0} /^## Popped Return$/{f=1; next} /^## [A-Z]/ && f {f=0} !f' ./MEMORY.md > ./MEMORY.md.tmp && mv ./MEMORY.md.tmp ./MEMORY.md
     sed -i 's/^coding_active_completed$/coding_to_testing_pushing/' ./MEMORY.md
 
 ## Instruction: Coding done — push
@@ -183,11 +189,17 @@ Then update state via in-place sed (single-line replacement, no template-emissio
     MEM_EOF
 
 ## Instruction: Testing rejected — stage retry
-**Condition:** MEMORY state is "testing_active_completed" AND `## Verdict` equals the literal `fail`
+**Condition:** MEMORY state is "testing_active_completed" AND the `verdict` key inside `## Popped Return` equals the literal `fail`
 **Action:** Extract reviewer feedback to a workspace file, then prune and park at the push state:
 
-    awk '/^## Feedback$/{f=1; next} /^## [A-Z]/ && f {exit} f' ./MEMORY.md > ../../workspace/.chatdev/last_rejection.md
-    awk 'BEGIN{f=0} /^## (Verdict|Feedback|Dialogue)$/{f=1; next} /^## [A-Z]/ && f {f=0} !f' ./MEMORY.md > ./MEMORY.md.tmp && mv ./MEMORY.md.tmp ./MEMORY.md
+    awk '
+      /^## Popped Return$/ { in_pr=1; next }
+      in_pr && /^## / { exit }
+      in_pr && /^feedback: \|$/ { in_v=1; next }
+      in_pr && in_v && /^[a-zA-Z_]/ { exit }
+      in_pr && in_v { sub(/^  /, ""); print }
+    ' ./MEMORY.md > ../../workspace/.chatdev/last_rejection.md
+    awk 'BEGIN{f=0} /^## Popped Return$/{f=1; next} /^## [A-Z]/ && f {f=0} !f' ./MEMORY.md > ./MEMORY.md.tmp && mv ./MEMORY.md.tmp ./MEMORY.md
     sed -i 's/^testing_active_completed$/testing_retry_pushing/' ./MEMORY.md
 
 ## Instruction: Testing rejected — push retry
@@ -220,9 +232,9 @@ Then update state via in-place sed (single-line replacement, no template-emissio
 
 ## Instruction: Testing done — prune (stage)
 **Condition:** MEMORY state is "testing_active_completed"
-**Action:** The testing dialogue already wrote `../../workspace/.chatdev/test_report.md`. Prune `## Dialogue`, `## Verdict`, and `## Feedback` from MEMORY and park at the push state:
+**Action:** The testing dialogue already wrote `../../workspace/.chatdev/test_report.md`. Prune the `## Popped Return` section from MEMORY and park at the push state:
 
-    awk 'BEGIN{f=0} /^## (Verdict|Feedback|Dialogue)$/{f=1; next} /^## [A-Z]/ && f {f=0} !f' ./MEMORY.md > ./MEMORY.md.tmp && mv ./MEMORY.md.tmp ./MEMORY.md
+    awk 'BEGIN{f=0} /^## Popped Return$/{f=1; next} /^## [A-Z]/ && f {f=0} !f' ./MEMORY.md > ./MEMORY.md.tmp && mv ./MEMORY.md.tmp ./MEMORY.md
     sed -i 's/^testing_active_completed$/testing_to_doc_pushing/' ./MEMORY.md
 
 ## Instruction: Testing done — push
@@ -255,11 +267,17 @@ Then update state via in-place sed (single-line replacement, no template-emissio
     MEM_EOF
 
 ## Instruction: Documenting rejected — stage retry
-**Condition:** MEMORY state is "doc_active_completed" AND `## Verdict` equals the literal `fail`
+**Condition:** MEMORY state is "doc_active_completed" AND the `verdict` key inside `## Popped Return` equals the literal `fail`
 **Action:** Extract reviewer feedback to a workspace file, then prune and park at the push state:
 
-    awk '/^## Feedback$/{f=1; next} /^## [A-Z]/ && f {exit} f' ./MEMORY.md > ../../workspace/.chatdev/last_rejection.md
-    awk 'BEGIN{f=0} /^## (Verdict|Feedback|Dialogue)$/{f=1; next} /^## [A-Z]/ && f {f=0} !f' ./MEMORY.md > ./MEMORY.md.tmp && mv ./MEMORY.md.tmp ./MEMORY.md
+    awk '
+      /^## Popped Return$/ { in_pr=1; next }
+      in_pr && /^## / { exit }
+      in_pr && /^feedback: \|$/ { in_v=1; next }
+      in_pr && in_v && /^[a-zA-Z_]/ { exit }
+      in_pr && in_v { sub(/^  /, ""); print }
+    ' ./MEMORY.md > ../../workspace/.chatdev/last_rejection.md
+    awk 'BEGIN{f=0} /^## Popped Return$/{f=1; next} /^## [A-Z]/ && f {f=0} !f' ./MEMORY.md > ./MEMORY.md.tmp && mv ./MEMORY.md.tmp ./MEMORY.md
     sed -i 's/^doc_active_completed$/doc_retry_pushing/' ./MEMORY.md
 
 ## Instruction: Documenting rejected — push retry
@@ -294,7 +312,7 @@ Then update state via in-place sed (single-line replacement, no template-emissio
 **Condition:** MEMORY state is "doc_active_completed"
 **Action:** The documentation dialogue already wrote `../../workspace/.chatdev/documentation.md`. Prune any remaining verdict/feedback/dialogue sections and halt, emitting a `## Return` block so that AFlow-lite callers receive the answer:
 
-    awk 'BEGIN{f=0} /^## (Verdict|Feedback|Dialogue)$/{f=1; next} /^## [A-Z]/ && f {f=0} !f' ./MEMORY.md > ./MEMORY.md.tmp && mv ./MEMORY.md.tmp ./MEMORY.md
+    awk 'BEGIN{f=0} /^## Popped Return$/{f=1; next} /^## [A-Z]/ && f {f=0} !f' ./MEMORY.md > ./MEMORY.md.tmp && mv ./MEMORY.md.tmp ./MEMORY.md
 
 Write `./MEMORY.md` with this EXACT single-heredoc shape (the `## Return` block MUST be in the same heredoc as the state change — without it the caller receives no return value in AFlow-lite mode):
 

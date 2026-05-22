@@ -174,25 +174,39 @@ Prior answer (always empty at root bootstrap):
 
 ## Instruction: Phase completed — stage gate
 **Condition:** MEMORY state is one of "summarise_active_completed", "requirements_active_completed", "design_active_completed", "backlog_active_completed", "tasks_active_completed", "plan_active_completed"
-**Action:** A phase shim has popped. The shell spliced its `## Return` keys as top-level MEMORY sections (typically `## Artefact`, possibly `## Verdict` and `## Feedback`). Extract the artefact path to `../../workspace/.sdlc/last-artefact.md` so the next instruction can write a clean gate question, then prune those splice sections from MEMORY and park at the gating state.
+**Action:** A phase shim has popped. The shell placed its `## Return` body verbatim under a single `## Popped Return` section in this MEMORY. Extract the artefact path (the `artefact` key inside `## Popped Return`) to `../../workspace/.sdlc/last-artefact.md` so the next instruction can write a clean gate question, then prune the `## Popped Return` section from MEMORY and park at the gating state.
 
-First, extract the artefact path. The `## Artefact` body is a single line (a path); grab it:
+First, extract the artefact path. The `artefact:` value is a single-line key inside `## Popped Return`:
 
-    awk '/^## Artefact$/{f=1; next} /^## [A-Z]/ && f {exit} f' ./MEMORY.md > ../../workspace/.sdlc/last-artefact.md
+    awk '
+      /^## Popped Return$/ { in_pr=1; next }
+      in_pr && /^## / { exit }
+      in_pr && /^artefact: / { sub(/^artefact: /, ""); print; exit }
+    ' ./MEMORY.md > ../../workspace/.sdlc/last-artefact.md
 
-If a `## Verdict` is present and equals `fail`, also stage `## Feedback` for inclusion in the gate question:
+If a `verdict` key is present inside `## Popped Return` and equals `fail`, also stage `feedback` for inclusion in the gate question:
 
-    if grep -q '^## Verdict$' ./MEMORY.md; then
-      awk '/^## Verdict$/{f=1; next} /^## [A-Z]/ && f {exit} f' ./MEMORY.md > ../../workspace/.sdlc/last-verdict.md
-      awk '/^## Feedback$/{f=1; next} /^## [A-Z]/ && f {exit} f' ./MEMORY.md > ../../workspace/.sdlc/last-feedback.md
+    if grep -q '^verdict:' ./MEMORY.md 2>/dev/null; then
+      awk '
+        /^## Popped Return$/ { in_pr=1; next }
+        in_pr && /^## / { exit }
+        in_pr && /^verdict: / { sub(/^verdict: /, ""); print; exit }
+      ' ./MEMORY.md > ../../workspace/.sdlc/last-verdict.md
+      awk '
+        /^## Popped Return$/ { in_pr=1; next }
+        in_pr && /^## / { exit }
+        in_pr && /^feedback: \|$/ { in_v=1; next }
+        in_pr && in_v && /^[a-zA-Z_]/ { exit }
+        in_pr && in_v { sub(/^  /, ""); print }
+      ' ./MEMORY.md > ../../workspace/.sdlc/last-feedback.md
     else
       : > ../../workspace/.sdlc/last-verdict.md
       : > ../../workspace/.sdlc/last-feedback.md
     fi
 
-Prune the spliced sections from MEMORY:
+Prune the `## Popped Return` section from MEMORY:
 
-    awk 'BEGIN{f=0} /^## (Artefact|Verdict|Feedback|Answer|Dialogue|Refined|Revised|Lesson|Lessons)$/{f=1; next} /^## [A-Z]/ && f {f=0} !f' ./MEMORY.md > ./MEMORY.md.tmp && mv ./MEMORY.md.tmp ./MEMORY.md
+    awk 'BEGIN{f=0} /^## Popped Return$/{f=1; next} /^## [A-Z]/ && f {f=0} !f' ./MEMORY.md > ./MEMORY.md.tmp && mv ./MEMORY.md.tmp ./MEMORY.md
 
 Transition state from `<phase>_active_completed` to `<phase>_gating` via in-place sed:
 
