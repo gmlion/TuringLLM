@@ -5,7 +5,7 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/gmlion/turing.git"
+    "url": "git+https://github.com/gmlion/TuringLLM.git"
   },
   "type": "module",
   "scripts": {

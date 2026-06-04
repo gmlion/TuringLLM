@@ -56,6 +56,7 @@ up-front, keeps gathering background while you think, and produces a
 structured report at `instances/<name>/workspace/report.md`.
 
 ```bash
+npm install
 npm run build
 
 # Create the instance. PROGRAM.md ships pre-filled with an
@@ -500,7 +501,8 @@ that give you a flat subroutine call.
 ## Usage
 
 ```bash
-# Build
+# Install dependencies, then build
+npm install
 npm run build
 
 # Create an instance using an example interpreter
